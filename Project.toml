@@ -1,0 +1,13 @@
+name = "BitSAD"
+uuid = "7f90e340-ca22-4a3e-a259-118ed254aff3"
+authors = ["Kyle Daruwalla", "University of Wisconsin-Madison PHARM Group"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
