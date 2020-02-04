@@ -3,6 +3,14 @@ uuid = "7f90e340-ca22-4a3e-a259-118ed254aff3"
 authors = ["Kyle Daruwalla", "University of Wisconsin-Madison PHARM Group"]
 version = "0.1.0"
 
+[deps]
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+PearsonHash = "76affd09-9633-40de-b67a-dc8d4e40d5a1"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+
 [compat]
 julia = "1"
 
