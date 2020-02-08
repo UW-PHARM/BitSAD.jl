@@ -1,6 +1,7 @@
 using BitSAD
 using Test
 using Statistics: mean
+using LinearAlgebra: norm
 
 @testset "Bitstream" begin
     x = SBitstream(0.5)
@@ -16,6 +17,7 @@ end
     y = SBitstream(0.1)
     X = SBitstream(fill(0.5, 2, 2))
     Y = SBitstream(fill(0.5, 2, 2))
+    v = SBitstream(fill(0.5, 2))
 
     @testset "FP Values" begin
         @test x.value == 0.5 && y.value == 0.1
@@ -29,6 +31,8 @@ end
         @test sqrt(x).value == sqrt(x.value)
         @test decorrelate(x).value == x.value
         @test map(λ -> λ.value, X * Y) == map(λ -> λ.value, X) * map(λ -> λ.value, Y)
+        @test map(λ -> λ.value, X * v) == map(λ -> λ.value, X) * map(λ -> λ.value, v)
+        @test norm(v).value == norm(map(λ -> λ.value, v))
     end
 
     @testset "Sample Generation" begin
@@ -91,8 +95,8 @@ end
                 z / T
             end ≈ op(x).value atol = 0.01
         end
-        @testset "op = * (matrix)" begin
-            @test all(isapprox.(begin
+        @testset "op = * (matrix, matrix)" begin
+            @test begin
                 Z = zeros(2, 2)
                 for t in 1:T
                     bit = pop!.(X * Y)
@@ -100,8 +104,8 @@ end
                 end
 
                 Z ./ T
-            end, map(λ -> λ.value, X * Y); atol = 0.01))
-            @test all(isapprox.(begin
+            end ≈ map(λ -> λ.value, X * Y) atol = 0.05
+            @test begin
                 Z = zeros(2, 2)
                 for t in 1:T
                     bit = pop!.(Y * X)
@@ -109,7 +113,41 @@ end
                 end
 
                 Z ./ T
-            end, map(λ -> λ.value, Y * X); atol = 0.01))
+            end ≈ map(λ -> λ.value, Y * X) atol = 0.05
+        end
+        @testset "op = * (matrix, vector)" begin
+            @test begin
+                T = 50000
+                Z = zeros(2)
+                for t in 1:T
+                    bit = pop!.(X * v)
+                    Z .+= pos.(bit) .- neg.(bit)
+                end
+
+                Z ./ T
+            end ≈ map(λ -> λ.value, X * v) atol = 0.05
+            @test_broken begin
+                T = 100000
+                Z = zeros(1, 2)
+                for t in 1:T
+                    bit = pop!.(transpose(v) * X)
+                    Z .+= pos.(bit) .- neg.(bit)
+                end
+
+                Z ./ T
+            end ≈ map(λ -> λ.value, transpose(v) * X) atol = 0.05
+        end
+        @testset "op = norm" begin
+            @test begin
+                T = 50000
+                z = 0
+                for t in 1:T
+                    bit = pop!(norm(v))
+                    z += pos(bit) - neg(bit)
+                end
+
+                z / T
+            end ≈ norm(v).value atol = 0.05
         end
     end
 end

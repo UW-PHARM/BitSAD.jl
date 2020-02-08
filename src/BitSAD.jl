@@ -8,7 +8,7 @@ using MacroTools
 export AbstractBit, AbstractBitstream
 export SBit, SBitstream
 export pos, neg
-export +, -, *, /, ÷, sqrt, decorrelate
+export +, -, *, /, ÷, sqrt, decorrelate, norm
 export generate, generate!
 export push!, pop!, observe
 

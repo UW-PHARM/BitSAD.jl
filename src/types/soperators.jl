@@ -256,7 +256,7 @@ struct SMatMultiplier
     counters::Array{Int, 2}
 end
 SMatMultiplier(nrows, ncols) = SMatMultiplier(zeros(nrows, ncols))
-function (op::SMatMultiplier)(x::Array{Bool, 2}, y::Array{Bool, 2})
+function (op::SMatMultiplier)(x::VecOrMat{Bool}, y::VecOrMat{Bool})
     # Increment counters
     op.counters .+= x * y
 
@@ -268,8 +268,8 @@ function (op::SMatMultiplier)(x::Array{Bool, 2}, y::Array{Bool, 2})
 
     return z
 end
-(op::SMatMultiplier)(x::BitArray{2}, y::BitArray{2}) =
-    op(convert(Array{Bool, 2}, x), convert(Array{Bool, 2}, y))
+(op::SMatMultiplier)(x::BitArray, y::BitArray) =
+    op(convert(Array{Bool, ndims(x)}, x), convert(Array{Bool, ndims(y)}, y))
 
 """
     SSignedMatMultiplier
@@ -301,7 +301,7 @@ SSignedMatMultiplier(nrows, ncols) =
         [SAdder() for i in 1:nrows, j in 1:ncols],
         [SAdder() for i in 1:nrows, j in 1:ncols]
     )
-function (op::SSignedMatMultiplier)(x::Array{SBit, 2}, y::Array{SBit, 2})
+function (op::SSignedMatMultiplier)(x::VecOrMat{SBit}, y::VecOrMat{SBit})
     pp = op.ppmult(pos.(x), pos.(y))
     pn = op.pnmult(pos.(x), neg.(y))
     np = op.npmult(neg.(x), pos.(y))
@@ -313,6 +313,31 @@ function (op::SSignedMatMultiplier)(x::Array{SBit, 2}, y::Array{SBit, 2})
     s₄ = map.(op.sub4, nn, np)
 
     z = zip(map.(op.padder, s₁, s₄), map.(op.nadder, s₂, s₃)) |> collect
+
+    return (size(z, 2) == 1) ? dropdims(z; dims = 2) : z
+end
+
+"""
+    SL2Normer
+
+A stochastic bitstream L2-norm operator.
+"""
+@kwdef struct SL2Normer <: SOperator
+    dot::SSignedMatMultiplier = SSignedMatMultiplier(1, 1)
+    buffer::CircularBuffer{Matrix{SBit}} = CircularBuffer{Matrix{SBit}}(1)
+    root::SSquareRoot = SSquareRoot()
+end
+function (op::SL2Normer)(x::Vector{SBit})
+    # get row vector
+    dummybit = map(λ -> SBit((false, false), λ.value, λ.id), permutedims(x))
+    xt = isempty(op.buffer) ? dummybit : pop!(op.buffer)
+    push!(op.buffer, permutedims(x))
+
+    # compute inner product
+    xtx = op.dot(xt, x)[1]
+
+    # compute root
+    z = op.root(SBit(xtx, x[1].value, x[1].id))
 
     return z
 end

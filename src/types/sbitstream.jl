@@ -1,7 +1,11 @@
 import Base: +, -, *, /, ÷, sqrt
+import LinearAlgebra: norm
 
 _genid() = uuid4()
 _indexid(id::UUID, idx::Integer) = uuid5(id, "[$idx]")
+_getidstr(x::AbstractBit) = x.id.value
+_getidstr(x::VecOrMat{<:AbstractBit}) = string(map(λ -> λ.id.value, x)...)
+_getidstr(x) = x
 
 """
     SBit
@@ -26,8 +30,8 @@ struct SBit <: AbstractBit
         new(bit, min(max(value, -1), 1), id)
     end
 end
-function SBit(bits::Array{Tuple{Bool, Bool}, 2}, values::Array{Float64, 2}, id::UUID)
-    arr = Array{SBit, 2}(undef, size(bits))
+function SBit(bits::VecOrMat{Tuple{Bool, Bool}}, values::VecOrMat{Float64}, id::UUID)
+    arr = similar(bits, SBit)
     for (i, bit) in enumerate(bits)
         arr[i] = SBit(bit, values[i], _indexid(id, i))
     end
@@ -75,7 +79,8 @@ end)
 @simulatable(SSquareRoot,         sqrt(x::SBit) = sqrt(x.value))
 @simulatable(SSignedDecorrelator, decorrelate(x::SBit) = x.value)
 @simulatable(SSignedMatMultiplier,
-    *(x::Array{SBit, 2}, y::Array{SBit, 2}) = map(z -> z.value, x) * map(z -> z.value, y), (size(x, 1), size(y, 2)))
+    *(x::VecOrMat{SBit}, y::VecOrMat{SBit}) = map(z -> z.value, x) * map(z -> z.value, y), (size(x, 1), size(y, 2)))
+@simulatable(SL2Normer,           norm(x::Vector{SBit}) = norm(map(z -> z.value, x)))
 
 """
     SBitstream
@@ -102,8 +107,8 @@ struct SBitstream <: AbstractBitstream
     end
 end
 SBitstream(value::Real, id::UUID = _genid()) = SBitstream(Queue{SBit}(), float(value), id)
-function SBitstream(values::Array{Float64, 2}, id::UUID = _genid())
-    arr = Array{SBitstream, 2}(undef, size(values))
+function SBitstream(values::VecOrMat{Float64}, id::UUID = _genid())
+    arr = similar(values, SBitstream)
     for (i, value) in enumerate(values)
         arr[i] = SBitstream(value, _indexid(id, i))
     end
@@ -155,10 +160,17 @@ function ÷(x::SBitstream, y::Real)
 
     return z
 end
-function *(x::Array{SBitstream, 2}, y::Array{SBitstream, 2})
+function *(x::VecOrMat{SBitstream}, y::VecOrMat{SBitstream})
     zbit = pop!.(x) * pop!.(y)
     z = map(λ -> SBitstream(λ.value, λ.id), zbit)
     push!.(z, zbit)
+
+    return z
+end
+function norm(x::Vector{SBitstream})
+    zbit = norm(pop!.(x))
+    z = SBitstream(zbit.value, zbit.id)
+    push!(z, zbit)
 
     return z
 end
