@@ -1,11 +1,11 @@
 import Base: +, -, *, /, ÷, sqrt
 import LinearAlgebra: norm
 
-_genid() = uuid4()
-_indexid(id::UUID, idx::Integer) = uuid5(id, "[$idx]")
-_getidstr(x::AbstractBit) = x.id.value
-_getidstr(x::VecOrMat{<:AbstractBit}) = string(map(λ -> λ.id.value, x)...)
-_getidstr(x) = x
+_genid() = unsafe_trunc(UInt32, uuid4().value)
+_indexid(id::UInt32, idx::Integer) = unsafe_trunc(UInt32, uuid5(UUID(id), "[$idx]").value)
+_getidstr(x::AbstractBit) = digits(UInt8, x.id)
+_getidstr(x::VecOrMat{<:AbstractBit}) = vcat(map(λ -> digits(UInt8, λ.id), x)...)
+_getidstr(x) = Vector{UInt8}(string(x))
 
 """
     SBit
@@ -15,14 +15,14 @@ A stochastic bit is a pair of unipolar bits (positive and negative channels).
 Fields:
 - `bit::Tuple{Bool, Bool}`: a sample of a bitstream
 - `value::Float64`: the underlying floating-point number being represented
-- `id::UUID`: a unique identifier for all samples of this bitstream
+- `id::UInt32`: a unique identifier for all samples of this bitstream
 """
 struct SBit <: AbstractBit
     bit::Tuple{Bool, Bool}
     value::Float64
-    id::UUID
+    id::UInt32
 
-    function SBit(bit::Tuple{Bool, Bool}, value::Float64, id::UUID)
+    function SBit(bit::Tuple{Bool, Bool}, value::Float64, id::UInt32)
         if value > 1 || value < -1
             @warn "SBitstream can only be ∈ [-1, 1] (saturation occurring)."
         end
@@ -30,7 +30,7 @@ struct SBit <: AbstractBit
         new(bit, min(max(value, -1), 1), id)
     end
 end
-function SBit(bits::VecOrMat{Tuple{Bool, Bool}}, values::VecOrMat{Float64}, id::UUID)
+function SBit(bits::VecOrMat{Tuple{Bool, Bool}}, values::VecOrMat{Float64}, id::UInt32)
     arr = similar(bits, SBit)
     for (i, bit) in enumerate(bits)
         arr[i] = SBit(bit, values[i], _indexid(id, i))
@@ -91,14 +91,14 @@ between [-1, 1].
 Fields:
 - `bits::Queue{SBit}`: the underlying bitstream
 - `value::Float64`: the underlying floating-point number being represented
-- `id::UUID`: a unique identifier for this bitstream (set automatically)
+- `id::UInt32`: a unique identifier for this bitstream (set automatically)
 """
 struct SBitstream <: AbstractBitstream
     bits::Queue{SBit}
     value::Float64
-    id::UUID
+    id::UInt32
 
-    function SBitstream(bits::Queue{SBit}, value::Float64, id::UUID = _genid())
+    function SBitstream(bits::Queue{SBit}, value::Float64, id::UInt32 = _genid())
         if value > 1 || value < -1
             @warn "SBitstream can only be ∈ [-1, 1] (saturation occurring)."
         end
@@ -106,8 +106,8 @@ struct SBitstream <: AbstractBitstream
         new(bits, min(max(value, -1), 1), id)
     end
 end
-SBitstream(value::Real, id::UUID = _genid()) = SBitstream(Queue{SBit}(), float(value), id)
-function SBitstream(values::VecOrMat{Float64}, id::UUID = _genid())
+SBitstream(value::Real, id::UInt32 = _genid()) = SBitstream(Queue{SBit}(), float(value), id)
+function SBitstream(values::VecOrMat{Float64}, id::UInt32 = _genid())
     arr = similar(values, SBitstream)
     for (i, value) in enumerate(values)
         arr[i] = SBitstream(value, _indexid(id, i))
@@ -133,6 +133,7 @@ function generate(s::SBitstream, T::Integer = 1)
 end
 generate!(s::SBitstream, T::Integer = 1) = push!(s, generate(s, T))
 
+push!(s::SBitstream, b::SBit) = enqueue!(s.bits, SBit(b.bit, b.value, s.id))
 pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : dequeue!(s.bits)
 
 for op in (:+, :-, :*, :/)

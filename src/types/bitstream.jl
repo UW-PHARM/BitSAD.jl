@@ -5,7 +5,7 @@ import Base: push!, pop!
 
 Inherit from this type to create a custom bit type.
 """
-abstract type AbstractBit end
+abstract type AbstractBit <: Number end
 
 """
     AbstractBitstream
@@ -15,7 +15,7 @@ Inherit from this type to create a custom bitstream type.
 Expected fields:
 - `bits::Queue{AbstractBit}`: the underlying bitstream
 """
-abstract type AbstractBitstream <: Real end
+abstract type AbstractBitstream end
 
 """
     push!(s::AbstractBitstream, b)

@@ -302,6 +302,9 @@ SSignedMatMultiplier(nrows, ncols) =
         [SAdder() for i in 1:nrows, j in 1:ncols]
     )
 function (op::SSignedMatMultiplier)(x::VecOrMat{SBit}, y::VecOrMat{SBit})
+    # println(op)
+    # println()
+    
     pp = op.ppmult(pos.(x), pos.(y))
     pn = op.pnmult(pos.(x), neg.(y))
     np = op.npmult(neg.(x), pos.(y))

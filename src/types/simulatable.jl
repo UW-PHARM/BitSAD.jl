@@ -1,4 +1,6 @@
-_opmap = Dict{Tuple{UInt128, Symbol}, Tuple{SOperator, UUID}}()
+_opmap = Dict{Tuple{UInt32, Symbol}, Tuple{SOperator, UInt32}}()
+
+clearops() = empty!(_opmap)
 
 macro simulatable(optype, fdef, args = ())
     def = splitdef(fdef)
@@ -9,10 +11,10 @@ macro simulatable(optype, fdef, args = ())
         push!(idstrs, :(_getidstr($(arg[1]))))
         push!(opargs, :($(arg[1])))
     end
-    hashkey = :(string($(idstrs...)))
+    hashkey = :(vcat($(idstrs...)))
 
     newbody = quote
-        key = (hashn($hashkey, 16), Symbol($opsym))
+        key = (hashn!($hashkey, 4), Symbol($opsym))
         if haskey(_opmap, key)
             op, id = _opmap[key]
             value = $(def[:body])
