@@ -198,17 +198,12 @@ function (op::SSignedDivider)(x::SBit, y::SBit)
     return z
 end
 
-"""
-    SFixedGainDivider
-
-A stochastic bitstream fixed gain divide operator.
-"""
-@kwdef mutable struct SFixedGainDivider <: SOperator
+@kwdef mutable struct SFixedGainDivider
     counter::Int = 0
 end
-function (op::SFixedGainDivider)(x::SBit, y::Real)
+function (op::SFixedGainDivider)(x::Bool, y::Real)
     # Update counter
-    op.counter += 255 * pos(x)
+    op.counter += 255 * x
 
     # Decide output
     z = (op.counter >= round(255 * y))
@@ -216,8 +211,19 @@ function (op::SFixedGainDivider)(x::SBit, y::Real)
     # Decrement counter
     op.counter -= z * round(255 * y)
 
-    return (z, false)
+    return z
 end
+
+"""
+    SSignedFixedGainDivider
+
+A stochastic bitstream fixed gain divide operator.
+"""
+@kwdef struct SSignedFixedGainDivider <: SOperator
+    pdiv::SFixedGainDivider = SFixedGainDivider()
+    ndiv::SFixedGainDivider = SFixedGainDivider()
+end
+(op::SSignedFixedGainDivider)(x::SBit, y::Real) = (op.pdiv(pos(x), y), op.ndiv(neg(x), y))
 
 """
     SSquareRoot
@@ -302,9 +308,6 @@ SSignedMatMultiplier(nrows, ncols) =
         [SAdder() for i in 1:nrows, j in 1:ncols]
     )
 function (op::SSignedMatMultiplier)(x::VecOrMat{SBit}, y::VecOrMat{SBit})
-    # println(op)
-    # println()
-    
     pp = op.ppmult(pos.(x), pos.(y))
     pn = op.pnmult(pos.(x), neg.(y))
     np = op.npmult(neg.(x), pos.(y))

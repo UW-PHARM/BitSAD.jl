@@ -1,4 +1,4 @@
-import Base: +, -, *, /, ÷, sqrt
+import Base: +, -, *, /, ÷, sqrt, float
 import LinearAlgebra: norm
 
 _genid() = unsafe_trunc(UInt32, uuid4().value)
@@ -39,6 +39,12 @@ function SBit(bits::VecOrMat{Tuple{Bool, Bool}}, values::VecOrMat{Float64}, id::
     return arr
 end
 
+"""
+    value(b::SBit)
+
+Return the underlying floating-point value of `b`.
+"""
+float(b::SBit) = b.value
 
 """
     pos(b::SBit)
@@ -68,7 +74,7 @@ function /(x::SBit, y::SBit)
 
     x.value / y.value
 end)
-@simulatable(SFixedGainDivider,
+@simulatable(SSignedFixedGainDivider,
 function ÷(x::SBit, y::Real)
     if y < 1
         error("SBit only supports fixed-gain divisors >= 1 (y == $y).")
@@ -79,8 +85,8 @@ end)
 @simulatable(SSquareRoot,         sqrt(x::SBit) = sqrt(x.value))
 @simulatable(SSignedDecorrelator, decorrelate(x::SBit) = x.value)
 @simulatable(SSignedMatMultiplier,
-    *(x::VecOrMat{SBit}, y::VecOrMat{SBit}) = map(z -> z.value, x) * map(z -> z.value, y), (size(x, 1), size(y, 2)))
-@simulatable(SL2Normer,           norm(x::Vector{SBit}) = norm(map(z -> z.value, x)))
+    *(x::VecOrMat{SBit}, y::VecOrMat{SBit}) = float.(x) * float.(y), (size(x, 1), size(y, 2)))
+@simulatable(SL2Normer,           norm(x::Vector{SBit}) = norm(float.(x)))
 
 """
     SBitstream
@@ -116,6 +122,8 @@ function SBitstream(values::VecOrMat{Float64}, id::UInt32 = _genid())
     return arr
 end
 
+float(s::SBitstream) = s.value
+
 """
     generate(s::SBitstream, T::Integer = 1)
     generate!(s::SBitstream, T::Integer = 1)
@@ -135,6 +143,25 @@ generate!(s::SBitstream, T::Integer = 1) = push!(s, generate(s, T))
 
 push!(s::SBitstream, b::SBit) = enqueue!(s.bits, SBit(b.bit, b.value, s.id))
 pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : dequeue!(s.bits)
+
+"""
+    estimate!(buffer::AbstractVector, b::SBit)
+    estimate!(buffer::AbstractVector, b::VecOrMat{SBit})
+    estimate!(buffer::AbstractVector)
+
+Push `b` into the `buffer` and return the current estimate.
+"""
+function estimate!(buffer::AbstractVector, b::SBit)
+    push!(buffer, pos(b) - neg(b))
+
+    return sum(buffer) / length(buffer)
+end
+function estimate!(buffer::AbstractVector, bs::VecOrMat{SBit})
+    push!(buffer, pos.(bs) - neg.(bs))
+
+    return sum(buffer) / length(buffer)
+end
+estimate!(buffer::AbstractVector) = sum(buffer) / length(buffer)
 
 for op in (:+, :-, :*, :/)
     @eval function $(op)(x::SBitstream, y::SBitstream)
