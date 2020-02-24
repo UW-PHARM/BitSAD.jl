@@ -40,55 +40,6 @@ function SBit(bits::VecOrMat{Tuple{Bool, Bool}}, values::VecOrMat{Float64}, id::
 end
 
 """
-    value(b::SBit)
-
-Return the underlying floating-point value of `b`.
-"""
-float(b::SBit) = b.value
-
-"""
-    pos(b::SBit)
-
-Return the positive channel bit of a stochastic bit.
-"""
-pos(b::SBit) = b.bit[1]
-
-"""
-    neg(b::SBit)
-
-Return the negative channel bit of a stochastic bit.
-"""
-neg(b::SBit) = b.bit[2]
-
-include("./soperators.jl")
-include("./simulatable.jl")
-
-@simulatable(SSignedAdder,      +(x::SBit, y::SBit) = x.value + y.value)
-@simulatable(SSignedSubtractor, -(x::SBit, y::SBit) = x.value - y.value)
-@simulatable(SSignedMultiplier, *(x::SBit, y::SBit) = x.value * y.value)
-@simulatable(SSignedDivider,
-function /(x::SBit, y::SBit)
-    if y.value <= 0
-        error("SBit only supports divisors > 0 (y == $y).")
-    end
-
-    x.value / y.value
-end)
-@simulatable(SSignedFixedGainDivider,
-function ÷(x::SBit, y::Real)
-    if y < 1
-        error("SBit only supports fixed-gain divisors >= 1 (y == $y).")
-    end
-
-    x.value / y
-end)
-@simulatable(SSquareRoot,         sqrt(x::SBit) = sqrt(x.value))
-@simulatable(SSignedDecorrelator, decorrelate(x::SBit) = x.value)
-@simulatable(SSignedMatMultiplier,
-    *(x::VecOrMat{SBit}, y::VecOrMat{SBit}) = float.(x) * float.(y), (size(x, 1), size(y, 2)))
-@simulatable(SL2Normer,           norm(x::Vector{SBit}) = norm(float.(x)))
-
-"""
     SBitstream
 
 A stochastic bitstream that represents a real (floating-point) number
@@ -122,47 +73,60 @@ function SBitstream(values::VecOrMat{Float64}, id::UInt32 = _genid())
     return arr
 end
 
+"""
+    pos(b::SBit)
+
+Return the positive channel bit of a stochastic bit.
+"""
+pos(b::SBit) = b.bit[1]
+
+"""
+    neg(b::SBit)
+
+Return the negative channel bit of a stochastic bit.
+"""
+neg(b::SBit) = b.bit[2]
+
+"""
+    float(b::SBit)
+    float(s::SBitstream)
+
+Return the underlying floating-point value of
+a stochastic bit or bitstream.
+"""
+float(b::SBit) = b.value
 float(s::SBitstream) = s.value
 
-"""
-    generate(s::SBitstream, T::Integer = 1)
-    generate!(s::SBitstream, T::Integer = 1)
+include("./soperators.jl")
+include("./simulatable.jl")
 
-Generate `T` samples of the bitstream.
-Add them to its queue for `generate!`.
-"""
-function generate(s::SBitstream, T::Integer = 1)
-    r = rand(T)
-    bits = (s.value >= 0) ? zip(r .< abs(s.value), fill(false, T)) :
-                            zip(fill(false, T), r .< abs(s.value))
-    sbits = map(x -> SBit(x, s.value, s.id), bits)
+# SBit operator definitions #
+@simulatable(SSignedAdder,      +(x::SBit, y::SBit) = x.value + y.value)
+@simulatable(SSignedSubtractor, -(x::SBit, y::SBit) = x.value - y.value)
+@simulatable(SSignedMultiplier, *(x::SBit, y::SBit) = x.value * y.value)
+@simulatable(SSignedDivider,
+function /(x::SBit, y::SBit)
+    if y.value <= 0
+        error("SBit only supports divisors > 0 (y == $y).")
+    end
 
-    return sbits
-end
-generate!(s::SBitstream, T::Integer = 1) = push!(s, generate(s, T))
+    x.value / y.value
+end)
+@simulatable(SSignedFixedGainDivider,
+function ÷(x::SBit, y::Real)
+    if y < 1
+        error("SBit only supports fixed-gain divisors >= 1 (y == $y).")
+    end
 
-push!(s::SBitstream, b::SBit) = enqueue!(s.bits, SBit(b.bit, b.value, s.id))
-pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : dequeue!(s.bits)
+    x.value / y
+end)
+@simulatable(SSquareRoot,         sqrt(x::SBit) = sqrt(x.value))
+@simulatable(SSignedDecorrelator, decorrelate(x::SBit) = x.value)
+@simulatable(SSignedMatMultiplier,
+    *(x::VecOrMat{SBit}, y::VecOrMat{SBit}) = float.(x) * float.(y), (size(x, 1), size(y, 2)))
+@simulatable(SL2Normer,           norm(x::Vector{SBit}) = norm(float.(x)))
 
-"""
-    estimate!(buffer::AbstractVector, b::SBit)
-    estimate!(buffer::AbstractVector, b::VecOrMat{SBit})
-    estimate!(buffer::AbstractVector)
-
-Push `b` into the `buffer` and return the current estimate.
-"""
-function estimate!(buffer::AbstractVector, b::SBit)
-    push!(buffer, pos(b) - neg(b))
-
-    return sum(buffer) / length(buffer)
-end
-function estimate!(buffer::AbstractVector, bs::VecOrMat{SBit})
-    push!(buffer, pos.(bs) - neg.(bs))
-
-    return sum(buffer) / length(buffer)
-end
-estimate!(buffer::AbstractVector) = sum(buffer) / length(buffer)
-
+# SBitstream operator definitions #
 for op in (:+, :-, :*, :/)
     @eval function $(op)(x::SBitstream, y::SBitstream)
         zbit = $(op)(pop!(x), pop!(y))
@@ -202,3 +166,42 @@ function norm(x::Vector{SBitstream})
 
     return z
 end
+
+"""
+    generate(s::SBitstream, T::Integer = 1)
+    generate!(s::SBitstream, T::Integer = 1)
+
+Generate `T` samples of the bitstream.
+Add them to its queue for `generate!`.
+"""
+function generate(s::SBitstream, T::Integer = 1)
+    r = rand(T)
+    bits = (s.value >= 0) ? zip(r .< abs(s.value), fill(false, T)) :
+                            zip(fill(false, T), r .< abs(s.value))
+    sbits = map(x -> SBit(x, s.value, s.id), bits)
+
+    return sbits
+end
+generate!(s::SBitstream, T::Integer = 1) = push!(s, generate(s, T))
+
+push!(s::SBitstream, b::SBit) = enqueue!(s.bits, SBit(b.bit, b.value, s.id))
+pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : dequeue!(s.bits)
+
+"""
+    estimate!(buffer::AbstractVector, b::SBit)
+    estimate!(buffer::AbstractVector, b::VecOrMat{SBit})
+    estimate!(buffer::AbstractVector)
+
+Push `b` into the `buffer` and return the current estimate.
+"""
+function estimate!(buffer::AbstractVector, b::SBit)
+    push!(buffer, pos(b) - neg(b))
+
+    return sum(buffer) / length(buffer)
+end
+function estimate!(buffer::AbstractVector, bs::VecOrMat{SBit})
+    push!(buffer, pos.(bs) - neg.(bs))
+
+    return sum(buffer) / length(buffer)
+end
+estimate!(buffer::AbstractVector) = sum(buffer) / length(buffer)
