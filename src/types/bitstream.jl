@@ -1,4 +1,4 @@
-import Base: push!, pop!
+import Base: push!, pop!, length
 
 """
     AbstractBit
@@ -52,3 +52,10 @@ Fields:
 - `s::AbstractBitstream`: the bitstream object
 """
 observe(s::AbstractBitstream) = last(s.bits)
+
+"""
+    length(s::AbstractBitstream)
+
+Return the number of bits in `s`.
+"""
+length(s::AbstractBitstream) = length(s.bits)
