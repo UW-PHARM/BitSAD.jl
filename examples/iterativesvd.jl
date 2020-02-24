@@ -23,8 +23,8 @@ function (dut::IterativeSVD)(A::Matrix{SBit}, v₀::Vector{SBit})
     return u, v, σ
 end
 
-N = 1
-T = 200000
+N = 10
+T = 20000
 m = 2
 n = 2
 
@@ -36,47 +36,43 @@ dut = [IterativeSVD(m, n) for i in 1:N]
 
 # calculate scaling
 α = 2 .* max.(norm.(A, Inf), norm.(A, 1))
-A .= A ./ α
+A = A ./ α
 
 # convert to bitstream
 A = SBitstream.(A)
 v₀ = SBitstream.(v₀)
-map(x -> generate!.(x, T), A)
-map(x -> generate!.(x, 1000), v₀)
 
 # eval loop
 BitSAD.clearops()
 ϵ = zeros(T, N)
-ubuffer = [CircularBuffer{Vector{Int}}(10000) for i in 1:N]
-vbuffer = [CircularBuffer{Vector{Int}}(10000) for i in 1:N]
-σbuffer = [CircularBuffer{Int}(10000) for i in 1:N]
+ubuffer = [CircularBuffer{Vector{Int}}(5000) for i in 1:N]
+vbuffer = [CircularBuffer{Vector{Int}}(5000) for i in 1:N]
+σbuffer = [CircularBuffer{Int}(5000) for i in 1:N]
 Threads.@threads for trial in 1:N
+    generate!.(A[trial], T)
+    generate!.(v₀[trial], 1000)
+
     for t in 1:T
         # evaluate module
         output = dut[trial](pop!.(A[trial]), pop!.(v₀[trial]))
         (t >= 1000) && push!.(v₀[trial], decorrelate.(output[2]))
 
         # accumulate results in buffer
-        push!(ubuffer[trial], pos.(output[1]) .- neg.(output[1]))
-        push!(vbuffer[trial], pos.(output[2]) .- neg.(output[2]))
-        push!(σbuffer[trial], pos(output[3]) - neg(output[3]))
-
-        # get current average
-        u = sum(ubuffer[trial]) / length(ubuffer[trial])
-        v = sum(vbuffer[trial]) / length(vbuffer[trial])
-        σ = sum(σbuffer[trial]) / length(σbuffer[trial])
+        u = estimate!(ubuffer[trial], output[1])
+        v = estimate!(vbuffer[trial], output[2])
+        σ = estimate!(σbuffer[trial], output[3])
 
         # record loss
-        ϵ[t, trial] = norm(α[trial] * (map(λ -> λ.value, A[trial]) * v - u * σ * sqrt(n)))
+        ϵ[t, trial] = norm(α[trial] * (float.(A[trial]) * v - u * σ * sqrt(n)))
     end
 
     println("Completed trial $trial")
 end
 
-u = @. sum(ubuffer) / length(ubuffer)
-v = @. sum(vbuffer) / length(vbuffer)
-σ = @. sum(σbuffer) / length(σbuffer) * sqrt(n)
-A = map.(λ -> λ.value, A)
+u = @. estimate!(ubuffer)
+v = @. estimate!(vbuffer)
+σ = @. estimate!(σbuffer) * sqrt(n)
+A = map(λ -> float.(λ), A)
 f = svd(A[1])
 println("u error: $(u[1] - f.U[1, :])")
 println("v error: $(v[1] - f.V[1, :])")
