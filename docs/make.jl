@@ -5,7 +5,10 @@ makedocs(;
     format=Documenter.HTML(),
     pages=[
         "Home" => "index.md",
-        "Getting Started" => "getting-started.md",
+        "Introduction" => [
+            "Getting started" => "getting-started.md",
+            "Stochastic Bitstream Walkthrough" => "sbitstream-example.md",
+        ],
     ],
     repo="https://github.com/UW-PHARM/BitSAD.jl/blob/{commit}{path}#L{line}",
     sitename="BitSAD.jl",
