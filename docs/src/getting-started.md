@@ -8,7 +8,7 @@ Stochastic bitstreams refer to bit sequences found in [stochastic computing](htt
 
 Creating a bitstream variable is straightforward:
 
-```@example
+```julia
 x = SBitstream(0.1)
 y = DBitstream()
 ```
@@ -19,7 +19,7 @@ Here `x` is a stochastic bitstream representing the real number 0.1. `y` is a de
 
 Both types of bitstreams inherit from a shared abstract type — [`AbstractBitstream`](@ref). If you were to create your own bitstream type, you would need to inherit from this abstract type. This allows us to define some shared operations that apply to all bitstreams. For example, we can push and pop bits from bitstreams:
 
-```@example
+```julia
 x = SBitstream(0.1)
 y = DBitstream()
 
@@ -33,7 +33,7 @@ In the example above, we pushed and popped a bit from `y`, a deterministic bitst
 
 Once there are bits in the queue (or not for `SBitstream`s), you can perform arithmetic:
 
-```@example
+```julia
 x = SBitstream(0.1)
 y = SBitstream(0.3)
 

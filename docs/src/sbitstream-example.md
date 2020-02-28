@@ -4,16 +4,16 @@ Now let's walk through an `SBitstream` example program to compute the iterative 
 
 **Input:** Matrix ``A`` and inital guess ``v_0`` \
 **Steps: (for ``T`` iterations)** \
-1. ``w_k \\gets Av_{k - 1}``
-2. ``u_k \\gets w_k / \\|w_k\\|_2``
-3. ``z_k \\gets A^\top v_{k - 1}``
-4. ``\\sigma_k \\gets \\|z_k\\|_2``
-5. ``v_k \\gets z_k / \\sigma_k``
-**Return:** First singular value and vectors, ``\\sigma_T, u_T, v_T``
+1. ``w_k \gets Av_{k - 1}``
+2. ``u_k \gets w_k / \|w_k\|_2``
+3. ``z_k \gets A^\top v_{k - 1}``
+4. ``\sigma_k \\gets \|z_k\|_2``
+5. ``v_k \gets z_k / \sigma_k``
+**Return:** First singular value and vectors, ``\sigma_T, u_T, v_T``
 
 First we import BitSAD and create a module for our algorithm. There is no fixed way for defining an algorithm, but we recommend defining a struct. This way, the fields of the struct represent the submodules and internal parameters of the algorithm.
 
-```@example
+```julia
 using BitSAD
 
 struct IterativeSVD
@@ -24,7 +24,7 @@ end
 
 Above, we created the `IterativeSVD` module that is parameterized by the number of rows and columns in the matrix. Structs in Julia are callable, which means we can call the module like a function.
 
-```@example
+```julia
 function (dut::IterativeSVD)(A::Matrix{SBit}, v₀::Vector{SBit})
     # Update right singular vector
     w = A * v₀
@@ -45,7 +45,7 @@ Here we defined the algorithm as accepting a matrix of `SBit`s and a vector of `
 
 That's all it takes to define a bitstream computing algorithm in BitSAD. Of course, we don't just want to define the algorithm, we want to test and use it! To do that, we'll need to create some test matrices.
 
-```@example
+```julia
 using Makie, DataStructures
 using Statistics: mean
 using LinearAlgebra
@@ -72,7 +72,7 @@ v₀ = SBitstream.(v₀)
 
 The code above generates an array of matrices to decompose and initial guesses. It also calculates a scaling factor to prevent the stochastic bitstreams from saturating when we run multiple iterations of the algorithm. This is an important consideration for stochastic computing, and BitSAD can allow users to empirical determine the correct scaling level. In this case, we determined theoretical scaling factors beforehand. If a bitstream variable was to saturate during computation, then BitSAD will print a warning out. In the last few lines, we take the floating-point matrices and vectors that we generated, and we create `SBitstream` objects out of them.
 
-```@example
+```julia
 # eval loop
 BitSAD.clearops()
 ϵ = zeros(T, N)
@@ -109,7 +109,7 @@ Next, we called `generate!` on the matrix and vector that is the input for this 
 
 Finally, we enter the main loop that runs over `T` iterations and exercises an `IterativeSVD` for each step. The line `dut[trial](pop.!(A[trial]), pop!.(v₀[trial]))` is how we call our struct. If we weren't running for many trials, we wouldn't have multiple objects, and the call might look more like `dut(pop!.(A), pop!.(v₀))`. This call produces `output` which is the tuple returned by our algorithm. One element of this tuple, ``v_k``, is passed back into our algorithm as an input. We can pass each returned vector or scalar `SBit` to the `estimate!` function from BitSAD. This function is a handy utility function that updates the circular buffers and returns the current empirical average. The last step of the loop body is to compute and store the current algorithm error.
 
-```@example
+```julia
 u = @. estimate!(ubuffer)
 v = @. estimate!(vbuffer)
 σ = @. estimate!(σbuffer) * sqrt(n)
