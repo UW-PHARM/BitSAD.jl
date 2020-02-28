@@ -8,6 +8,7 @@ makedocs(;
         "Introduction" => [
             "Getting started" => "getting-started.md",
             "Stochastic Bitstream Walkthrough" => "sbitstream-example.md",
+            "Deterministic Bitstream Walkthrough" => "dbitstream-example.md",
         ],
     ],
     repo="https://github.com/UW-PHARM/BitSAD.jl/blob/{commit}{path}#L{line}",
