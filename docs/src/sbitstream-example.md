@@ -7,7 +7,7 @@ Now let's walk through an `SBitstream` example program to compute the iterative 
 1. ``w_k \gets Av_{k - 1}``
 2. ``u_k \gets w_k / \|w_k\|_2``
 3. ``z_k \gets A^\top v_{k - 1}``
-4. ``\sigma_k \\gets \|z_k\|_2``
+4. ``\sigma_k \gets \|z_k\|_2``
 5. ``v_k \gets z_k / \sigma_k``
 **Return:** First singular value and vectors, ``\sigma_T, u_T, v_T``
 
