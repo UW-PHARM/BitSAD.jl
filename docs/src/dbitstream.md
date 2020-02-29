@@ -7,10 +7,10 @@ DBit
 DBitstream
 ```
 
-A `DBit` maps ``\{0, 1\} \mapto \{-1, 1\}``. We can access this mapping through `float`.
+A `DBit` maps `` \{0, 1\} \mapsto \{-1, 1\} ``. We can access this mapping through `float`.
 
 ```@docs
-float
+float(b::DBit)
 ```
 
 # Operators

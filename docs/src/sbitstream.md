@@ -18,7 +18,6 @@ We can also access the underlying real value using `float`.
 
 ```@docs
 float(b::SBit)
-float(b::SBitstream)
 ```
 
 Finally, we can fill up a `SBitstream` with a bit sequence using `generate!` and estimate the empirical average using `estimate!`.
