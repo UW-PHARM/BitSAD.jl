@@ -10,6 +10,11 @@ makedocs(;
             "Stochastic Bitstream Walkthrough" => "sbitstream-example.md",
             "Deterministic Bitstream Walkthrough" => "dbitstream-example.md",
         ],
+        "Types" => [
+            "Abstract Bitstreams" => "bitstream.md",
+            "Stochastic Bitstreams" => "sbitstream.md",
+            "Deterministic Bitstreams" => "dbitstream.md",
+        ],
     ],
     repo="https://github.com/UW-PHARM/BitSAD.jl/blob/{commit}{path}#L{line}",
     sitename="BitSAD.jl",
