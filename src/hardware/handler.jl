@@ -66,4 +66,4 @@ gethandler(op::Operation) = haskey(_handlermap, op) ? _handlermap[op] :
         Perhaps you forgot to register a handler for your custom operation?
         """)
 
-include("hardware/handlers/saddhandler.jl")
+include("handlers/saddhandler.jl")
