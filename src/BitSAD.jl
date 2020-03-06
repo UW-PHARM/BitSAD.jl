@@ -4,6 +4,7 @@ using DataStructures
 using UUIDs, PearsonHash
 using Random: MersenneTwister
 using MacroTools
+using Reexport
 
 export AbstractBit, AbstractBitstream
 export SBit, SBitstream
@@ -19,5 +20,9 @@ include("types/bitstream.jl")
 include("types/sbitstream.jl")
 include("types/dbitstream.jl")
 include("modules/sdm.jl")
+
+include("hardware/HW.jl")
+
+@reexport using .HW
 
 end # module
