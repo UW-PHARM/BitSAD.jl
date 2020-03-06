@@ -39,6 +39,17 @@ const Netlist = Vector{Net}
 inputs(n::Netlist) = filter(isinput, n)
 outputs(n::Netlist) = filter(isoutput, n)
 
+find(n::Netlist, x::String) = findfirst(λ -> λ.name == x, n)
+contains(n::Netlist, x::String) = !isnothing(find(n, x))
+
+function getsize(n::Netlist, x::String)
+    i = find(n, x)
+    isnothing(i) && error("Cannot get size for net $x since it does not exist in netlist.")
+
+    return n[i].size
+end
+getsize(n::Netlist, x::Vector{String}) = map(λ -> getsize(n, λ), x)
+
 function update!(n::Netlist, x::Net)
     i = findfirst(λ -> λ.name == x.name, n)
     if isnothing(i)

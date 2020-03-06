@@ -5,7 +5,7 @@ using LightGraphs, MetaGraphs
 export AbstractHandler
 
 include("netlist.jl")
-include("module.jl")
 include("handler.jl")
+include("module.jl")
 
 end
