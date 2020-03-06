@@ -2,14 +2,21 @@
 
 Now let's walk through an `SBitstream` example program to compute the iterative SVD of a matrix. Here's an overview of the mathematical algorithm:
 
+----
+
 **Input:** Matrix ``A`` and inital guess ``v_0`` \
-**Steps: (for ``T`` iterations)** \
+
+**Steps: (for ``T`` iterations)**
+
 1. ``w_k \gets Av_{k - 1}``
 2. ``u_k \gets w_k / \|w_k\|_2``
 3. ``z_k \gets A^\top v_{k - 1}``
 4. ``\sigma_k \gets \|z_k\|_2``
 5. ``v_k \gets z_k / \sigma_k``
+
 **Return:** First singular value and vectors, ``\sigma_T, u_T, v_T``
+
+----
 
 First we import BitSAD and create a module for our algorithm. There is no fixed way for defining an algorithm, but we recommend defining a struct. This way, the fields of the struct represent the submodules and internal parameters of the algorithm.
 

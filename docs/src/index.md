@@ -6,9 +6,6 @@ See [CITATION.bib](https://github.com/UW-PHARM/BitSAD.jl/blob/master/CITATION.bi
 
 _**Note:** Hardware generation is still being ported over to BitSAD.jl from the original Scala implementation._
 
-```@contents
-```
-
 ## Installation
 
 You can install BitSAD by opening a Julia REPL and entering:
