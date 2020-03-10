@@ -13,10 +13,6 @@ function (handler::SAddHandler)(netlist::Netlist,
     # compute output size
     outsize = sizes[1]
 
-    # add internal nets to netlist
-    update!(netlist, Net(name = "add$(handler.id)_pp", size = outsize))
-    update!(netlist, Net(name = "add$(handler.id)_mm", size = outsize))
-
     # add output net to netlist
     update!(netlist, Net(name = string(outputs[1].name), signed = true, size = outsize))
 
@@ -31,7 +27,7 @@ function (handler::SAddHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A($(inputs[1].name)_p),
                 .B($(inputs[2].name)_p),
-                .Y(add$(handler.id)_pp)
+                .Y($(outputs[1].name)_p)
             );
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -41,26 +37,6 @@ function (handler::SAddHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A($(inputs[1].name)_m),
                 .B($(inputs[2].name)_m),
-                .Y(add$(handler.id)_mm)
-            );
-        stoch_sat_sub_mat #(
-                .NUM_ROWS($(outsize[1])),
-                .NUM_COLS($(outsize[2]))
-            ) add$(handler.id)_p (
-                .CLK(CLK),
-                .nRST(nRST),
-                .A(add$(handler.id)_pp),
-                .B(add$(handler.id)_mm),
-                .Y($(outputs[1].name)_p)
-            );
-        stoch_sat_sub_mat #(
-                .NUM_ROWS($(outsize[1])),
-                .NUM_COLS($(outsize[2]))
-            ) add$(handler.id)_m (
-                .CLK(CLK),
-                .nRST(nRST),
-                .A(add$(handler.id)_mm),
-                .B(add$(handler.id)_pp),
                 .Y($(outputs[1].name)_m)
             );
         // END add$(handler.id)

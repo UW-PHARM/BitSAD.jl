@@ -67,3 +67,10 @@ gethandler(op::Operation) = haskey(_handlermap, op) ? _handlermap[op] :
         """)
 
 include("handlers/saddhandler.jl")
+include("handlers/ssubhandler.jl")
+include("handlers/smulthandler.jl")
+include("handlers/sdivhandler.jl")
+include("handlers/sfdivhandler.jl")
+include("handlers/ssqrthandler.jl")
+include("handlers/sl2normhandler.jl")
+include("handlers/transposehandler.jl")
