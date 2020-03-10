@@ -1,12 +1,27 @@
 using Base: @kwdef
 
-@kwdef struct Module
+@kwdef mutable struct Module
     name::Symbol
     parameters::Dict{Symbol, Number} = Dict{Symbol, Number}()
     dfg::MetaDiGraph{Int, Float64} = MetaDiGraph()
 end
 
+Base.show(io::IO, m::Module) = print(io, "Module $(m.name) with $(length(m.parameters)) parameters")
+Base.show(io::IO, ::MIME"text/plain", m::Module) = print("""
+    Module $(m.name):
+        Parameters:
+            $(m.parameters)
+        Number of operations: $(nv(m.dfg))
+        Number of inputs: $(length(map(x -> getinputs(m.dfg, x), getroots(m.dfg))))
+        Number of outputs: $(length(map(x -> getoutputs(m.dfg, x), getbuds(m.dfg))))
+    """)
+
+findnode(g::MetaDiGraph, inputs, outputs, operator) =
+    collect(filter_vertices(g, (g, v) -> all(getname.(get_prop(g, v, :inputs)) .== inputs) &&
+                                         all(getname.(get_prop(g, v, :outputs)) .== outputs) &&
+                                         get_prop(g, v, :operator) == operator))
 getroots(g::MetaDiGraph) = collect(filter_vertices(g, (g, v) -> isempty(inneighbors(g, v))))
+getbuds(g::MetaDiGraph) = collect(filter_vertices(g, (g, v) -> isempty(outneighbors(g, v))))
 getparents(g::MetaDiGraph, x::Variable) =
     filter_vertices(g, (g, v) -> x ∈ get_prop(g, v, :outputs))
 getchildren(g::MetaDiGraph, x::Variable) =
@@ -31,6 +46,23 @@ function addnode!(m::Module, inputs::Vector{Variable}, outputs::Vector{Variable}
             add_edge!(m.dfg, node, child)
         end
     end
+
+    return m
+end
+
+function updatetype!(m::Module, inputs::Vector{Variable}, outputs::Vector{Variable}, op::Symbol)
+    innames = getname.(inputs)
+    outnames = getname.(outputs)
+    v = findnode(m.dfg, innames, outnames, op)
+    isempty(v) && error("""
+        Could not update node because it was not found in DFG.
+        inputs: $innames
+        outputs: $outnames
+        operator: $op
+        """)
+    set_prop!(m.dfg, v[1], :inputs, inputs)
+    set_prop!(m.dfg, v[1], :outputs, outputs)
+    set_prop!(m.dfg, v[1], :operator, op)
 
     return m
 end
@@ -95,3 +127,10 @@ function generate(m::Module)
 
     return outstr
 end
+function generate(m::Module, f)
+    # get types
+    f()
+
+    return generate(m)
+end
+generate(c::Tuple{Module, Function}, dut, args...) = generate(c[1], () -> c[2](dut, c[1], args...))
