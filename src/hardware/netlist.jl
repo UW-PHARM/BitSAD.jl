@@ -4,8 +4,10 @@ _checktype(type) = (type != :reg && type != :wire) &&
     error("Cannot create net with type $type (use :reg or :wire)")
 _checkclass(class) = (class != :input &&
                       class != :output &&
-                      class != :internal) &&
-    error("Cannot create net with class $class (use :input, :output, or :internal)")
+                      class != :internal &&
+                      class != :constant &&
+                      class != :parameter) &&
+    error("Cannot create net with class $class (use :input, :output, :internal, :constant, or :parameter)")
 _checksize(size) = any(size .< 1) &&
     error("Cannot create net with size $size (size[i] must be >= 1)")
 
@@ -49,6 +51,8 @@ function getsize(n::Netlist, x::String)
     return n[i].size
 end
 getsize(n::Netlist, x::Vector{String}) = map(λ -> getsize(n, λ), x)
+
+delete!(n::Netlist, x::String) = deleteat!(n, find(n, x))
 
 function update!(n::Netlist, x::Net)
     i = findfirst(λ -> λ.name == x.name, n)

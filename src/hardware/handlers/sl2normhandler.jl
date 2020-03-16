@@ -2,7 +2,7 @@
     id = 0
 end
 
-register(Operation([Symbol("Vector{SBit}")], [Symbol("SBit")], :norm), SL2NormHandler)
+@register(SL2NormHandler, norm, [Vector{SBit}] => [SBit])
 
 function (handler::SL2NormHandler)(netlist::Netlist,
                                    inputs::Vector{Variable},

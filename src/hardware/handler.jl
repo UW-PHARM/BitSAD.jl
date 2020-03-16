@@ -33,6 +33,9 @@ isequal(x::Operation, y::Operation) =
     all(x.inputs .== y.inputs) && all(x.outputs .== y.outputs) && (x.operator == y.operator)
 hash(x::Operation) = hash(hash(hash(x.inputs), hash(x.outputs)), hash(x.operator))
 
+opalias(x::Operation) = Operation(x.inputs, x.outputs, opalias(x.operator))
+opalias(x) = (x == :÷) ? :div : x
+
 """
     AbstractHandler
 
@@ -58,7 +61,7 @@ register(Operation([:SBit, :SBit], [:SBit], :+), SAddHandler)
 ```
 """
 register(op::Operation, handler::Type{T}) where T<:AbstractHandler =
-    _handlermap[op] = handler
+    _handlermap[opalias(op)] = handler
 
 gethandler(op::Operation) = haskey(_handlermap, op) ? _handlermap[op] :
     error("""
@@ -66,6 +69,36 @@ gethandler(op::Operation) = haskey(_handlermap, op) ? _handlermap[op] :
         Perhaps you forgot to register a handler for your custom operation?
         """)
 
+maptype(x) = @capture(x, Matrix{T_}) ? [Symbol("Array{$T,2}")] :
+             @capture(x, Vector{T_}) ? [Symbol("Array{$T,1}")] :
+             @capture(x, Number) ? vcat(maptype(:Integer), maptype(:Real)) :
+             @capture(x, Real) ? [:Float16, :Float32, :Float64] :
+             @capture(x, Integer) ? [:UInt8, :Int8, :UInt16, :Int16, :UInt32, :Int32, :UInt64, :Int64, :UInt128, :Int128] :
+             [x]
+
+function register(intypes, outtypes, op, handler::Symbol)
+    nintypes = length(intypes)
+    typematrix = maptype.(vcat(intypes, outtypes))
+
+    for types in Base.product(typematrix...)
+        register(Operation([types[1:nintypes]...], [types[(nintypes + 1):end]...], op), @eval($handler))
+    end
+end
+
+macro register(handler, op, ex)
+    @capture(unblock(rmlines(ex)), rules__) || error("Could not parse registration.")
+    for rule in rules
+        @capture(rule, ins_ => outs_) ||
+            error("Could not parse registration $rule (use format '[:SBit, :SBit] => [:SBit]')")
+        (@capture(ins, [intypes__]) && @capture(outs, [outtypes__])) ||
+            error("Specify registration as array (use format '[:SBit, :SBit] => [:SBit]'")
+        register(intypes, outtypes, op, handler)
+    end
+
+    return :(nothing)
+end
+
+include("handlers/utils.jl")
 include("handlers/saddhandler.jl")
 include("handlers/ssubhandler.jl")
 include("handlers/smulthandler.jl")

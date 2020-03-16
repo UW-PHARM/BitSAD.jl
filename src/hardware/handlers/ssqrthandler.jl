@@ -2,9 +2,11 @@
     id = 0
 end
 
-register(Operation([:SBit], [:SBit], :sqrt), SSqrtHandler)
-register(Operation([Symbol("Vector{SBit}")], [Symbol("Vector{SBit}")], :sqrt), SSqrtHandler)
-register(Operation([Symbol("Matrix{SBit}")], [Symbol("Matrix{SBit}")], :sqrt), SSqrtHandler)
+@register(SSqrtHandler, sqrt, begin
+    [SBit] => [SBit]
+    [Vector{SBit}] => [Vector{SBit}]
+    [Matrix{SBit}] => [Matrix{SBit}]
+end)
 
 function (handler::SSqrtHandler)(netlist::Netlist,
                                  inputs::Vector{Variable},

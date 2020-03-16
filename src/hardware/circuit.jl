@@ -1,8 +1,8 @@
 using MacroTools: postwalk, @q
 
-function extracttypes!(m::Module, innames, outname, f, args...)
+function extracttypes!(m::Module, innames, outname, f, isbroadcast, args...)
     # evaluate function
-    retval = f(args...)
+    retval = isbroadcast ? f.(args...) : f(args...)
 
     # get types
     intypes = Symbol.(typeof.(args))
@@ -37,6 +37,11 @@ createstruct(name, fields) = esc(@q begin
     end
 end)
 
+function stripbroadcast(x)
+    m = match(r"\.(.*)", string(x))
+
+    return isnothing(m) ? (false, x) : (true, Symbol(m.captures[1]))
+end
 stripparameters(x; prefix) = @capture(x, p_.s_) && p == prefix ? s : x
 
 issymbol(s) = false
@@ -45,9 +50,12 @@ issymbol(s::Symbol) = true
 function parsenode!(m::Module, opd, op, args, modcalls, modsym)
     inputs = map(x -> Variable(x, :Any), args)
     outputs = map(x -> Variable(x, :Any), [opd])
+    isbroadcast, op = stripbroadcast(op)
+    op = opalias(op)
+
     addnode!(m, inputs, outputs, op)
 
-    return @q BitSAD.HW.extracttypes!($modsym, $args, $(QuoteNode(:($opd))), $op, $(modcalls...))
+    return @q BitSAD.HW.extracttypes!($modsym, $args, $(QuoteNode(:($opd))), $op, $isbroadcast, $(modcalls...))
 end
 
 function parseexpr!(m::Module, expr; prefix, modsym, opd = nothing, level = 1, depth = 1, counter = 1)

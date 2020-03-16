@@ -2,9 +2,11 @@
     id = 0
 end
 
-register(Operation([:SBit, :SBit], [:Real], :÷), SFixedGainDivHandler)
-register(Operation([Symbol("Vector{SBit}"), Symbol("Vector{Real}")], [Symbol("Vector{SBit}")], :÷), SFixedGainDivHandler)
-register(Operation([Symbol("Matrix{SBit}"), Symbol("Matrix{Real}")], [Symbol("Matrix{SBit}")], :÷), SFixedGainDivHandler)
+@register(SFixedGainDivHandler, ÷, begin
+    [SBit, Number] => [SBit]
+    [Vector{SBit}, Number] => [Vector{SBit}]
+    [Matrix{SBit}, Number] => [Matrix{SBit}]
+end)
 
 function (handler::SFixedGainDivHandler)(netlist::Netlist,
                                          inputs::Vector{Variable},

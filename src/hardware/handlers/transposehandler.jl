@@ -2,10 +2,12 @@
     id = 0
 end
 
-register(Operation([Symbol("Vector{SBit}")], [Symbol("Matrix{SBit}")], :permutedims), TransposeHandler)
-register(Operation([Symbol("Vector{DBit}")], [Symbol("Matrix{DBit}")], :permutedims), TransposeHandler)
-register(Operation([Symbol("Matrix{SBit}")], [Symbol("Matrix{SBit}")], :permutedims), TransposeHandler)
-register(Operation([Symbol("Matrix{DBit}")], [Symbol("Matrix{DBit}")], :permutedims), TransposeHandler)
+@register(TransposeHandler, permutedims, begin
+    [Vector{SBit}] => [Matrix{SBit}]
+    [Vector{DBit}] => [Matrix{DBit}]
+    [Matrix{SBit}] => [Matrix{SBit}]
+    [Matrix{DBit}] => [Matrix{DBit}]
+end)
 
 function (handler::TransposeHandler)(netlist::Netlist,
                                      inputs::Vector{Variable},
@@ -20,7 +22,7 @@ function (handler::TransposeHandler)(netlist::Netlist,
     outstring = """
         $stdcomment
         // BEGIN transpose$(handler.id)
-        $(id > 0 ? "" : "integer i, j;")
+        $(handler.id > 0 ? "" : "integer i, j;")
         always @(*) begin
             for (i = 0; i < $(sizes[1][1]); i = i + 1) begin
                 for (j = 0; j < $(sizes[1][2]); j = j + 1) begin

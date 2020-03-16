@@ -3,24 +3,26 @@ using Makie, DataStructures
 using Statistics: mean
 using LinearAlgebra
 
-struct IterativeSVD
-    rows::Int
-    cols::Int
-end
+circuit = @circuit IterativeSVD begin
+    parameters : [
+        rows::Int => 2,
+        cols::Int => 2
+    ]
 
-function (dut::IterativeSVD)(A::Matrix{SBit}, v₀::Vector{SBit})
-    # Update right singular vector
-    w = A * v₀
-    wscaled = w .÷ sqrt(dut.rows)
-    u = wscaled ./ norm(wscaled)
+    circuit : (dut::IterativeSVD)(A::Matrix{SBit}, v₀::Vector{SBit}) -> begin
+        # Update right singular vector
+        w = A * v₀
+        wscaled = w .÷ sqrt(dut.rows)
+        u = wscaled ./ norm(wscaled)
 
-    # Update left singular vector
-    z = permutedims(A) * u
-    zscaled = z .÷ sqrt(dut.cols)
-    σ = norm(zscaled)
-    v = zscaled ./ σ
+        # Update left singular vector
+        z = permutedims(A) * u
+        zscaled = z .÷ sqrt(dut.cols)
+        σ = norm(zscaled)
+        v = zscaled ./ σ
 
-    return u, v, σ
+        return u, v, σ
+    end
 end
 
 N = 10

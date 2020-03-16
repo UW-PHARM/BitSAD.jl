@@ -2,16 +2,22 @@
     id = 0
 end
 
-register(Operation([:SBit, :SBit], [:SBit], :+), SAddHandler)
-register(Operation([Symbol("Vector{SBit}"), Symbol("Vector{SBit}")], [Symbol("Vector{SBit}")], :+), SAddHandler)
-register(Operation([Symbol("Matrix{SBit}"), Symbol("Matrix{SBit}")], [Symbol("Matrix{SBit}")], :+), SAddHandler)
+@register(SAddHandler, +, begin
+    [SBit, SBit] => [SBit]
+    [SBit, Vector{SBit}] => [Vector{SBit}]
+    [Vector{SBit}, SBit] => [Vector{SBit}]
+    [Vector{SBit}, Vector{SBit}] => [Vector{SBit}]
+    [SBit, Matrix{SBit}] => [Matrix{SBit}]
+    [Matrix{SBit}, SBit] => [Matrix{SBit}]
+    [Matrix{SBit}, Matrix{SBit}] => [Matrix{SBit}]
+end)
 
 function (handler::SAddHandler)(netlist::Netlist,
                                 inputs::Vector{Variable},
                                 outputs::Vector{Variable},
                                 sizes::Vector{Tuple{Int, Int}})
     # compute output size
-    outsize = sizes[1]
+    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name, sizes[1], sizes[2])
 
     # add output net to netlist
     update!(netlist, Net(name = string(outputs[1].name), signed = true, size = outsize))
@@ -25,8 +31,8 @@ function (handler::SAddHandler)(netlist::Netlist,
             ) add$(handler.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1].name)_p),
-                .B($(inputs[2].name)_p),
+                .A($(lname("_p"))),
+                .B($(rname("_p"))),
                 .Y($(outputs[1].name)_p)
             );
         stoch_add_mat #(
@@ -35,8 +41,8 @@ function (handler::SAddHandler)(netlist::Netlist,
             ) add$(handler.id)_mm (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1].name)_m),
-                .B($(inputs[2].name)_m),
+                .A($(lname("_m"))),
+                .B($(rname("_m"))),
                 .Y($(outputs[1].name)_m)
             );
         // END add$(handler.id)

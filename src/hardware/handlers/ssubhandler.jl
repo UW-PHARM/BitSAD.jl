@@ -2,16 +2,22 @@
     id = 0
 end
 
-register(Operation([:SBit, :SBit], [:SBit], :-), SSubHandler)
-register(Operation([Symbol("Vector{SBit}"), Symbol("Vector{SBit}")], [Symbol("Vector{SBit}")], :-), SSubHandler)
-register(Operation([Symbol("Matrix{SBit}"), Symbol("Matrix{SBit}")], [Symbol("Matrix{SBit}")], :-), SSubHandler)
+@register(SSubHandler, -, begin
+    [SBit, SBit] => [SBit]
+    [SBit, Vector{SBit}] => [Vector{SBit}]
+    [Vector{SBit}, SBit] => [Vector{SBit}]
+    [Vector{SBit}, Vector{SBit}] => [Vector{SBit}]
+    [SBit, Matrix{SBit}] => [Matrix{SBit}]
+    [Matrix{SBit}, SBit] => [Matrix{SBit}]
+    [Matrix{SBit}, Matrix{SBit}] => [Matrix{SBit}]
+end)
 
 function (handler::SSubHandler)(netlist::Netlist,
                                 inputs::Vector{Variable},
                                 outputs::Vector{Variable},
                                 sizes::Vector{Tuple{Int, Int}})
     # compute output size
-    outsize = sizes[1]
+    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name, sizes[1], sizes[2])
 
     # add internal nets to netlist
     update!(netlist, Net(name = "sub$(handler.id)_pp", size = outsize))
@@ -31,8 +37,8 @@ function (handler::SSubHandler)(netlist::Netlist,
             ) sub$(handler.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1].name)_p),
-                .B($(inputs[2].name)_m),
+                .A($(lname("_p"))),
+                .B($(rname("_m"))),
                 .Y(sub$(handler.id)_pp)
             );
         stoch_sat_sub_mat #(
@@ -41,8 +47,8 @@ function (handler::SSubHandler)(netlist::Netlist,
             ) sub$(handler.id)_pm (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[2].name)_p),
-                .B($(inputs[1].name)_m),
+                .A($(rname("_p"))),
+                .B($(lname("_m"))),
                 .Y(sub$(handler.id)_pm)
             );
         stoch_sat_sub_mat #(
@@ -51,8 +57,8 @@ function (handler::SSubHandler)(netlist::Netlist,
             ) sub$(handler.id)_mp (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[2].name)_m),
-                .B($(inputs[1].name)_m),
+                .A($(rname("_m"))),
+                .B($(lname("_m"))),
                 .Y(sub$(handler.id)_mp)
             );
         stoch_sat_sub_mat #(
@@ -61,8 +67,8 @@ function (handler::SSubHandler)(netlist::Netlist,
             ) sub$(handler.id)_mm (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1].name)_m),
-                .B($(inputs[2].name)_m),
+                .A($(lname("_m"))),
+                .B($(rname("_m"))),
                 .Y(sub$(handler.id)_mm)
             );
         stoch_add_mat #(

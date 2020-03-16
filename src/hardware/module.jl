@@ -26,7 +26,12 @@ getparents(g::MetaDiGraph, x::Variable) =
     filter_vertices(g, (g, v) -> x ∈ get_prop(g, v, :outputs))
 getchildren(g::MetaDiGraph, x::Variable) =
     filter_vertices(g, (g, v) -> x ∈ get_prop(g, v, :inputs))
-traverse(g::MetaDiGraph, vs) = unique(reduce(vcat, map(v -> outneighbors(g, v), vs)))
+function traverse(g::MetaDiGraph, vs::Vector{T}, visited = T[]) where T
+    levelup = unique(reduce(vcat, map(v -> outneighbors(g, v), vs)))
+    parents = filter(v -> all(x -> x ∈ visited, inneighbors(g, v)), levelup)
+
+    return parents, union(parents, visited)
+end
 
 function addnode!(m::Module, inputs::Vector{Variable}, outputs::Vector{Variable}, op::Symbol)
     add_vertex!(m.dfg)
@@ -71,6 +76,28 @@ getinputs(g::MetaDiGraph, v) = get_prop(g, v, :inputs)
 getoutputs(g::MetaDiGraph, v) = get_prop(g, v, :outputs)
 getoperator(g::MetaDiGraph, v) = get_prop(g, v, :operator)
 
+include("optimizations/constantreduction.jl")
+
+function printdfg(m::Module)
+    nodes = getroots(m.dfg)
+    visited = nodes
+    padding = ""
+
+    while !isempty(nodes)
+        for node in nodes
+            inputs = getinputs(m.dfg, node)
+            outputs = getoutputs(m.dfg, node)
+            op = getoperator(m.dfg, node)
+            println("$(padding)inputs: $inputs")
+            println("$(padding)outputs: $outputs")
+            println("$(padding)op: $op")
+        end
+
+        nodes, visited = traverse(m.dfg, nodes, visited)
+        padding *= "   "
+    end
+end
+
 function asksize(x::String)
     print("What is the size of $x (as a tuple)? ")
     resp = match(r"\((\d+),\s*(\d+)\)", readline())
@@ -89,17 +116,26 @@ function generate(m::Module)
     netlist = Netlist()
     handlers = Dict{Operation, AbstractHandler}()
     outstr = ""
+    m = deepcopy(m)
+
+    # run constant reduction
+    constantreduction!(m, netlist)
 
     # start at inputs
     nodes = getroots(m.dfg)
+    visited = nodes
 
     # add inputs to netlist
     for node in nodes
         inputs = getinputs(m.dfg, node)
         for input in inputs
             if !contains(netlist, getname(input))
-                s = asksize(getname(input))
-                update!(netlist, Net(name = getname(input), class = :input, signed = true, size = s))
+                if haskey(m.parameters, input.name)
+                    update!(netlist, Net(name = getname(input), class = :parameter, size = (1, 1)))
+                else
+                    s = asksize(getname(input))
+                    update!(netlist, Net(name = getname(input), class = :input, signed = true, size = s))
+                end
             end
         end
     end
@@ -122,7 +158,7 @@ function generate(m::Module)
         end
 
         # move one level up in the DFG
-        nodes = traverse(m.dfg, nodes)
+        nodes, visited = traverse(m.dfg, nodes, visited)
     end
 
     return outstr

@@ -6,17 +6,25 @@ end
     id = 0
 end
 
-register(Operation([:SBit, :SBit], [:SBit], :*), SMultHandler)
-register(Operation([Symbol("Vector{SBit}"), Symbol("Matrix{SBit}")], [Symbol("Matrix{SBit}")], :*), SMatMultHandler)
-register(Operation([Symbol("Matrix{SBit}"), Symbol("Vector{SBit}")], [Symbol("Matrix{SBit}")], :*), SMatMultHandler)
-register(Operation([Symbol("Matrix{SBit}"), Symbol("Matrix{SBit}")], [Symbol("Matrix{SBit}")], :*), SMatMultHandler)
+@register(SMultHandler, *, begin
+    [SBit, SBit] => [SBit]
+    [SBit, Vector{SBit}] => [Vector{SBit}]
+    [Vector{SBit}, SBit] => [Vector{SBit}]
+    [SBit, Matrix{SBit}] => [Matrix{SBit}]
+    [Matrix{SBit}, SBit] => [Matrix{SBit}]
+end)
+@register(SMatMultHandler, *, begin
+    [Vector{SBit}, Matrix{SBit}] => [Matrix{SBit}]
+    [Matrix{SBit}, Vector{SBit}] => [Vector{SBit}]
+    [Matrix{SBit}, Matrix{SBit}] => [Matrix{SBit}]
+end)
 
 function (handler::SMultHandler)(netlist::Netlist,
                                  inputs::Vector{Variable},
                                  outputs::Vector{Variable},
                                  sizes::Vector{Tuple{Int, Int}})
     # compute output size
-    outsize = sizes[1]
+    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name, sizes[1], sizes[2])
 
     # add internal nets to netlist
     update!(netlist, Net(name = "mult$(handler.id)_pp", size = outsize))
@@ -34,10 +42,10 @@ function (handler::SMultHandler)(netlist::Netlist,
     outstring = """
         $stdcomment
         // BEGIN mult$(handler.id)
-        assign mult$(handler.id)_pp = $(inputs[1].name)_p & $(inputs[2].name)_p
-        assign mult$(handler.id)_pm = $(inputs[1].name)_p & $(inputs[2].name)_m
-        assign mult$(handler.id)_mp = $(inputs[1].name)_m & $(inputs[2].name)_p
-        assign mult$(handler.id)_mm = $(inputs[1].name)_m & $(inputs[2].name)_m
+        assign mult$(handler.id)_pp = $(lname("_p")) & $(rname("_p"))
+        assign mult$(handler.id)_pm = $(lname("_p")) & $(rname("_m"))
+        assign mult$(handler.id)_mp = $(lname("_m")) & $(rname("_p"))
+        assign mult$(handler.id)_mm = $(lname("_m")) & $(rname("_m"))
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
@@ -111,7 +119,7 @@ function (handler::SMatMultHandler)(netlist::Netlist,
                                     outputs::Vector{Variable},
                                     sizes::Vector{Tuple{Int, Int}})
     # compute output size
-    outsize = sizes[1][1] * sizes[2][2]
+    outsize = (sizes[1][1], sizes[2][2])
 
     # add internal nets to netlist
     update!(netlist, Net(name = "mmult$(handler.id)_pp", size = outsize))
@@ -133,7 +141,7 @@ function (handler::SMatMultHandler)(netlist::Netlist,
                 .NUM_ROWS($(sizes[1][1])),
                 .NUM_MID($(sizes[1][2])),
                 .NUM_COLS($(sizes[2][2]))
-            ) mmult${id}_pp (
+            ) mmult$(handler.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
                 .A($(inputs[1].name)_p),

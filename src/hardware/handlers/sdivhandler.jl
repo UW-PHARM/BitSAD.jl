@@ -2,16 +2,22 @@
     id = 0
 end
 
-register(Operation([:SBit, :SBit], [:SBit], :/), SDivHandler)
-register(Operation([Symbol("Vector{SBit}"), Symbol("Vector{SBit}")], [Symbol("Vector{SBit}")], :/), SDivHandler)
-register(Operation([Symbol("Matrix{SBit}"), Symbol("Matrix{SBit}")], [Symbol("Matrix{SBit}")], :/), SDivHandler)
+@register(SDivHandler, /, begin
+    [SBit, SBit] => [SBit]
+    [SBit, Vector{SBit}] => [Vector{SBit}]
+    [Vector{SBit}, SBit] => [Vector{SBit}]
+    [Vector{SBit}, Vector{SBit}] => [Vector{SBit}]
+    [SBit, Matrix{SBit}] => [Matrix{SBit}]
+    [Matrix{SBit}, SBit] => [Matrix{SBit}]
+    [Matrix{SBit}, Matrix{SBit}] => [Matrix{SBit}]
+end)
 
 function (handler::SDivHandler)(netlist::Netlist,
                                 inputs::Vector{Variable},
                                 outputs::Vector{Variable},
                                 sizes::Vector{Tuple{Int, Int}})
     # compute output size
-    outsize = sizes[1]
+    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name, sizes[1], sizes[2])
 
     # add internal nets to netlist
     update!(netlist, Net(name = "div$(handler.id)_pp", size = outsize))
@@ -30,8 +36,8 @@ function (handler::SDivHandler)(netlist::Netlist,
             ) div$(handler.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1])_p),
-                .B($(inputs[2])_p),
+                .A($(lname("_p"))),
+                .B($(rname("_p"))),
                 .Y(div$(handler.id)_pp)
             );
         stoch_div_mat #(
@@ -41,8 +47,8 @@ function (handler::SDivHandler)(netlist::Netlist,
             ) div$(handler.id)_mp (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1])_m),
-                .B($(inputs[2])_p),
+                .A($(lname("_m"))),
+                .B($(rname("_p"))),
                 .Y(div$(handler.id)_mp)
             );
         stoch_sat_sub_mat #(
