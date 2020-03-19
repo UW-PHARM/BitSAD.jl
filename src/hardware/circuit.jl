@@ -3,7 +3,7 @@ using MacroTools: postwalk, @q
 _padtuple(x, n) = length(x) < n ? (x..., ones(n - length(x))...) : x
 isconstant(x) = occursin(r"^-?\d+$", string(x)) || occursin(r"^-?\d+\.\d+$", string(x))
 
-function extracttypes!(m::Module, netlist::Netlist, innames, outname, f, isbroadcast, args...)
+function extractrtinfo!(m::Module, netlist::Netlist, innames, outname, f, isbroadcast, args...)
     # evaluate function
     retval = isbroadcast ? f.(args...) : f(args...)
 
@@ -107,7 +107,7 @@ function parsenode!(m::Module, opd, op, args, modcalls, modsym, netsym)
 
     addnode!(m, inputs, outputs, op)
 
-    return @q BitSAD.HW.extracttypes!($modsym, $netsym, $args, $(QuoteNode(:($opd))), $op, $isbroadcast, $(modcalls...))
+    return @q BitSAD.HW.extractrtinfo!($modsym, $netsym, $args, $(QuoteNode(:($opd))), $op, $isbroadcast, $(modcalls...))
 end
 
 function parseexpr!(m::Module, expr; prefix, modsym, netsym, opd = nothing, level = 1, depth = 1, counter = 1)
@@ -166,7 +166,7 @@ function parsecircuit!(m::Module, f)
     innames = string.(stripargument.(args))
     outnames = string.(Symbol.(rargs))
     modfdef = @q begin
-        function extracttypes!($dut::$T, $modsym::BitSAD.HW.Module, $netsym::BitSAD.HW.Netlist, $(args...))
+        function extractrtinfo!($dut::$T, $modsym::BitSAD.HW.Module, $netsym::BitSAD.HW.Netlist, $(args...))
             $(modstatements...)
             BitSAD.HW.setinputs!($netsym, $innames)
             BitSAD.HW.setoutputs!($netsym, $outnames)

@@ -99,20 +99,6 @@ function printdfg(m::Module)
     end
 end
 
-function asksize(x::String)
-    print("What is the size of $x (as a tuple)? ")
-    resp = match(r"\((\d+),\s*(\d+)\)", readline())
-
-    if length(resp.captures) != 2 || any(isnothing, resp.captures)
-        error("Cannot understand response. Enter a tuple (i.e. (row, col))")
-    end
-
-    row = parse(Int, resp.captures[1])
-    col = parse(Int, resp.captures[2])
-
-    return (row, col)
-end
-
 function generate(m::Module, netlist::Netlist)
     handlers = Dict{Operation, AbstractHandler}()
     outstr = ""
