@@ -11,23 +11,23 @@ end)
 
 function (handler::TransposeHandler)(netlist::Netlist,
                                      inputs::Vector{Variable},
-                                     outputs::Vector{Variable},
-                                     sizes::Vector{Tuple{Int, Int}})
+                                     outputs::Vector{Variable})
     # compute output size
-    outsize = (sizes[1][2], sizes[1][1])
+    outsize = getsize(netlist, getname(outputs[1]))
 
     # add output net to netlist
-    update!(netlist, Net(name = string(outputs[1].name), signed = true, size = outsize))
+    setsigned!(netlist, getname(outputs[1]), true)
+    setreg!(netlist, getname(outputs[1]))
 
     outstring = """
         $stdcomment
         // BEGIN transpose$(handler.id)
         $(handler.id > 0 ? "" : "integer i, j;")
         always @(*) begin
-            for (i = 0; i < $(sizes[1][1]); i = i + 1) begin
-                for (j = 0; j < $(sizes[1][2]); j = j + 1) begin
-                    $(outputs[1].name)_p[(j*$(sizes[1][1])) + i] <= $(inputs[1].name)_p[(i*$(sizes[1][2])) + j];
-                    $(outputs[1].name)_m[(j*$(sizes[1][1])) + i] <= $(inputs[1].name)_m[(i*$(sizes[1][2])) + j];
+            for (i = 0; i < $(outsize[2]); i = i + 1) begin
+                for (j = 0; j < $(outsize[1]); j = j + 1) begin
+                    $(outputs[1].name)_p[(j*$(outsize[2])) + i] <= $(inputs[1].name)_p[(i*$(outsize[1])) + j];
+                    $(outputs[1].name)_m[(j*$(outsize[2])) + i] <= $(inputs[1].name)_m[(i*$(outsize[1])) + j];
                 end
             end
         end

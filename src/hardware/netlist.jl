@@ -30,9 +30,11 @@ end
 isreg(x::Net) = (x.type == :reg)
 iswire(x::Net) = !isreg(x)
 
-isinput(x::Net) = (x == :input)
-isoutput(x::Net) = (x == :output)
-isinternal(x::Net) = (x == :internal)
+isinput(x::Net) = (x.class == :input)
+isoutput(x::Net) = (x.class == :output)
+isinternal(x::Net) = (x.class == :internal)
+isconstant(x::Net) = (x.class == :constant)
+isparameter(x::Net) = (x.class == :parameter)
 
 issigned(x::Net) = x.signed
 
@@ -61,6 +63,30 @@ function update!(n::Netlist, x::Net)
     else
         n[i] = x
     end
+
+    return n
+end
+
+function setreg!(n::Netlist, x::String)
+    i = find(n, x)
+    isnothing(i) && error("Cannot set net $x as register because it does not exist in netlist.")
+    update!(n, Net(name = x, type = :reg, class = n[i].class, signed = n[i].signed, size = n[i].size))
+
+    return n
+end
+
+function setwire!(n::Netlist, x::String)
+    i = find(n, x)
+    isnothing(i) && error("Cannot set net $x as wire because it does not exist in netlist.")
+    update!(n, Net(name = x, type = :wire, class = n[i].class, signed = n[i].signed, size = n[i].size))
+
+    return n
+end
+
+function setsigned!(n::Netlist, x::String, signed::Bool)
+    i = find(n, x)
+    isnothing(i) && error("Cannot set net $x as signed = $signed because it does not exist in netlist.")
+    update!(n, Net(name = x, type = n[i].type, class = n[i].class, signed = signed, size = n[i].size))
 
     return n
 end

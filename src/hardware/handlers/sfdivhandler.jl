@@ -10,13 +10,15 @@ end)
 
 function (handler::SFixedGainDivHandler)(netlist::Netlist,
                                          inputs::Vector{Variable},
-                                         outputs::Vector{Variable},
-                                         sizes::Vector{Tuple{Int, Int}})
+                                         outputs::Vector{Variable})
+    # update netlist with inputs
+    setsigned!(netlist, getname(inputs[1]), true)
+
     # compute output size
-    outsize = sizes[1]
+    outsize = getsize(netlist, getname(outputs[1]))
 
     # add output net to netlist
-    update!(netlist, Net(name = string(outputs[1].name), signed = true, size = outsize))
+    setsigned!(netlist, getname(outputs[1]), true)
 
     outstring = """
         $stdcomment
@@ -50,3 +52,5 @@ function (handler::SFixedGainDivHandler)(netlist::Netlist,
 
     return outstring
 end
+
+allowconstreplace(::Type{SFixedGainDivHandler}) = false

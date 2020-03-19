@@ -21,10 +21,15 @@ end)
 
 function (handler::SMultHandler)(netlist::Netlist,
                                  inputs::Vector{Variable},
-                                 outputs::Vector{Variable},
-                                 sizes::Vector{Tuple{Int, Int}})
+                                 outputs::Vector{Variable})
+    # update netlist with inputs
+    setsigned!(netlist, getname(inputs[1]), true)
+    setsigned!(netlist, getname(inputs[2]), true)
+
     # compute output size
-    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name, sizes[1], sizes[2])
+    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name,
+                                            getsize(netlist, getname(inputs[1])),
+                                            getsize(netlist, getname(inputs[2])))
 
     # add internal nets to netlist
     update!(netlist, Net(name = "mult$(handler.id)_pp", size = outsize))
@@ -37,7 +42,7 @@ function (handler::SMultHandler)(netlist::Netlist,
     update!(netlist, Net(name = "mult$(handler.id)_14", size = outsize))
 
     # add output net to netlist
-    update!(netlist, Net(name = string(outputs[1].name), signed = true, size = outsize))
+    setsigned!(netlist, getname(outputs[1]), true)
 
     outstring = """
         $stdcomment
@@ -116,10 +121,18 @@ end
 
 function (handler::SMatMultHandler)(netlist::Netlist,
                                     inputs::Vector{Variable},
-                                    outputs::Vector{Variable},
-                                    sizes::Vector{Tuple{Int, Int}})
+                                    outputs::Vector{Variable})
+    # update netlist with inputs
+    setsigned!(netlist, getname(inputs[1]), true)
+    setsigned!(netlist, getname(inputs[2]), true)
+
     # compute output size
-    outsize = (sizes[1][1], sizes[2][2])
+    m, n = getsize(netlist, getname(inputs[1]))
+    _, p = getsize(netlist, getname(inputs[2]))
+    outsize = getsize(netlist, getname(outputs[1]))
+
+    # add output net to netlist
+    setsigned!(netlist, getname(outputs[1]), true)
 
     # add internal nets to netlist
     update!(netlist, Net(name = "mmult$(handler.id)_pp", size = outsize))
@@ -131,16 +144,13 @@ function (handler::SMatMultHandler)(netlist::Netlist,
     update!(netlist, Net(name = "mmult$(handler.id)_13", size = outsize))
     update!(netlist, Net(name = "mmult$(handler.id)_14", size = outsize))
 
-    # add output net to netlist
-    update!(netlist, Net(name = string(outputs[1].name), signed = true, size = outsize))
-
     outstring = """
         $stdcomment
         // BEGIN mmult$(handler.id)
         stoch_matrix_mult #(
-                .NUM_ROWS($(sizes[1][1])),
-                .NUM_MID($(sizes[1][2])),
-                .NUM_COLS($(sizes[2][2]))
+                .NUM_ROWS($m),
+                .NUM_MID($n),
+                .NUM_COLS($p)
             ) mmult$(handler.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
@@ -149,9 +159,9 @@ function (handler::SMatMultHandler)(netlist::Netlist,
                 .Y(mmult$(handler.id)_pp)
             );
         stoch_matrix_mult #(
-                .NUM_ROWS($(sizes[1][1])),
-                .NUM_MID($(sizes[1][2])),
-                .NUM_COLS($(sizes[2][2]))
+                .NUM_ROWS($m),
+                .NUM_MID($n),
+                .NUM_COLS($p)
             ) mmult$(handler.id)_pm (
                 .CLK(CLK),
                 .nRST(nRST),
@@ -160,9 +170,9 @@ function (handler::SMatMultHandler)(netlist::Netlist,
                 .Y(mmult$(handler.id)_pm)
             );
         stoch_matrix_mult #(
-                .NUM_ROWS($(sizes[1][1])),
-                .NUM_MID($(sizes[1][2])),
-                .NUM_COLS($(sizes[2][2]))
+                .NUM_ROWS($m),
+                .NUM_MID($n),
+                .NUM_COLS($p)
             ) mmult$(handler.id)_mp (
                 .CLK(CLK),
                 .nRST(nRST),
@@ -171,9 +181,9 @@ function (handler::SMatMultHandler)(netlist::Netlist,
                 .Y(mmult$(handler.id)_mp)
             );
         stoch_matrix_mult #(
-                .NUM_ROWS($(sizes[1][1])),
-                .NUM_MID($(sizes[1][2])),
-                .NUM_COLS($(sizes[2][2]))
+                .NUM_ROWS($m),
+                .NUM_MID($n),
+                .NUM_COLS($p)
             ) mmult$(handler.id)_mm (
                 .CLK(CLK),
                 .nRST(nRST),

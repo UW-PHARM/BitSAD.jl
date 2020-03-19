@@ -14,19 +14,24 @@ end)
 
 function (handler::SSubHandler)(netlist::Netlist,
                                 inputs::Vector{Variable},
-                                outputs::Vector{Variable},
-                                sizes::Vector{Tuple{Int, Int}})
+                                outputs::Vector{Variable})
+    # update netlist with inputs
+    setsigned!(netlist, getname(inputs[1]), true)
+    setsigned!(netlist, getname(inputs[2]), true)
+
     # compute output size
-    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name, sizes[1], sizes[2])
+    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name,
+                                            getsize(netlist, getname(inputs[1])),
+                                            getsize(netlist, getname(inputs[2])))
+
+    # add output net to netlist
+    setsigned!(netlist, getname(outputs[1]), true)
 
     # add internal nets to netlist
     update!(netlist, Net(name = "sub$(handler.id)_pp", size = outsize))
     update!(netlist, Net(name = "sub$(handler.id)_pm", size = outsize))
     update!(netlist, Net(name = "sub$(handler.id)_mp", size = outsize))
     update!(netlist, Net(name = "sub$(handler.id)_mm", size = outsize))
-
-    # add output net to netlist
-    update!(netlist, Net(name = string(outputs[1].name), signed = true, size = outsize))
 
     outstring = """
         $stdcomment

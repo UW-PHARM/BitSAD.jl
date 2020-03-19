@@ -14,13 +14,18 @@ end)
 
 function (handler::SAddHandler)(netlist::Netlist,
                                 inputs::Vector{Variable},
-                                outputs::Vector{Variable},
-                                sizes::Vector{Tuple{Int, Int}})
-    # compute output size
-    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name, sizes[1], sizes[2])
+                                outputs::Vector{Variable})
+    # update netlist with inputs
+    setsigned!(netlist, getname(inputs[1]), true)
+    setsigned!(netlist, getname(inputs[2]), true)
 
-    # add output net to netlist
-    update!(netlist, Net(name = string(outputs[1].name), signed = true, size = outsize))
+    # compute output size
+    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name,
+                                            getsize(netlist, getname(inputs[1])),
+                                            getsize(netlist, getname(inputs[2])))
+
+    # update netlist with output
+    setsigned!(netlist, getname(outputs[1]), true)
 
     outstring = """
         $stdcomment

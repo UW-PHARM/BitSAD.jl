@@ -1,6 +1,9 @@
 using MacroTools: postwalk, @q
 
-function extracttypes!(m::Module, innames, outname, f, isbroadcast, args...)
+_padtuple(x, n) = length(x) < n ? (x..., ones(n - length(x))...) : x
+isconstant(x) = occursin(r"^-?\d+$", string(x)) || occursin(r"^-?\d+\.\d+$", string(x))
+
+function extracttypes!(m::Module, netlist::Netlist, innames, outname, f, isbroadcast, args...)
     # evaluate function
     retval = isbroadcast ? f.(args...) : f(args...)
 
@@ -8,15 +11,63 @@ function extracttypes!(m::Module, innames, outname, f, isbroadcast, args...)
     intypes = Symbol.(typeof.(args))
     outtype = Symbol(typeof(retval))
 
-    # push types onto module
+    # get sizes
+    insizes = _padtuple.(size.(args), 2)
+    outsize = _padtuple(size(retval), 2)
+
+    # push types onto module and netlist
     inputs = Variable[]
     outputs = [Variable(outname, outtype)]
-    for (inname, intype) in zip(innames, intypes)
+    for (inname, intype, insize) in zip(innames, intypes, insizes)
         push!(inputs, Variable(inname, intype))
+        if !contains(netlist, string(inname))
+            if isconstant(inname)
+                update!(netlist, Net(name = string(inname), class = :constant, size = insize))
+            elseif haskey(m.parameters, inname)
+                update!(netlist, Net(name = string(inname), class = :parameter, size = insize))
+            else
+                update!(netlist, Net(name = string(inname), class = :internal, size = insize))
+            end
+        end
     end
     updatetype!(m, inputs, outputs, nameof(f))
+    !contains(netlist, string(outname)) && update!(netlist, Net(name = string(outname), class = :internal, size = outsize))
 
     return retval
+end
+
+function setinputs!(netlist::Netlist, innames)
+    for inname in innames
+        i = find(netlist, inname)
+        if isnothing(i)
+            error("Cannot set $inname as input because it does not exist in netlist.")
+        else
+            update!(netlist, Net(name = inname,
+                                 type = netlist[i].type,
+                                 class = :input,
+                                 signed = netlist[i].signed,
+                                 size = netlist[i].size))
+        end
+    end
+
+    return netlist
+end
+
+function setoutputs!(netlist::Netlist, outnames)
+    for outname in outnames
+        i = find(netlist, outname)
+        if isnothing(i)
+            error("Cannot set $outname as output because it does not exist in netlist.")
+        else
+            update!(netlist, Net(name = inname,
+                                 type = netlist[i].type,
+                                 class = :output,
+                                 signed = netlist[i].signed,
+                                 size = netlist[i].size))
+        end
+    end
+
+    return netlist
 end
 
 function getparameters!(parametermap, params)
@@ -43,11 +94,12 @@ function stripbroadcast(x)
     return isnothing(m) ? (false, x) : (true, Symbol(m.captures[1]))
 end
 stripparameters(x; prefix) = @capture(x, p_.s_) && p == prefix ? s : x
+stripargument(x) = @capture(x, name_::T_) ? name : error("Cannot strip argument expression $x")
 
 issymbol(s) = false
 issymbol(s::Symbol) = true
 
-function parsenode!(m::Module, opd, op, args, modcalls, modsym)
+function parsenode!(m::Module, opd, op, args, modcalls, modsym, netsym)
     inputs = map(x -> Variable(x, :Any), args)
     outputs = map(x -> Variable(x, :Any), [opd])
     isbroadcast, op = stripbroadcast(op)
@@ -55,10 +107,10 @@ function parsenode!(m::Module, opd, op, args, modcalls, modsym)
 
     addnode!(m, inputs, outputs, op)
 
-    return @q BitSAD.HW.extracttypes!($modsym, $args, $(QuoteNode(:($opd))), $op, $isbroadcast, $(modcalls...))
+    return @q BitSAD.HW.extracttypes!($modsym, $netsym, $args, $(QuoteNode(:($opd))), $op, $isbroadcast, $(modcalls...))
 end
 
-function parseexpr!(m::Module, expr; prefix, modsym, opd = nothing, level = 1, depth = 1, counter = 1)
+function parseexpr!(m::Module, expr; prefix, modsym, netsym, opd = nothing, level = 1, depth = 1, counter = 1)
     opd = isnothing(opd) ? Symbol("net_$(level)_$(depth)_$counter") : opd
 
     if issymbol(stripparameters(expr; prefix = prefix))
@@ -70,13 +122,13 @@ function parseexpr!(m::Module, expr; prefix, modsym, opd = nothing, level = 1, d
     wires = Symbol[]
     modcalls = Union{Expr, Symbol}[]
     for (i, arg) in enumerate(args)
-        wire, modcall = parseexpr!(m, arg; prefix = prefix, modsym = modsym,
+        wire, modcall = parseexpr!(m, arg; prefix = prefix, modsym = modsym, netsym = netsym,
                                            level = level, depth = depth + 1, counter = i)
         push!(wires, wire)
         push!(modcalls, modcall)
     end
 
-    return opd, parsenode!(m, opd, op, wires, modcalls, modsym)
+    return opd, parsenode!(m, opd, op, wires, modcalls, modsym, netsym)
 end
 
 function parsecircuit!(m::Module, f)
@@ -96,20 +148,28 @@ function parsecircuit!(m::Module, f)
 
     # gensym for modified function definition
     modsym = gensym("m")
+    netsym = gensym("netlist")
 
     # step through body of function and extract DFG
     modstatements = Expr[]
+    rargs = Symbol[]
     for (i, statement) in enumerate(statements)
         @capture(statement, opd_ = rhs_) ?
-            push!(modstatements, @q $opd = $(parseexpr!(m, rhs; prefix = dut, modsym = modsym, opd = opd, level = i)[2])) :
-        @capture(statement, return rargs__) ? println("Return: $rargs") :
+            push!(modstatements,
+                @q $opd = $(parseexpr!(m, rhs; prefix = dut, modsym = modsym, netsym = netsym, opd = opd, level = i)[2])) :
+        @capture(statement, return (rvals__)) ? vcat(rargs, rvals) :
+        @capture(statement, return rval_) ? vcat(rargs, [rval]) :
         error("Cannot parse statement $statement.")
     end
 
     # create modified function definition (for type extraction at runtime)
+    innames = string.(stripargument.(args))
+    outnames = string.(Symbol.(rargs))
     modfdef = @q begin
-        function extracttypes!($dut::$T, $modsym::BitSAD.HW.Module, $(args...))
+        function extracttypes!($dut::$T, $modsym::BitSAD.HW.Module, $netsym::BitSAD.HW.Netlist, $(args...))
             $(modstatements...)
+            BitSAD.HW.setinputs!($netsym, $innames)
+            BitSAD.HW.setoutputs!($netsym, $outnames)
         end
     end
 

@@ -60,7 +60,7 @@ Register a mapping from an operation to a handler.
 register(Operation([:SBit, :SBit], [:SBit], :+), SAddHandler)
 ```
 """
-register(op::Operation, handler::Type{T}) where T<:AbstractHandler =
+register(op::Operation, handler::Type{T}) where T <: AbstractHandler =
     _handlermap[opalias(op)] = handler
 
 gethandler(op::Operation) = haskey(_handlermap, op) ? _handlermap[op] :
@@ -68,6 +68,8 @@ gethandler(op::Operation) = haskey(_handlermap, op) ? _handlermap[op] :
         Cannot find handler for $(op.operator) ($(op.inputs)) -> $(op.outputs).
         Perhaps you forgot to register a handler for your custom operation?
         """)
+
+allowconstreplace(::Type{T}) where T <: AbstractHandler = true
 
 maptype(x) = @capture(x, Matrix{T_}) ? [Symbol("Array{$T,2}")] :
              @capture(x, Vector{T_}) ? [Symbol("Array{$T,1}")] :

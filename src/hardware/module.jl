@@ -77,6 +77,7 @@ getoutputs(g::MetaDiGraph, v) = get_prop(g, v, :outputs)
 getoperator(g::MetaDiGraph, v) = get_prop(g, v, :operator)
 
 include("optimizations/constantreduction.jl")
+include("optimizations/constantreplacement.jl")
 
 function printdfg(m::Module)
     nodes = getroots(m.dfg)
@@ -112,33 +113,25 @@ function asksize(x::String)
     return (row, col)
 end
 
-function generate(m::Module)
-    netlist = Netlist()
+function generate(m::Module, netlist::Netlist)
     handlers = Dict{Operation, AbstractHandler}()
     outstr = ""
     m = deepcopy(m)
 
+    printdfg(m)
+    println()
+
     # run constant reduction
     constantreduction!(m, netlist)
+    printdfg(m)
+    println()
+    constantreplacement!(m, netlist)
+    printdfg(m)
+    println()
 
     # start at inputs
     nodes = getroots(m.dfg)
     visited = nodes
-
-    # add inputs to netlist
-    for node in nodes
-        inputs = getinputs(m.dfg, node)
-        for input in inputs
-            if !contains(netlist, getname(input))
-                if haskey(m.parameters, input.name)
-                    update!(netlist, Net(name = getname(input), class = :parameter, size = (1, 1)))
-                else
-                    s = asksize(getname(input))
-                    update!(netlist, Net(name = getname(input), class = :input, signed = true, size = s))
-                end
-            end
-        end
-    end
 
     while !isempty(nodes)
         # for each node, invoke the appropriate handler
@@ -154,7 +147,7 @@ function generate(m::Module)
                 handlers[op] = handler
             end
 
-            outstr *= handler(netlist, inputs, outputs, getsize(netlist, getname.(inputs)))
+            outstr *= handler(netlist, inputs, outputs)
         end
 
         # move one level up in the DFG
@@ -164,9 +157,10 @@ function generate(m::Module)
     return outstr
 end
 function generate(m::Module, f)
-    # get types
-    f()
+    # get runtime info and populate netlist
+    netlist = Netlist()
+    f(netlist)
 
-    return generate(m)
+    return generate(m, netlist)
 end
-generate(c::Tuple{Module, Function}, dut, args...) = generate(c[1], () -> c[2](dut, c[1], args...))
+generate(c::Tuple{Module, Function}, dut, args...) = generate(c[1], (netlist) -> c[2](dut, c[1], netlist, args...))
