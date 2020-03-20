@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Internals · BitSAD.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">BitSAD.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Introduction</span><ul><li><a class="tocitem" href="../getting-started/">Getting started</a></li><li><a class="tocitem" href="../sbitstream-example/">Stochastic Bitstream Walkthrough</a></li><li><a class="tocitem" href="../dbitstream-example/">Deterministic Bitstream Walkthrough</a></li></ul></li><li><span class="tocitem">Types</span><ul><li><a class="tocitem" href="../bitstream/">Abstract Bitstreams</a></li><li><a class="tocitem" href="../sbitstream/">Stochastic Bitstreams</a></li><li><a class="tocitem" href="../dbitstream/">Deterministic Bitstreams</a></li></ul></li><li><span class="tocitem">Hardware Generation</span><ul><li><a class="tocitem" href="../hardware-generation/">Getting started</a></li><li class="is-active"><a class="tocitem" href>Internals</a><ul class="internal"><li class="toplevel"><a class="tocitem" href="#@circuit-internals-1"><span><code>@circuit</code> internals</span></a></li><li class="toplevel"><a class="tocitem" href="#HW.generate-internals-1"><span><code>HW.generate</code> internals</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Hardware Generation</a></li><li class="is-active"><a href>Internals</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Internals</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/UW-PHARM/BitSAD.jl/blob/master/docs/src/hardware-internals.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Hardware-internals-1"><a class="docs-heading-anchor" href="#Hardware-internals-1">Hardware internals</a><a class="docs-heading-anchor-permalink" href="#Hardware-internals-1" title="Permalink"></a></h1><p>From the user perspective, generating hardware seems fairly trivial. Yet, there is a lot happening under the hood to make this possible. It will be important to understand these details if you want to customize the hardware generation process.</p><p>All the information for hardware generation is stored in a <code>Module</code> object. The <code>HW.generate</code> function operates on this object to output a Verilog string. Users will typically use <code>@circuit</code> to generate the module object.</p><div class="admonition is-warning"><header class="admonition-header">Missing docstring.</header><div class="admonition-body"><p>Missing docstring for <code>Module</code>. Check Documenter&#39;s build log for details.</p></div></div><article class="docstring"><header><a class="docstring-binding" id="BitSAD.HW.generate" href="#BitSAD.HW.generate"><code>BitSAD.HW.generate</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia">HW.generate(m::Module, netlist::Netlist)
+HW.generate(m::Module, f)
+HW.generate(c::Tuple{Module, Function}, dut, args...)</code></pre><p>Generate the Verilog implementation of the module. Users will most likely call the last method form above.</p><p><strong>Fields:</strong></p><ul><li><code>m::Module</code>: the module to generate</li><li><code>netlist::Netlist</code>: the netlist for the circuit being generated</li><li><code>f</code>: a closure with one argument (a netlist) that calls a runtime information extraction function</li><li><code>c::Tuple{Module, Function}</code>: the tuple returned by <a href="#BitSAD.HW.@circuit"><code>@circuit</code></a></li><li><code>dut</code>: an instance of the circuit struct</li><li><code>args</code>: example arguments to circuit</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/UW-PHARM/BitSAD.jl/blob/bcaf1512e78221889bbfd072fe68177e689764ee/src/hardware/module.jl#LL125-L140">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="BitSAD.HW.@circuit" href="#BitSAD.HW.@circuit"><code>BitSAD.HW.@circuit</code></a> — <span class="docstring-category">Macro</span></header><section><div><pre><code class="language-julia">@circuit</code></pre><p>Create a new BitSAD circuit by specifying the name, parameters, submodules, initialization, and implementation algorithm.</p><p>Returns a <code>Tuple{Module, Function}</code>. See <a href="@ref"><code>Module</code></a>. The function returned extracts runtime information to store in the <code>Module</code>.</p><p>The function has the signature where <code>T</code> is the name of the circuit generated:</p><pre><code class="language-julia">extractrtinfo!(dut::T, m::BitSAD.HW.Module, netlist::BitSAD.HW.Netlist, args...)</code></pre><p><strong>Examples</strong></p><pre><code class="language-julia">m = @circuit Foo begin
+    parameters : [
+        a =&gt; 0.125
+        b =&gt; 10
+    ]
+
+    submodules : [
+        m::SDM,
+        n::CircularBuffer{DBit}
+    ]
+
+    initialize : begin
+        dut = new(a, b, m, n)
+        fill!(dut.n, zero(DBit))
+
+        return dut
+    end
+
+    circuit : (dut::Foo)(x::DBit) -&gt; begin
+        y = dut.a * x
+        z = y + dut.b
+
+        return z
+    end
+end</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/UW-PHARM/BitSAD.jl/blob/bcaf1512e78221889bbfd072fe68177e689764ee/src/hardware/circuit.jl#LL237-L279">source</a></section></article><h1 id="@circuit-internals-1"><a class="docs-heading-anchor" href="#@circuit-internals-1"><code>@circuit</code> internals</a><a class="docs-heading-anchor-permalink" href="#@circuit-internals-1" title="Permalink"></a></h1><p>The <code>@circuit</code> is responsible for parsing a domain-specific language for creating and populating <code>Module</code> objects. In <a href="../hardware-generation/#Generating-hardware-1">Generating hardware</a>, we see an example of <code>@circuit</code> being used. Here is an equivalent piece of code for achieving the same goal without using <code>@circuit</code></p><pre><code class="language-julia">using BitSAD
+using BitSAD.HW: Variable
+
+Base.@kwdef struct IterativeSVD
+    rows::Int = 2
+    cols::Int = 2
+end
+
+function (dut::IterativeSVD)(A::Matrix{SBit}, v₀::Vector{SBit})
+    # Update right singular vector
+    w = A * v₀
+    wscaled = w .÷ sqrt(dut.rows)
+    u = wscaled ./ norm(wscaled)
+
+    # Update left singular vector
+    z = permutedims(A) * u
+    zscaled = z .÷ sqrt(dut.cols)
+    σ = norm(zscaled)
+    v = zscaled ./ σ
+
+    return u, v, σ
+end
+
+# manually create Module
+m = Module(name = Symbol(&quot;IterativeSVD&quot;))
+
+# manually populate module DFG
+inputs = [Variable(:A, :Any), Variable(:v₀, :Any)]
+outputs = [Variable(:w, :Any)]
+op = :*
+addnode!(m, inputs, outputs)
+# ... remaining addnode! calls left out for brevity
+
+# define runtime info extraction function
+function extractrtinfo!(dut::IterativeSVD, m::BitSAD.HW.Module, netlist::BitSAD.HW.Netlist, A::Matrix{SBit}, v₀::Vector{SBit})
+    w = extractrtinfo!(m, netlist, [:A, :v₀], :w, *, false, nothing, A, v₀)
+    wscaled = extractrtinfo!(m, netlist, [:w, :net_2_2_1], :wscaled, div, true, nothing, w,
+                    extractrtinfo!(m, netlist, [:rows], :net_2_2_1, sqrt, false, nothing, dut.rows)
+                )
+    # ... remaining lines ommitted for brevity
+end
+
+circuit = (m, extractrtinfo!)</code></pre><p>We ommitted several lines to keep the snippet above short, but as you can see, for each operation in the DFG, there are many auto-generated lines of code.</p><h1 id="HW.generate-internals-1"><a class="docs-heading-anchor" href="#HW.generate-internals-1"><code>HW.generate</code> internals</a><a class="docs-heading-anchor-permalink" href="#HW.generate-internals-1" title="Permalink"></a></h1><p>The <code>HW.generate</code> goes through several stages to produce the output Verilog string. Here are those steps (assuming <code>circuit</code> is the tuple returned by <code>@circuit</code>):</p><ol><li>Call <code>HW.generate(circuit, dut, args...)</code> where <code>dut</code> refers to an instance of the algorithm struct and <code>args...</code> are the example arguments to the circuit.</li><li>This function in turn calls <code>HW.generate(circuit[1], (netlist) -&gt; circuit[2](dut, circuit[1], netlist, args...))</code>.</li><li>This function in turn does:<ol><li>Creates a new netlist with <code>netlist = Netlist()</code>.</li><li>Populates the module and netlist with runtime information calling <code>f(netlist)</code> where <code>f</code> is the anonymous function in Step 2 above.</li><li>Calls <code>HW.generate(module, netlist)</code> where <code>module</code> is <code>circuit[1]</code> populated with runtime info using <code>f</code>.</li></ol></li><li>We now step through the main hardware generation function:<ol><li>Apply the constant reduction phase to reduce expressions containing only compile time literals or module parameters.</li><li>Apply the constant replacement phase to transform each constant in the circuit into a binary Verilog literal.</li><li>Traverse the DFG from inputs to outputs in breadth-first fashion. For each node in the traversal:<ol><li>Get the current handler object corresponding to the operation and input/output types of the node.</li><li>Call the handler object passing the current node&#39;s inputs/outputs and netlist. The handler will update the netlist if necessary and return a Verilog string instantiating that operation into the total circuit.</li></ol></li><li>Return all the Verilog strings concatenated together.</li></ol></li></ol><p><code>HW.generate</code> makes a deep-copy of the <code>Module</code> object, so any optimization phases above do not modify the DFG generated by <code>@circuit</code>. This allows you to call <code>HW.generate</code> multiple times with different example arguments. This can be useful if you want to programmatically generate many versions of the same circuit with different parameters (e.g. different matrix sizes).</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../hardware-generation/">« Getting started</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 20 March 2020 20:24">Friday 20 March 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
