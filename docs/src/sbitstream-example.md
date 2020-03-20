@@ -46,7 +46,7 @@ circuit = @circuit IterativeSVD begin
 end
 ```
 
-Above, we created the `IterativeSVD` module that is parameterized by the number of rows and columns in the matrix. The [`@circuit`](@ref) macro creates a struct named `IterativeSVD` with fields matching the parameters. Structs in Julia are callable, which means we can call the module like a function. What happens when we call our module is defined by the `circuit` field above.
+Above, we created the `IterativeSVD` module that is parameterized by the number of rows and columns in the matrix. The [`@circuit`](@ref) macro creates a struct named `IterativeSVD` with fields matching the parameters. Structs in Julia are callable, which means we can call the module like a function. What happens when we call our module is defined by the `circuit` field above. See [Hardware Generation](@ref) for more details.
 
 Here we defined the algorithm as accepting a matrix of `SBit`s and a vector of `SBit`s. Though directly operating on `SBitstream`s is supported, this is mostly intended for REPL-style work. If you are writing a program that you intend to map to hardware, it should operate directly on `SBit`s. This should be intuitive — a stochastic bitstream circuit operates on a single bit at a time. In this way, you should aim for your modules to describe what happens in a single iteration. Lastly, it is also worth noting here how closely the function body matches the algorithm above.
 
