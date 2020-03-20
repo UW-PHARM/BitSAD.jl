@@ -3,14 +3,19 @@ using Base: @kwdef
 @kwdef mutable struct Module
     name::Symbol
     parameters::Dict{Symbol, Number} = Dict{Symbol, Number}()
+    submodules::Dict{Symbol, Symbol} = Dict{Symbol, Symbol}()
     dfg::MetaDiGraph{Int, Float64} = MetaDiGraph()
+    handlers::Dict{Operation, AbstractHandler} = Dict{Operation, AbstractHandler}()
 end
 
-Base.show(io::IO, m::Module) = print(io, "Module $(m.name) with $(length(m.parameters)) parameters")
+Base.show(io::IO, m::Module) =
+    print(io, "Module $(m.name) with $(length(m.parameters)) parameters and $(length(m.submodules)) submodules.")
 Base.show(io::IO, ::MIME"text/plain", m::Module) = print("""
     Module $(m.name):
         Parameters:
             $(m.parameters)
+        Submodules:
+            $(m.submodules)
         Number of operations: $(nv(m.dfg))
         Number of inputs: $(length(map(x -> getinputs(m.dfg, x), getroots(m.dfg))))
         Number of outputs: $(length(map(x -> getoutputs(m.dfg, x), getbuds(m.dfg))))
@@ -100,7 +105,6 @@ function printdfg(m::Module)
 end
 
 function generate(m::Module, netlist::Netlist)
-    handlers = Dict{Operation, AbstractHandler}()
     outstr = ""
     m = deepcopy(m)
 
@@ -126,11 +130,11 @@ function generate(m::Module, netlist::Netlist)
             outputs = getoutputs(m.dfg, node)
             op = Operation(gettype.(inputs), gettype.(outputs), getoperator(m.dfg, node))
 
-            if haskey(handlers, op)
-                handler = handlers[op]
+            if haskey(m.handlers, op)
+                handler = m.handlers[op]
             else
                 handler = gethandler(op)()
-                handlers[op] = handler
+                m.handlers[op] = handler
             end
 
             outstr *= handler(netlist, inputs, outputs)

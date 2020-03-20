@@ -70,13 +70,14 @@ gethandler(op::Operation) = haskey(_handlermap, op) ? _handlermap[op] :
         """)
 
 allowconstreplace(::Type{T}) where T <: AbstractHandler = true
+extractrtinfo!(handler::AbstractHandler, innames, outname, opname, inputs, output, op) = nothing
 
 maptype(x) = @capture(x, Matrix{T_}) ? [Symbol("Array{$T,2}")] :
              @capture(x, Vector{T_}) ? [Symbol("Array{$T,1}")] :
              @capture(x, Number) ? vcat(maptype(:Integer), maptype(:Real)) :
              @capture(x, Real) ? [:Float16, :Float32, :Float64] :
              @capture(x, Integer) ? [:UInt8, :Int8, :UInt16, :Int16, :UInt32, :Int32, :UInt64, :Int64, :UInt128, :Int128] :
-             [x]
+             [Symbol(x)]
 
 function register(intypes, outtypes, op, handler::Symbol)
     nintypes = length(intypes)
@@ -109,3 +110,11 @@ include("handlers/sfdivhandler.jl")
 include("handlers/ssqrthandler.jl")
 include("handlers/sl2normhandler.jl")
 include("handlers/transposehandler.jl")
+include("handlers/daddhandler.jl")
+include("handlers/dsubhandler.jl")
+include("handlers/dmulthandler.jl")
+include("handlers/fxpaddhandler.jl")
+include("handlers/fxpsubhandler.jl")
+include("handlers/fxpmulthandler.jl")
+include("handlers/sdmhandler.jl")
+include("handlers/delaybufferhandler.jl")

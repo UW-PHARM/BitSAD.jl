@@ -1,40 +1,46 @@
 using BitSAD
 using DataStructures
 
-struct SVFilter
-    f::Float64
-    q::Float64
-    delay₁::CircularBuffer{DBit}
-    delay₂::CircularBuffer{DBit}
-    ΣΔ₁::SDM
-    ΣΔ₂::SDM
+circuit = @circuit SVFilter begin
+    parameters : [
+        f::Float64 => 0.125,
+        q::Float64 => 1.875
+    ]
 
-    function SVFilter(f, q, delay₁, delay₂, ΣΔ₁, ΣΔ₂)
+    submodules : [
+        delay₁::CircularBuffer{DBit},
+        delay₂::CircularBuffer{DBit},
+        ΣΔ₁::SDM,
+        ΣΔ₂::SDM
+    ]
+
+    initialize : begin
         svfilter = new(f, q, delay₁, delay₂, ΣΔ₁, ΣΔ₂)
         fill!(svfilter.delay₁, zero(DBit))
         fill!(svfilter.delay₂, zero(DBit))
 
         return svfilter
     end
+
+    circuit : (filter::SVFilter)(x::DBit) -> begin
+        # get delay buffer values
+        d₁old = popfirst!(filter.delay₁)
+        d₂old = popfirst!(filter.delay₂)
+
+        # calculate new buffer values and filter output
+        d₂ = filter.ΣΔ₂(filter.f * d₁old + d₂old)
+        d₁ = filter.ΣΔ₁(filter.f * (x - d₂ - filter.q * d₁old) + d₁old)
+
+        # push new values into delay buffers
+        push!(filter.delay₁, d₁)
+        push!(filter.delay₂, d₂)
+
+        return d₁
+    end
 end
+
 SVFilter(f::Real, q::Real, delay::Integer) =
     SVFilter(f, q, CircularBuffer{DBit}(delay), CircularBuffer{DBit}(delay), SDM(), SDM())
-
-function (filter::SVFilter)(x::DBit)
-    # get delay buffer values
-    d₁old = popfirst!(filter.delay₁)
-    d₂old = popfirst!(filter.delay₂)
-
-    # calculate new buffer values and filter output
-    d₂ = filter.ΣΔ₂(filter.f * d₁old + d₂old)
-    d₁ = filter.ΣΔ₁(filter.f * (x - d₂ - filter.q * d₁old) + d₁old)
-
-    # push new values into delay buffers
-    push!(filter.delay₁, d₁)
-    push!(filter.delay₂, d₂)
-
-    return d₁
-end
 
 function readdat(filename)
     s = DBitstream()

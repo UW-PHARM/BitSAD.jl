@@ -3,7 +3,7 @@ using MacroTools: postwalk, @q
 _padtuple(x, n) = length(x) < n ? (x..., ones(n - length(x))...) : x
 isconstant(x) = occursin(r"^-?\d+$", string(x)) || occursin(r"^-?\d+\.\d+$", string(x))
 
-function extractrtinfo!(m::Module, netlist::Netlist, innames, outname, f, isbroadcast, args...)
+function extractrtinfo!(m::Module, netlist::Netlist, innames, outname, f, isbroadcast, submod, args...)
     # evaluate function
     retval = isbroadcast ? f.(args...) : f(args...)
 
@@ -17,10 +17,10 @@ function extractrtinfo!(m::Module, netlist::Netlist, innames, outname, f, isbroa
 
     # push types onto module and netlist
     inputs = Variable[]
-    outputs = [Variable(outname, outtype)]
+    outputs = ismissing(outname) ? Variable[] : [Variable(outname, outtype)]
     for (inname, intype, insize) in zip(innames, intypes, insizes)
         push!(inputs, Variable(inname, intype))
-        if !contains(netlist, string(inname))
+        if !contains(netlist, string(inname)) && all(insize .!= 0)
             if isconstant(inname)
                 update!(netlist, Net(name = string(inname), class = :constant, size = insize))
             elseif haskey(m.parameters, inname)
@@ -30,8 +30,31 @@ function extractrtinfo!(m::Module, netlist::Netlist, innames, outname, f, isbroa
             end
         end
     end
-    updatetype!(m, inputs, outputs, nameof(f))
-    !contains(netlist, string(outname)) && update!(netlist, Net(name = string(outname), class = :internal, size = outsize))
+
+    # update operator if operation is submodule
+    if !isnothing(submod)
+        v = findnode(m.dfg, string.(innames), [string(outname)], submod)
+        operator = Symbol(typeof(f))
+        !isempty(v) && set_prop!(m.dfg, v[1], :operator, operator)
+    else
+        operator = Symbol(f)
+    end
+    updatetype!(m, inputs, outputs, operator)
+
+    # update output in netlist
+    if !ismissing(outname) && !contains(netlist, string(outname)) && all(outsize .!= 0)
+        update!(netlist, Net(name = string(outname), class = :internal, size = outsize))
+    end
+
+    # allow handler to access runtime information
+    op = Operation([intypes...], ismissing(outname) ? Symbol[] : [outtype], operator)
+    if haskey(m.handlers, op)
+        handler = m.handlers[op]
+    else
+        handler = gethandler(op)()
+        m.handlers[op] = handler
+    end
+    extractrtinfo!(handler, innames, outname, submod, args, retval, f)
 
     return retval
 end
@@ -82,14 +105,43 @@ function getparameters!(parametermap, params)
     return parametermap, fields
 end
 
-createstruct(name, fields) = esc(@q begin
-    Base.@kwdef struct $name
-        $(fields...)
+function getsubmodules!(submodulemap, submodules)
+    fields = Expr[]
+    for submodule in submodules
+        @capture(submodule, var_::T_) ||
+            error("Cannot parse submodule: $submodule (use syntax 'modname::modtype')")
+        submodulemap[var] = Symbol(T)
+        push!(fields, @q($var::$T))
     end
-end)
+
+    return submodulemap, fields
+end
+
+createinnerconstructor(name, initdef, fields) = isnothing(initdef) ? nothing :
+    @q begin
+        function $name($(fields...))
+            $initdef
+        end
+    end
+
+createstruct(name, pfields, sfields, constructor) = isnothing(constructor) ?
+    esc(@q begin
+        Base.@kwdef struct $name
+            $(pfields...)
+            $(sfields...)
+        end
+    end) :
+    esc(@q begin
+        Base.@kwdef struct $name
+            $(pfields...)
+            $(sfields...)
+
+            $constructor
+        end
+    end)
 
 function stripbroadcast(x)
-    m = match(r"\.(.*)", string(x))
+    m = match(r"^\.(.*)$", string(x))
 
     return isnothing(m) ? (false, x) : (true, Symbol(m.captures[1]))
 end
@@ -99,15 +151,18 @@ stripargument(x) = @capture(x, name_::T_) ? name : error("Cannot strip argument 
 issymbol(s) = false
 issymbol(s::Symbol) = true
 
-function parsenode!(m::Module, opd, op, args, modcalls, modsym, netsym)
+function parsenode!(m::Module, opd, op, args, prefix, modcalls, modsym, netsym)
     inputs = map(x -> Variable(x, :Any), args)
-    outputs = map(x -> Variable(x, :Any), [opd])
+    outputs = ismissing(opd) ? Variable[] : map(x -> Variable(x, :Any), [opd])
     isbroadcast, op = stripbroadcast(op)
     op = opalias(op)
 
-    addnode!(m, inputs, outputs, op)
+    opname = stripparameters(op; prefix = prefix)
+    addnode!(m, inputs, outputs, opname)
 
-    return @q BitSAD.HW.extractrtinfo!($modsym, $netsym, $args, $(QuoteNode(:($opd))), $op, $isbroadcast, $(modcalls...))
+    submod = (opname == op) ? nothing : opname
+
+    return @q BitSAD.HW.extractrtinfo!($modsym, $netsym, $args, $(QuoteNode(:($opd))), $op, $isbroadcast, $(QuoteNode(:($submod))), $(modcalls...))
 end
 
 function parseexpr!(m::Module, expr; prefix, modsym, netsym, opd = nothing, level = 1, depth = 1, counter = 1)
@@ -128,7 +183,7 @@ function parseexpr!(m::Module, expr; prefix, modsym, netsym, opd = nothing, leve
         push!(modcalls, modcall)
     end
 
-    return opd, parsenode!(m, opd, op, wires, modcalls, modsym, netsym)
+    return opd, parsenode!(m, opd, op, wires, prefix, modcalls, modsym, netsym)
 end
 
 function parsecircuit!(m::Module, f)
@@ -157,6 +212,9 @@ function parsecircuit!(m::Module, f)
         @capture(statement, opd_ = rhs_) ?
             push!(modstatements,
                 @q $opd = $(parseexpr!(m, rhs; prefix = dut, modsym = modsym, netsym = netsym, opd = opd, level = i)[2])) :
+        @capture(statement, op_(arg__)) ?
+            push!(modstatements,
+                parseexpr!(m, statement; prefix = dut, modsym = modsym, netsym = netsym, opd = missing, level = i)[2]) :
         @capture(statement, return (rvals__)) ? vcat(rargs, rvals) :
         @capture(statement, return rval_) ? vcat(rargs, [rval]) :
         error("Cannot parse statement $statement.")
@@ -180,7 +238,7 @@ end
     @circuit
 
 Create a new BitSAD circuit by specifying the name, parameters,
-and implementation algorithm.
+submodules, initialization, and implementation algorithm.
 
 # Examples
 ```julia
@@ -201,17 +259,29 @@ end
 """
 macro circuit(name, body)
     parametermap = Dict{Symbol, Number}()
-    fields = Expr[]
+    submodulemap = Dict{Symbol, Symbol}()
+    pfields = Expr[]
+    sfields = Expr[]
     funcdef = body
     modfdef = body
+    initdef = nothing
     m = Module(name = Symbol("$name"))
 
     # walk through definition
     postwalk(body) do statement
         # extract parameters
         if @capture(statement, parameters : [params__])
-            m.parameters, fields = getparameters!(parametermap, params)
-            println(parametermap)
+            m.parameters, pfields = getparameters!(parametermap, params)
+        end
+
+        # extract submodules
+        if @capture(statement, submodules : [submods__])
+            m.submodules, sfields = getsubmodules!(submodulemap, submods)
+        end
+
+        # extract initialization
+        if @capture(statement, initialize : initroutine_)
+            initdef = rmlines(initroutine)
         end
 
         # extract circuit
@@ -222,7 +292,8 @@ macro circuit(name, body)
         return statement
     end
 
-    structdef = createstruct(name, fields)
+    innerconstructor = createinnerconstructor(name, initdef, vcat(collect(keys(parametermap)), collect(keys(submodulemap))))
+    structdef = createstruct(name, pfields, sfields, innerconstructor)
 
     return @q begin
         $structdef
