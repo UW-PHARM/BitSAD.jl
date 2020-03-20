@@ -31,5 +31,5 @@ end
 Of course, implementing the code like above for every operator would be cumbersome and prone to error. What's `_genidstr` or `_opmap` for example? How do you use them? To alleviate these issues, BitSAD provides `@simulatable`.
 
 ```@docs
-@simulatable
+BitSAD.@simulatable
 ```
