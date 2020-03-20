@@ -21,7 +21,7 @@ The following makes a simulatable stochastic divide operation.
 @simulatable(SSignedDivider,
 function /(x::SBit, y::SBit)
     if y.value <= 0
-        error("SBit only supports divisors > 0 (y == $y).")
+        error("SBit only supports divisors > 0.")
     end
 
     x.value / y.value
