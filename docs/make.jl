@@ -15,6 +15,9 @@ makedocs(;
             "Stochastic Bitstreams" => "sbitstream.md",
             "Deterministic Bitstreams" => "dbitstream.md",
         ],
+        "Hardware Generation"
+            "Getting started" => "hardware-generation.md",
+            "Internals" => "hardware-internals.md",
     ],
     repo="https://github.com/UW-PHARM/BitSAD.jl/blob/{commit}{path}#L{line}",
     sitename="BitSAD.jl",

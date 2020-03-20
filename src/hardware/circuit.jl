@@ -240,6 +240,14 @@ end
 Create a new BitSAD circuit by specifying the name, parameters,
 submodules, initialization, and implementation algorithm.
 
+Returns a `Tuple{Module, Function}`. See [`Module`](@ref).
+The function returned extracts runtime information to store in the `Module`.
+
+The function has the signature where `T` is the name of the circuit generated:
+```julia
+extractrtinfo!(dut::T, m::BitSAD.HW.Module, netlist::BitSAD.HW.Netlist, args...)
+```
+
 # Examples
 ```julia
 m = @circuit Foo begin
@@ -247,6 +255,18 @@ m = @circuit Foo begin
         a => 0.125
         b => 10
     ]
+
+    submodules : [
+        m::SDM,
+        n::CircularBuffer{DBit}
+    ]
+
+    initialize : begin
+        dut = new(a, b, m, n)
+        fill!(dut.n, zero(DBit))
+
+        return dut
+    end
 
     circuit : (dut::Foo)(x::DBit) -> begin
         y = dut.a * x

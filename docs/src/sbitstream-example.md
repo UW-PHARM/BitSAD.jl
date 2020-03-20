@@ -18,35 +18,35 @@ Now let's walk through an `SBitstream` example program to compute the iterative 
 
 ----
 
-First we import BitSAD and create a module for our algorithm. There is no fixed way for defining an algorithm, but we recommend defining a struct. This way, the fields of the struct represent the submodules and internal parameters of the algorithm.
+First we import BitSAD and create a module for our algorithm. In theory, you could use any standard Julia syntax for defining your algorithm -- callable structs or functions. This is because the data types provided by BitSAD are just a subtype of `AbstractFloat`. But if you want hardware generation, then you will probably want to use some convenient macros that the package provides. Again, these macros are not require, but _strongly suggested_.
 
 ```julia
 using BitSAD
 
-struct IterativeSVD
-    rows::Int
-    cols::Int
+circuit = @circuit IterativeSVD begin
+    parameters : [
+        rows::Int => 2,
+        cols::Int => 2
+    ]
+
+    circuit : (dut::IterativeSVD)(A::Matrix{SBit}, v₀::Vector{SBit}) -> begin
+        # Update right singular vector
+        w = A * v₀
+        wscaled = w .÷ sqrt(dut.rows)
+        u = wscaled ./ norm(wscaled)
+
+        # Update left singular vector
+        z = permutedims(A) * u
+        zscaled = z .÷ sqrt(dut.cols)
+        σ = norm(zscaled)
+        v = zscaled ./ σ
+
+        return u, v, σ
+    end
 end
 ```
 
-Above, we created the `IterativeSVD` module that is parameterized by the number of rows and columns in the matrix. Structs in Julia are callable, which means we can call the module like a function.
-
-```julia
-function (dut::IterativeSVD)(A::Matrix{SBit}, v₀::Vector{SBit})
-    # Update right singular vector
-    w = A * v₀
-    wscaled = w .÷ sqrt(dut.rows)
-    u = wscaled ./ norm(wscaled)
-
-    # Update left singular vector
-    z = permutedims(A) * u
-    zscaled = z .÷ sqrt(dut.cols)
-    σ = norm(zscaled)
-    v = zscaled ./ σ
-
-    return u, v, σ
-end
-```
+Above, we created the `IterativeSVD` module that is parameterized by the number of rows and columns in the matrix. The [`@circuit`](@ref) macro creates a struct named `IterativeSVD` with fields matching the parameters. Structs in Julia are callable, which means we can call the module like a function. What happens when we call our module is defined by the `circuit` field above.
 
 Here we defined the algorithm as accepting a matrix of `SBit`s and a vector of `SBit`s. Though directly operating on `SBitstream`s is supported, this is mostly intended for REPL-style work. If you are writing a program that you intend to map to hardware, it should operate directly on `SBit`s. This should be intuitive — a stochastic bitstream circuit operates on a single bit at a time. In this way, you should aim for your modules to describe what happens in a single iteration. Lastly, it is also worth noting here how closely the function body matches the algorithm above.
 
