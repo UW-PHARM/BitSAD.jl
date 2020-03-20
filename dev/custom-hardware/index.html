@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Custom hardware generation · BitSAD.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">BitSAD.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Introduction</span><ul><li><a class="tocitem" href="../getting-started/">Getting started</a></li><li><a class="tocitem" href="../sbitstream-example/">Stochastic Bitstream Walkthrough</a></li><li><a class="tocitem" href="../dbitstream-example/">Deterministic Bitstream Walkthrough</a></li></ul></li><li><span class="tocitem">Types</span><ul><li><a class="tocitem" href="../bitstream/">Abstract Bitstreams</a></li><li><a class="tocitem" href="../sbitstream/">Stochastic Bitstreams</a></li><li><a class="tocitem" href="../dbitstream/">Deterministic Bitstreams</a></li></ul></li><li><span class="tocitem">Hardware Generation</span><ul><li><a class="tocitem" href="../hardware-generation/">Getting started</a></li><li><a class="tocitem" href="../hardware-internals/">Internals</a></li></ul></li><li><span class="tocitem">Customizing BitSAD</span><ul><li class="is-active"><a class="tocitem" href>Custom hardware generation</a><ul class="internal"><li><a class="tocitem" href="#Complex-custom-handlers-1"><span>Complex custom handlers</span></a></li><li><a class="tocitem" href="#Runtime-extraction-for-handlers-1"><span>Runtime extraction for handlers</span></a></li><li class="toplevel"><a class="tocitem" href="#Hardware-API-1"><span>Hardware API</span></a></li></ul></li><li><a class="tocitem" href="../custom-soperators/">Custom <code>SBitstream</code> operators</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Customizing BitSAD</a></li><li class="is-active"><a href>Custom hardware generation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Custom hardware generation</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/UW-PHARM/BitSAD.jl/blob/master/docs/src/custom-hardware.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Custom-hardware-generation-1"><a class="docs-heading-anchor" href="#Custom-hardware-generation-1">Custom hardware generation</a><a class="docs-heading-anchor-permalink" href="#Custom-hardware-generation-1" title="Permalink"></a></h1><p>A natural extension to BitSAD is user-defined hardware operators. For example, suppose you have a better implemention of a stochastic adder, and you want <code>x + y</code> (for <code>x</code>, <code>y</code> as <code>SBitstream</code>s) to map to instantiate your implementation. To facilitate this, BitSAD provides the <a href="#BitSAD.HW.AbstractHandler"><code>AbstractHandler</code></a> interface. Let&#39;s take a look at <code>SAddHandler</code>, BitSAD&#39;s default implementation for stochastic addition, to see how this works.</p><p>First, we need to create a subtype of <code>AbstractHandler</code>.</p><pre><code class="language-julia">@kwdef mutable struct SAddHandler &lt;: AbstractHandler
+    id = 0
+end</code></pre><p>There is nothing special yet about this handler, but we will make note of the <code>id</code> field. For each call to <a href="../hardware-internals/#BitSAD.HW.generate"><code>HW.generate</code></a>, a single instance of <code>SAddHandler</code> will be responsible for generating the Verilog strings for every stochastic add operation in the DFG. Clearly, we do not want to name all instances generated the same, or the Verilog synthesizer will complain. The <code>id</code> field allows us to make each instance name unique. You will likely need some similar mechanism for your custom handler.</p><p>The next step is to <em>register</em> the handler with BitSAD. For this, BitSAD provides the convenient <a href="#BitSAD.HW.@register"><code>HW.@register</code></a> macro. Here&#39;s how it is used for <code>SAddHandler</code>.</p><pre><code class="language-julia">@register(SAddHandler, +, begin
+    [SBit, SBit] =&gt; [SBit]
+    [SBit, Vector{SBit}] =&gt; [Vector{SBit}]
+    [Vector{SBit}, SBit] =&gt; [Vector{SBit}]
+    [Vector{SBit}, Vector{SBit}] =&gt; [Vector{SBit}]
+    [SBit, Matrix{SBit}] =&gt; [Matrix{SBit}]
+    [Matrix{SBit}, SBit] =&gt; [Matrix{SBit}]
+    [Matrix{SBit}, Matrix{SBit}] =&gt; [Matrix{SBit}]
+end)</code></pre><p>The <code>@register</code> macro takes three arguments — a handler type, an operator, and a sequence of rules. The rules specify which combination of input argument types map to output arguments. The format of a rule is <code>[intype1, intype2, ...] =&gt; [outtype1, ...]</code>. Each type in the rule can be any type in Julia; the only restriction is that the types must be runtime types. BitSAD will try to match a node in the DFG based on the types of the arguments according to runtime dispatch. So, you might have defined <code>+(x::SBit, y::Real)</code>, but at runtime <code>y</code> might be <code>Float64</code>, <code>Int64</code>, or <code>UInt128</code>. Normally, you would have to specify a rule for every possible dispatch combination you want to match. But for some common cases, <code>@register</code> affords some conveniences. For example, <code>Number</code> matches any primitive numeric type. Below is a list of all convenience mappings.</p><table><tr><th style="text-align: left">Keyword</th><th style="text-align: left">Types</th></tr><tr><td style="text-align: left"><code>Integer</code></td><td style="text-align: left"><code>UInt8</code>, <code>Int8</code>, <code>UInt16</code>, <code>Int16</code>, <code>UInt32</code>, <code>Int32</code>, <code>UInt64</code>, <code>Int64</code>, <code>UInt128</code>, <code>Int128</code></td></tr><tr><td style="text-align: left"><code>Real</code></td><td style="text-align: left"><code>Float16</code>, <code>Float32</code>, <code>Float64</code></td></tr><tr><td style="text-align: left"><code>Number</code></td><td style="text-align: left">Everything for <code>Real</code> &amp; <code>Integer</code></td></tr><tr><td style="text-align: left"><code>Matrix{_}</code></td><td style="text-align: left"><code>Array{_, 2}</code></td></tr><tr><td style="text-align: left"><code>Vector{_}</code></td><td style="text-align: left"><code>Array{_, 1}</code></td></tr></table><p>Now, any time BitSAD encounters a node that accepts two <code>SBit</code>s as inputs, applies <code>+</code> on those inputs, and returns a <code>SBit</code>, it will invoke an instance of <code>SAddHandler</code> to generate the Verilog string. The next step is to define what happens when our handler is invoked.</p><pre><code class="language-julia">function (handler::SAddHandler)(netlist::Netlist,
+                                inputs::Vector{Variable},
+                                outputs::Vector{Variable})
+    # update netlist with inputs
+    setsigned!(netlist, getname(inputs[1]), true)
+    setsigned!(netlist, getname(inputs[2]), true)
+
+    # compute output size
+    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name,
+                                            getsize(netlist, getname(inputs[1])),
+                                            getsize(netlist, getname(inputs[2])))
+
+    # update netlist with output
+    setsigned!(netlist, getname(outputs[1]), true)
+
+    outstring = &quot;&quot;&quot;
+        $stdcomment
+        // BEGIN add$(handler.id)
+        stoch_add_mat #(
+                .NUM_ROWS($(outsize[1])),
+                .NUM_COLS($(outsize[2]))
+            ) add$(handler.id)_pp (
+                .CLK(CLK),
+                .nRST(nRST),
+                .A($(lname(&quot;_p&quot;))),
+                .B($(rname(&quot;_p&quot;))),
+                .Y($(outputs[1].name)_p)
+            );
+        stoch_add_mat #(
+                .NUM_ROWS($(outsize[1])),
+                .NUM_COLS($(outsize[2]))
+            ) add$(handler.id)_mm (
+                .CLK(CLK),
+                .nRST(nRST),
+                .A($(lname(&quot;_m&quot;))),
+                .B($(rname(&quot;_m&quot;))),
+                .Y($(outputs[1].name)_m)
+            );
+        // END add$(handler.id)
+        \n&quot;&quot;&quot;
+
+    handler.id += 1
+
+    return outstring
+end</code></pre><p>Every handler <em>must</em> be callable and <em>must</em> adhere to the interface: <code>(handler::AbstractHandler)(netlist::Netlist, inputs::Vector{Variable}, outputs::Vector{Variable})</code>. Refer to <a href="#Hardware-API-1">Hardware API</a> for more details on <code>Netlist</code> or <code>Variable</code>. For now, let&#39;s take a look at what our handler does. First, it sets the input and output nets as <em>signed</em>. This means that the net name will have <code>_p</code> or <code>_m</code> appended on the end. This is required for <code>SBitstream</code>s whose signed representation is actually two nets — one for the positive channel and one for the negative channel. Notice that the handler also handles broadcasting. In cases where a matrix is added to a scalar, we need to use the repeat operator in Verilog to &quot;broadcast&quot; the scalar. Finally, the handler generates the output string that instantiates the <code>stoch_add_mat</code> module in Verilog. It also updates the <code>id</code> so that the next node gets a unique instance name.</p><p>At this point, it might seems like the handler code is quite complex. This is intentional to allow users the most flexibility in extending BitSAD.</p><h2 id="Complex-custom-handlers-1"><a class="docs-heading-anchor" href="#Complex-custom-handlers-1">Complex custom handlers</a><a class="docs-heading-anchor-permalink" href="#Complex-custom-handlers-1" title="Permalink"></a></h2><p>To see just how flexible this interface can be, let&#39;s take a look at a more complex example — the delay buffer for deterministic bitstreams. Here is the code below:</p><pre><code class="language-julia">using DataStructures: capacity
+
+@kwdef mutable struct DelayBufferHandler &lt;: AbstractHandler
+    id = 0
+    pushpopmap::Dict{Symbol, NamedTuple} = Dict{Symbol, NamedTuple}()
+end
+
+@register(DelayBufferHandler, popfirst!, [CircularBuffer{DBit}] =&gt; [DBit])
+@register(DelayBufferHandler, push!, [CircularBuffer{DBit}, DBit] =&gt; [])
+
+function (handler::DelayBufferHandler)(netlist::Netlist,
+                                       inputs::Vector{Variable},
+                                       outputs::Vector{Variable})
+    buffname = inputs[1].name
+
+    if length(inputs) == 1 &amp;&amp; gettype(inputs[1]) == Symbol(&quot;CircularBuffer{DBit}&quot;)
+        # record pop in map
+        if haskey(handler.pushpopmap, buffname)
+            handler.pushpopmap[buffname] = (push = handler.pushpopmap[buffname][:push],
+                                            pop = outputs[1],
+                                            delay = handler.pushpopmap[buffname][:delay],
+                                            processed = false)
+        else
+            error(&quot;Cannot find delay buffer $buffname in handler records.&quot;)
+        end
+    else
+        # record push in map
+        if haskey(handler.pushpopmap, buffname)
+            handler.pushpopmap[buffname] = (push = inputs[2],
+                                            pop = handler.pushpopmap[buffname][:pop],
+                                            delay = handler.pushpopmap[buffname][:delay],
+                                            processed = false)
+        else
+            error(&quot;Cannot find delay buffer $buffname in handler records.&quot;)
+        end
+    end
+
+    if haskey(handler.pushpopmap, buffname) &amp;&amp; !any(isnothing, handler.pushpopmap[buffname]) &amp;&amp; !handler.pushpopmap[buffname][:processed]
+        outstring = &quot;&quot;&quot;
+            $stdcomment
+            // BEGIN delay_buff$(handler.id)
+            delay_buffer #(
+                    .DELAY($(handler.pushpopmap[buffname][:delay]))
+                ) delay_buff$(handler.id) (
+                    .CLK(CLK),
+                    .nRST(nRST),
+                    .x($(handler.pushpopmap[buffname][:push])),
+                    .y($(handler.pushpopmap[buffname][:pop]))
+                );
+            // END delay_buff$(handler.id)
+            \n&quot;&quot;&quot;
+
+        handler.pushpopmap[buffname] = (push = handler.pushpopmap[buffname][:push],
+                                        pop = handler.pushpopmap[buffname][:pop],
+                                        delay = handler.pushpopmap[buffname][:delay],
+                                        processed = true)
+
+        handler.id += 1
+    else
+        outstring = &quot;&quot;
+    end
+
+    return outstring
+end</code></pre><p>BitSAD treats <code>CircularBuffer{DBit}</code>s (from Datastructures.jl) as delay buffers. Yet, one tricky aspect of implementing delay buffers is that they will show up in two places in the DFG. A <code>popfirst!</code> operation will get the output of the buffer, and a <code>push!</code> operation will add an input to the buffer. Even though there are two operations in Julia, they correspond to a single instance in Verilog. To facilitate this, the code above registers both operations to the same handler. So, the same handler instance will be invoked regardless of which operation is encountered. Depending on whether we are handling a <code>push!</code> or <code>popfirst!</code>, we record what is being pushed or popped in <code>pushpopmap</code> — an internal handler field to keep track of all the delay buffer relationships. This field maps the name of a delay buffer (the first argument to <code>push!</code> or <code>popfirst!</code> in Julia) to a named tuple. This named tuple stores the name of what net is pushed, popped, the amount of delay, and whether the handler as already processed the Verilog string for this particular buffer.</p><p>The latter half of the function will actually output the Verilog string for a delay buffer only once all the information has been acquired in the named tuple. If the handler does not have all the information to generate the Verilog string, then it just returns an empty string. Already, this example is fairly complex. But this isn&#39;t all the code required! You may notice that we use <code>pushpopmap[_][:delay]</code>, but it is never set in any of the code above. How does this delay information get set? That is covered in the next section.</p><h2 id="Runtime-extraction-for-handlers-1"><a class="docs-heading-anchor" href="#Runtime-extraction-for-handlers-1">Runtime extraction for handlers</a><a class="docs-heading-anchor-permalink" href="#Runtime-extraction-for-handlers-1" title="Permalink"></a></h2><p>So far, we have only covered the required functions of the <code>AbstractHandler</code> interface. There are some optional functions you can implement to gain even more flexibility. Below, we show the <code>extractrtinfo!</code> interface function for the delay buffer.</p><pre><code class="language-julia">function extractrtinfo!(handler::DelayBufferHandler, innames, outname, opname, inputs, output, op)
+    if op == popfirst!
+        buffname = innames[1]
+
+        if !haskey(handler.pushpopmap, buffname)
+            handler.pushpopmap[buffname] = (push = nothing, pop = nothing, delay = capacity(inputs[1]), processed = false)
+        end
+    elseif op == push!
+        buffname = innames[1]
+
+        if !haskey(handler.pushpopmap, buffname)
+            handler.pushpopmap[buffname] = (push = nothing, pop = nothing, delay = capacity(inputs[1]), processed = false)
+        end
+    end
+end</code></pre><p>You will recall from <a href="../hardware-internals/#Hardware-internals-1">Hardware internals</a> that before the Verilog is generated, BitSAD calls a function to extract runtime information from the DFG to update the <code>Module</code>. During this phase, your handler can also access the runtime information for certain nodes. By implementing a function with the same signature as above, you will have access to the following:</p><ul><li><code>innames</code>: a vector of symbols of the input net names</li><li><code>outname</code>: a symbol of the output net name</li><li><code>opname</code>: a symbol for the operator name stored in the DFG</li><li><code>inputs</code>: the actual runtime input arguments</li><li><code>output</code>: the actual runtime return value</li><li><code>op</code>: the function called at runtime (note that for callable structs, this is the instance of the struct)</li></ul><p>It is important to remember that runtime extraction happens <em>before</em> the DFG is traversed for optimization and hardware generation. So, the DFG will be unoptimized, and fields inside your handler will not be populated yet with netlist information. Instead, this interface is provided to extract <em>only</em> the information the requires access to the runtime objects. For example, to set the delay for a delay buffer, we need to call <code>DataStructures.capacity(inputs[1])</code>. Lastly, it is important to remember that this function is only called for your handler when a node that matches the <code>@register</code> rules is encountered.</p><h1 id="Hardware-API-1"><a class="docs-heading-anchor" href="#Hardware-API-1">Hardware API</a><a class="docs-heading-anchor-permalink" href="#Hardware-API-1" title="Permalink"></a></h1><p>All custom hardware generation is based on inheriting from <code>AbstractHandler</code>. You are only required to <code>@register</code> your handler and define it as a callable struct.</p><article class="docstring"><header><a class="docstring-binding" id="BitSAD.HW.AbstractHandler" href="#BitSAD.HW.AbstractHandler"><code>BitSAD.HW.AbstractHandler</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia">AbstractHandler</code></pre><p>Inherit from this type to create a Verilog generation handler.</p><p>This object is responsible for managing all instantiations of its associated Verilog module. It should also update the netlist as it adds nets.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/UW-PHARM/BitSAD.jl/blob/586a0406b040222a97799f3c144903ff42f2b959/src/hardware/handler.jl#LL39-L47">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="BitSAD.HW.@register" href="#BitSAD.HW.@register"><code>BitSAD.HW.@register</code></a> — <span class="docstring-category">Macro</span></header><section><div><pre><code class="language-julia">HW.@register</code></pre><p>A convenience macro for registering a specific handler to a certain operation type.</p><p><strong>Examples</strong></p><p>The following code will map any call to <code>+</code> with the specified argument/return types to the <code>SAddHandler</code> object.</p><pre><code class="language-julia">@register(SAddHandler, +, begin
+    [SBit, SBit] =&gt; [SBit]
+    [SBit, Vector{SBit}] =&gt; [Vector{SBit}]
+    [Vector{SBit}, SBit] =&gt; [Vector{SBit}]
+    [Vector{SBit}, Vector{SBit}] =&gt; [Vector{SBit}]
+    [SBit, Matrix{SBit}] =&gt; [Matrix{SBit}]
+    [Matrix{SBit}, SBit] =&gt; [Matrix{SBit}]
+    [Matrix{SBit}, Matrix{SBit}] =&gt; [Matrix{SBit}]
+end)</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/UW-PHARM/BitSAD.jl/blob/586a0406b040222a97799f3c144903ff42f2b959/src/hardware/handler.jl#LL115-L135">source</a></section></article><p>There are optional functions as part of the interface as well. You can override these for more flexibility.</p><div class="admonition is-warning"><header class="admonition-header">Missing docstring.</header><div class="admonition-body"><p>Missing docstring for <code>HW.allowconstreplacement</code>. Check Documenter&#39;s build log for details.</p></div></div><article class="docstring"><header><a class="docstring-binding" id="BitSAD.HW.extractrtinfo!" href="#BitSAD.HW.extractrtinfo!"><code>BitSAD.HW.extractrtinfo!</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia">HW.extractrtinfo!(handler::AbstractHandler, innames, outname, opname, inputs, output, op)</code></pre><p>Override this function to extract runtime information.</p><p><strong>Fields:</strong></p><ul><li><code>handler::AbstractHandler</code>: an instance of your handler</li><li><code>innames::Vector{Symbol}</code>: the names of the arguments into the node</li><li><code>outname::Symbol</code>: the name of the return out of the node</li><li><code>opname::Symbol</code>: the name of the operator stored in the DFG at this node</li><li><code>inputs</code>: a vector of the actual input argument objects into the node</li><li><code>output</code>: the actual return object from the node</li><li><code>op</code>: the actual function called in Julia (for callable structs this is the struct instance itself)</li></ul></div><a class="docs-sourcelink" target="_blank" href="https://github.com/UW-PHARM/BitSAD.jl/blob/586a0406b040222a97799f3c144903ff42f2b959/src/hardware/handler.jl#LL83-L96">source</a></section></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../hardware-internals/">« Internals</a><a class="docs-footer-nextpage" href="../custom-soperators/">Custom <code>SBitstream</code> operators »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 20 March 2020 22:38">Friday 20 March 2020</span>. Using Julia version 1.3.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
