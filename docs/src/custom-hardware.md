@@ -210,6 +210,6 @@ HW.@register
 There are optional functions as part of the interface as well. You can override these for more flexibility.
 
 ```@docs
-HW.allowconstreplacement
+HW.allowconstreplace
 HW.extractrtinfo!
 ```
