@@ -40,3 +40,7 @@ The following operations are defined for `SBit`s and `SBitstream`s.
 | `÷(x::SBit, y::Real)`   | Fixed-Gain Division | `y >= 1`   |
 | `sqrt(x::SBit)`         | Square Root         | `x >= 0`   |
 | `norm(x::Vector{SBit})` | L2 Norm             | None       |
+
+# Internal details
+
+See [`SBitstream` operator internals](@ref) for the internals of `SBit` simulation.

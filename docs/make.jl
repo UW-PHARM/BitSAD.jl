@@ -19,6 +19,10 @@ makedocs(;
             "Getting started" => "hardware-generation.md",
             "Internals" => "hardware-internals.md",
         ],
+        "Customizing BitSAD" => [
+            "Custom hardware generation" => "custom-hardware.md",
+            "Custom `SBitstream` operators" => "custom-soperators.md",
+        ],
     ],
     repo="https://github.com/UW-PHARM/BitSAD.jl/blob/{commit}{path}#L{line}",
     sitename="BitSAD.jl",

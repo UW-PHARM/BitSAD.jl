@@ -69,7 +69,31 @@ gethandler(op::Operation) = haskey(_handlermap, op) ? _handlermap[op] :
         Perhaps you forgot to register a handler for your custom operation?
         """)
 
+"""
+    HW.allowconstreplace(::Type{T}) where T <: AbstractHandler
+
+Override this function to block constant replacement for the inputs to your handler.
+
+For example, `x + 2` is a node with inputs: `[:x, :2]`.
+The constant input could replaced with a Verilog string `Symbol("2'b10")`.
+Overriding the return value of this function to `false` will prevent this replacement from happening.
+"""
 allowconstreplace(::Type{T}) where T <: AbstractHandler = true
+
+"""
+    HW.extractrtinfo!(handler::AbstractHandler, innames, outname, opname, inputs, output, op)
+
+Override this function to extract runtime information.
+
+# Fields:
+- `handler::AbstractHandler`: an instance of your handler
+- `innames::Vector{Symbol}`: the names of the arguments into the node
+- `outname::Symbol`: the name of the return out of the node
+- `opname::Symbol`: the name of the operator stored in the DFG at this node
+- `inputs`: a vector of the actual input argument objects into the node
+- `output`: the actual return object from the node
+- `op`: the actual function called in Julia (for callable structs this is the struct instance itself)
+"""
 extractrtinfo!(handler::AbstractHandler, innames, outname, opname, inputs, output, op) = nothing
 
 maptype(x) = @capture(x, Matrix{T_}) ? [Symbol("Array{$T,2}")] :
@@ -88,6 +112,27 @@ function register(intypes, outtypes, op, handler::Symbol)
     end
 end
 
+"""
+    HW.@register
+
+A convenience macro for registering a specific handler to a certain operation type.
+
+# Examples
+
+The following code will map any call to `+` with the specified argument/return types
+to the `SAddHandler` object.
+```julia
+@register(SAddHandler, +, begin
+    [SBit, SBit] => [SBit]
+    [SBit, Vector{SBit}] => [Vector{SBit}]
+    [Vector{SBit}, SBit] => [Vector{SBit}]
+    [Vector{SBit}, Vector{SBit}] => [Vector{SBit}]
+    [SBit, Matrix{SBit}] => [Matrix{SBit}]
+    [Matrix{SBit}, SBit] => [Matrix{SBit}]
+    [Matrix{SBit}, Matrix{SBit}] => [Matrix{SBit}]
+end)
+```
+"""
 macro register(handler, op, ex)
     @capture(unblock(rmlines(ex)), rules__) || error("Could not parse registration.")
     for rule in rules

@@ -5,7 +5,7 @@ From the user perspective, generating hardware seems fairly trivial. Yet, there 
 All the information for hardware generation is stored in a `Module` object. The `HW.generate` function operates on this object to output a Verilog string. Users will typically use `@circuit` to generate the module object.
 
 ```@docs
-Module
+HW.Module
 HW.generate
 @circuit
 ```

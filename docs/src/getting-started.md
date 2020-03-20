@@ -47,3 +47,5 @@ x + y
 ## Under the Hood
 
 What does the comment in the above example mean? In hardware, a bitstream computing program is represented by a circuit. A stream of bits enters the circuit inputs, and each bit is processed one-by-one to produce an output bitstream. So, `x + y` is an operator that works on single bits. We mentioned that all bitstreams have a queue containing the underlying sequence of bits. For `SBitstream`s, this is a sequence of `SBit`s. The `+` operator is defined for `SBit`s to add two inputs bit samples according to the hardware specification. In other words, when you run `x + y`, the result is computed exactly as it would be in hardware. In this way, BitSAD allows users to write programs at a high algorithmic level, simulate the hardware results, verify the results, then map the program to Verilog.
+
+See [`SBitstream` operator internals](@ref) for simulation internal details. See [Hardware internals](@ref) for details about hardware generation.
