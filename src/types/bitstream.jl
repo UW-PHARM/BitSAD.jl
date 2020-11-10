@@ -1,13 +1,6 @@
 import Base: push!, pop!, length
 
 """
-    AbstractBit
-
-Inherit from this type to create a custom bit type.
-"""
-abstract type AbstractBit <: Number end
-
-"""
     AbstractBitstream
 
 Inherit from this type to create a custom bitstream type.
@@ -15,7 +8,7 @@ Inherit from this type to create a custom bitstream type.
 Expected fields:
 - `bits::Queue{AbstractBit}`: the underlying bitstream
 """
-abstract type AbstractBitstream end
+abstract type AbstractBitstream <: Number end
 
 """
     push!(s::AbstractBitstream, b)
@@ -26,12 +19,13 @@ Fields:
 - `s::AbstractBitstream`: the bitstream object
 - `b`: the bit(s) to push onto the stream
 """
-push!(s::AbstractBitstream, b::AbstractBit) = enqueue!(s.bits, b)
-function push!(s::AbstractBitstream, bs::Vector{<:AbstractBit})
+push!(s::AbstractBitstream, b) = enqueue!(s.bits, b)
+function push!(s::AbstractBitstream, bs::Vector)
     for b in bs
         push!(s, b)
     end
 end
+push!(s::VecOrMat{<:AbstractBitstream}, bs::VecOrMat) = push!.(s, bs)
 
 """
     pop!(s::AbstractBitstream)
@@ -42,6 +36,7 @@ Fields:
 - `s::AbstractBitstream`: the bitstream object
 """
 pop!(s::AbstractBitstream) = dequeue!(s.bits)
+pop!(s::VecOrMat{<:AbstractBitstream}) = pop!.(s)
 
 """
     observe(s::AbstractBitstream)
@@ -52,6 +47,7 @@ Fields:
 - `s::AbstractBitstream`: the bitstream object
 """
 observe(s::AbstractBitstream) = last(s.bits)
+observe(s::VecOrMat{<:AbstractBitstream}) = observe.(s)
 
 """
     length(s::AbstractBitstream)
