@@ -44,7 +44,7 @@ A stochastic bitstream decorrelator.
     pdecorr::SDecorrelator = SDecorrelator()
     ndecorr::SDecorrelator = SDecorrelator()
 end
-(op::SSignedDecorrelator)(x::SBit) = (op.pdecorr(pos(x)), op.ndecorr(neg(x)))
+(op::SSignedDecorrelator)(x::SBit) = SBit((op.pdecorr(x.pos), op.ndecorr(x.neg)))
 
 @kwdef mutable struct SAdder
     counter::Int = 0
@@ -72,8 +72,8 @@ A signed stochastic bitstream add operator.
     nadder::SAdder = SAdder()
 end
 function (op::SSignedAdder)(x::SBit, y::SBit)
-    pbit = op.padder(pos(x), pos(y))
-    nbit = op.nadder(neg(x), neg(y))
+    pbit = op.padder(x.pos, y.pos)
+    nbit = op.nadder(x.neg, y.neg)
 
     return (pbit, nbit)
 end
@@ -114,13 +114,13 @@ A signed stochastic bitstream subtract operator.
     nnsub::SSaturatingSubtractor = SSaturatingSubtractor()
 end
 function (op::SSignedSubtractor)(x::SBit, y::SBit)
-    pp = op.ppsub(pos(x), pos(y))
-    pn = op.pnsub(pos(y), pos(x))
-    np = op.npsub(neg(y), neg(x))
-    nn = op.nnsub(neg(x), neg(y))
+    pp = op.ppsub(x.pos, y.pos)
+    pn = op.pnsub(y.pos, x.pos)
+    np = op.npsub(y.neg, x.neg)
+    nn = op.nnsub(x.neg, y.neg)
     z = (op.padder(pp, np), op.nadder(pn, nn))
 
-    return z
+    return SBit(z)
 end
 
 struct SMultiplier end
@@ -144,10 +144,10 @@ A signed stochastic bitstream multiply operator.
     nadder::SAdder = SAdder()
 end
 function (op::SSignedMultiplier)(x::SBit, y::SBit)
-    pp = op.ppmult(pos(x), pos(y))
-    pn = op.pnmult(pos(x), neg(y))
-    np = op.npmult(neg(x), pos(y))
-    nn = op.nnmult(neg(x), neg(y))
+    pp = op.ppmult(x.pos, y.pos)
+    pn = op.pnmult(x.pos, y.neg)
+    np = op.npmult(x.neg, y.pos)
+    nn = op.nnmult(x.neg, y.neg)
 
     s₁₁ = op.sub11(pp, pn)
     s₁₂ = op.sub12(pn, pp)
@@ -156,7 +156,7 @@ function (op::SSignedMultiplier)(x::SBit, y::SBit)
 
     z = (op.padder(s₁₁, s₁₄), op.nadder(s₁₂, s₁₃))
 
-    return z
+    return SBit(z)
 end
 
 @kwdef mutable struct SDivider
@@ -190,12 +190,12 @@ A signed stochastic bitstream divide operator.
     nsub::SSaturatingSubtractor = SSaturatingSubtractor()
 end
 function (op::SSignedDivider)(x::SBit, y::SBit)
-    pp = op.pdiv(pos(x), pos(y))
-    np = op.ndiv(neg(x), pos(y))
+    pp = op.pdiv(x.pos, y.pos)
+    np = op.ndiv(x.neg, y.pos)
 
     z = (op.psub(pp, np), op.nsub(np, pp))
 
-    return z
+    return SBit(z)
 end
 
 @kwdef mutable struct SFixedGainDivider
@@ -223,7 +223,7 @@ A stochastic bitstream fixed gain divide operator.
     pdiv::SFixedGainDivider = SFixedGainDivider()
     ndiv::SFixedGainDivider = SFixedGainDivider()
 end
-(op::SSignedFixedGainDivider)(x::SBit, y::Real) = (op.pdiv(pos(x), y), op.ndiv(neg(x), y))
+(op::SSignedFixedGainDivider)(x::SBit, y::Real) = SBit((op.pdiv(x.pos, y), op.ndiv(x.neg, y)))
 
 """
     SSquareRoot
@@ -245,7 +245,7 @@ A stochastic bitstream square root operator.
 end
 function (op::SSquareRoot)(x::SBit)
     # Update counter
-    op.counter = max(op.counter + 4 * pos(x) - 4 * op.zand, -100)
+    op.counter = max(op.counter + 4 * x.pos - 4 * op.zand, -100)
 
     # Decide output
     r = rand(op.rng, 0:511)
@@ -255,7 +255,7 @@ function (op::SSquareRoot)(x::SBit)
     op.zand = z && pop!(op.buffer)
     push!(op.buffer, z)
 
-    return (z, false)
+    return SBit((z, false))
 end
 
 struct SMatMultiplier
@@ -320,7 +320,7 @@ function (op::SSignedMatMultiplier)(x::VecOrMat{SBit}, y::VecOrMat{SBit})
 
     z = zip(map.(op.padder, s₁, s₄), map.(op.nadder, s₂, s₃)) |> collect
 
-    return (size(z, 2) == 1) ? dropdims(z; dims = 2) : z
+    return (size(z, 2) == 1) ? SBit.(dropdims(z; dims = 2)) : SBit.(z)
 end
 
 """
@@ -335,7 +335,7 @@ A stochastic bitstream L2-norm operator.
 end
 function (op::SL2Normer)(x::Vector{SBit})
     # get row vector
-    dummybit = map(λ -> SBit((false, false), λ.value, λ.id), permutedims(x))
+    dummybit = fill(SBit((false, false)), size(permutedims(x)))
     xt = isempty(op.buffer) ? dummybit : pop!(op.buffer)
     push!(op.buffer, permutedims(x))
 
@@ -343,7 +343,7 @@ function (op::SL2Normer)(x::Vector{SBit})
     xtx = op.dot(xt, x)[1]
 
     # compute root
-    z = op.root(SBit(xtx, x[1].value, x[1].id))
+    z = op.root(xtx)
 
     return z
 end

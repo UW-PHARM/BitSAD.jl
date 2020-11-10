@@ -4,25 +4,27 @@ using DataStructures
 using UUIDs, PearsonHash
 using Random: MersenneTwister
 using MacroTools
+using Cassette
 using Reexport
 
-export AbstractBit, AbstractBitstream
+export AbstractBitstream
 export SBit, SBitstream
 export DBit, DBitstream
-export float, pos, neg
+export pos, neg, float
 export zero, one
 export +, -, *, /, ÷, sqrt, decorrelate, norm
 export generate, generate!, estimate!
 export push!, pop!, observe, length
-export SDM
+# export SDM
+export @simulate
 
 include("types/bitstream.jl")
 include("types/sbitstream.jl")
-include("types/dbitstream.jl")
-include("modules/sdm.jl")
+# include("types/dbitstream.jl")
+# include("modules/sdm.jl")
 
-include("hardware/HW.jl")
+# include("hardware/HW.jl")
 
-@reexport using .HW
+# @reexport using .HW
 
 end # module
