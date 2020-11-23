@@ -18,7 +18,7 @@ Hardware generation traverses `dfg` and uses `handlers` to generate Verilog stri
 
 See also: [HW.generate](@ref)
 """
-@kwdef mutable struct Module
+@kwdef struct Module
     name::Symbol
     parameters::Dict{Symbol, Number} = Dict{Symbol, Number}()
     submodules::Dict{Symbol, Symbol} = Dict{Symbol, Symbol}()
@@ -45,9 +45,9 @@ findnode(g::MetaDiGraph, inputs, outputs, operator) =
                                          get_prop(g, v, :operator) == operator))
 getroots(g::MetaDiGraph) = collect(filter_vertices(g, (g, v) -> isempty(inneighbors(g, v))))
 getbuds(g::MetaDiGraph) = collect(filter_vertices(g, (g, v) -> isempty(outneighbors(g, v))))
-getparents(g::MetaDiGraph, x::Variable) =
+getparents(g::MetaDiGraph, x::Net) =
     filter_vertices(g, (g, v) -> x ∈ get_prop(g, v, :outputs))
-getchildren(g::MetaDiGraph, x::Variable) =
+getchildren(g::MetaDiGraph, x::Net) =
     filter_vertices(g, (g, v) -> x ∈ get_prop(g, v, :inputs))
 function traverse(g::MetaDiGraph, vs::Vector{T}, visited = T[]) where T
     levelup = unique(reduce(vcat, map(v -> outneighbors(g, v), vs)))
@@ -56,7 +56,7 @@ function traverse(g::MetaDiGraph, vs::Vector{T}, visited = T[]) where T
     return parents, union(parents, visited)
 end
 
-function addnode!(m::Module, inputs::Vector{Variable}, outputs::Vector{Variable}, op::Symbol)
+function addnode!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Symbol)
     add_vertex!(m.dfg)
     node = nv(m.dfg)
     set_prop!(m.dfg, node, :inputs, inputs)
@@ -78,7 +78,7 @@ function addnode!(m::Module, inputs::Vector{Variable}, outputs::Vector{Variable}
     return m
 end
 
-function updatetype!(m::Module, inputs::Vector{Variable}, outputs::Vector{Variable}, op::Symbol)
+function updatetype!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Symbol)
     innames = getname.(inputs)
     outnames = getname.(outputs)
     v = findnode(m.dfg, innames, outnames, op)
@@ -188,3 +188,98 @@ function generate(m::Module, f)
     return generate(m, netlist)
 end
 generate(c::Tuple{Module, Function}, dut, args...) = generate(c[1], (netlist) -> c[2](dut, c[1], netlist, args...))
+
+# struct Variable{T}
+#     ref::T
+#     name::Symbol
+# end
+
+# unwrap(x::Variable) = x.ref
+# name(x::Variable) = x.name
+
+# struct Parameter{T, S<:Number}
+#     ref::T
+#     name::Symbol
+#     default::S
+# end
+
+# const VarOrParam = Union{<:Variable, <:Parameter}
+
+# unwrap(x::Parameter) = x.ref
+# name(x::Parameter) = x.name
+
+struct TraceCall
+    inputs::Vector{Net}
+    outputs::Vector{Net}
+    operator::Symbol
+    subtrace::Vector{TraceCall}
+end
+
+const Trace = Vector{TraceCall}
+
+Base.show(io::IO, c::TraceCall) =
+    print(io, "TraceCall($(length(c.subtrace)))($(c.inputs) => $(c.outputs))")
+Base.show(io::IO, ::MIME"text/plain", c::TraceCall) = print(io, strip("""
+    TraceCall $(c.operator) w/ $(length(c.subtrace))-length subtrace:
+        Inputs:
+            $(map(i -> "$i\n        ", c.inputs)...)
+        Outputs:
+            $(map(i -> "$i\n        ", c.outputs)...)
+    """))
+
+Base.show(io::IO, t::Trace) =
+    print(io, "Trace($(length(t)) nodes)")
+Base.show(io::IO, ::MIME"text/plain", t::Trace) = print(io, strip("""
+    Trace($(length(t)) nodes):
+      $(map(i -> "$i\n  ", t)...)
+    """))
+
+istraceprimitive(x) = false
+
+function enter!(trace::Trace, f, args...)
+    inputs = [Net(jltype = typeof(arg), size = netsize(arg)) for arg in args]
+    outputs = Net[]
+    operator = Symbol(f)
+    trace_call = TraceCall(inputs, outputs, operator, Trace())
+    push!(trace, trace_call)
+
+    return trace_call.subtrace
+end
+
+function exit!(trace::Trace, output)
+    push!(trace[end].outputs, Net(jltype = typeof(output), size = netsize(output)))
+
+    return trace[end]
+end
+
+@kwdef mutable struct HardwareState
+    current_trace::Trace = Trace()
+    trace_stack::Vector{Trace} = [current_trace]
+end
+
+Cassette.@context HardwareCtx
+
+function Cassette.prehook(ctx::HardwareCtx, f, args...)
+    subtrace = enter!(ctx.metadata.current_trace, f, args...)
+    !istraceprimitive(f) && push!(ctx.metadata.trace_stack, subtrace)
+    ctx.metadata.current_trace = ctx.metadata.trace_stack[end]
+end
+
+function Cassette.posthook(ctx::HardwareCtx, output, f, args...)
+    if !istraceprimitive(f)
+        removed_trace = pop!(ctx.metadata.trace_stack)
+        ctx.metadata.current_trace = isempty(ctx.metadata.trace_stack) ? removed_trace :
+                                                                         ctx.metadata.trace_stack[end]
+    end
+    exit!(ctx.metadata.current_trace, output)
+end
+
+# function generate(ex; name::Symbol = :top, params::Dict{Symbol, Number} = [])
+#     mod = Module(name; parameters = params)
+    
+#     ctx = HardwareCtx(metadata = mod)
+
+#     Cassette.@overdub ctx ex
+
+#     return mod
+# end
