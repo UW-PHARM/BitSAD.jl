@@ -2,6 +2,7 @@ module HW
 
 using LightGraphs, MetaGraphs
 using MacroTools
+using Cassette
 
 export AbstractHandler
 export @circuit

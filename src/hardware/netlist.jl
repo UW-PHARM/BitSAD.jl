@@ -12,20 +12,28 @@ _checksize(size) = any(size .< 1) &&
     error("Cannot create net with size $size (size[i] must be >= 1)")
 
 @kwdef struct Net
-    name::String
+    name::String = ""
+    jltype::Type = Any
     type::Symbol = :wire
     class::Symbol = :internal
     signed::Bool = false
     size::Tuple{Int, Int}
 
-    function Net(name, type, class, signed, size)
+    function Net(name, jltype, type, class, signed, size)
         _checktype(type)
         _checkclass(class)
         _checksize(size)
 
-        new(name, type, class, signed, size)
+        new(name, jltype, type, class, signed, size)
     end
 end
+Net(x) = Net(jltype = typeof(x), size = netsize(x))
+
+Base.show(io::IO, n::Net) =
+    print(io, "Net($(n.name)::$(n.jltype))($(n.size[1])x$(n.size[2]))")
+
+netsize(x) = (1, 1)
+netsize(x::AbstractArray) = size(x)
 
 isreg(x::Net) = (x.type == :reg)
 iswire(x::Net) = !isreg(x)

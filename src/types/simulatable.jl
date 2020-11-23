@@ -1,12 +1,3 @@
-_genid() = unsafe_trunc(UInt32, uuid4().value)
-_indexid(id::UInt32, idx::Integer) = unsafe_trunc(UInt32, uuid5(UUID(id), "[$idx]").value)
-_getidstr(x::AbstractBitstream) = digits(UInt8, x.id; base = 16, pad = 8)
-_getidstr(x) = Vector{UInt8}(string(x))
-_getidstr(x::VecOrMat) = mapreduce(_getidstr, vcat, x)
-
-id(s::SBitstream) = s.id
-id(x) = x
-
 const SBitstreamLike = Union{<:SBitstream, VecOrMat{<:SBitstream}}
 const SimulatableOp = @NamedTuple{op::Symbol, args::UInt32}
 const SimulatableReturn = @NamedTuple{val::SBitstreamLike, op::SOperator}
