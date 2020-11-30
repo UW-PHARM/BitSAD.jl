@@ -36,6 +36,8 @@ struct SBitstream{T<:Real} <: AbstractBitstream
 end
 SBitstream(value::T) where {T<:Real} = SBitstream{T}(Queue{SBit}(), value)
 
+const SBitstreamLike = Union{<:SBitstream, VecOrMat{<:SBitstream}}
+
 Base.float(s::SBitstream) = s.value
 Base.zero(::SBitstream{T}) where T = SBitstream(zero(T))
 Base.one(::SBitstream{T}) where T = SBitstream(one(T))
