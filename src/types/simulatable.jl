@@ -1,4 +1,3 @@
-const SBitstreamLike = Union{<:SBitstream, VecOrMat{<:SBitstream}}
 const SimulatableOp = @NamedTuple{op::Symbol, args::UInt32}
 const SimulatableReturn = @NamedTuple{val::SBitstreamLike, op::SOperator}
 

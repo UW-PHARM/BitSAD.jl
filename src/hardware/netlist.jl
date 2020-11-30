@@ -35,6 +35,8 @@ Base.show(io::IO, n::Net) =
 netsize(x) = (1, 1)
 netsize(x::AbstractArray) = size(x)
 
+name(x::Net) = x.name
+
 isreg(x::Net) = (x.type == :reg)
 iswire(x::Net) = !isreg(x)
 

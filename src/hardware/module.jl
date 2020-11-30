@@ -28,7 +28,7 @@ end
 
 Base.show(io::IO, m::Module) =
     print(io, "Module $(m.name) with $(length(m.parameters)) parameters and $(length(m.submodules)) submodules.")
-Base.show(io::IO, ::MIME"text/plain", m::Module) = print("""
+Base.show(io::IO, ::MIME"text/plain", m::Module) = print(io, """
     Module $(m.name):
         Parameters:
             $(m.parameters)
@@ -38,6 +38,26 @@ Base.show(io::IO, ::MIME"text/plain", m::Module) = print("""
         Number of inputs: $(length(map(x -> getinputs(m.dfg, x), getroots(m.dfg))))
         Number of outputs: $(length(map(x -> getoutputs(m.dfg, x), getbuds(m.dfg))))
     """)
+
+function printdfg(m::Module)
+    nodes = getroots(m.dfg)
+    visited = nodes
+    padding = ""
+
+    while !isempty(nodes)
+        for node in nodes
+            inputs = getinputs(m.dfg, node)
+            outputs = getoutputs(m.dfg, node)
+            op = getoperator(m.dfg, node)
+            println("$(padding)inputs: $inputs")
+            println("$(padding)outputs: $outputs")
+            println("$(padding)op: $op")
+        end
+
+        nodes, visited = traverse(m.dfg, nodes, visited)
+        padding *= "   "
+    end
+end
 
 findnode(g::MetaDiGraph, inputs, outputs, operator) =
     collect(filter_vertices(g, (g, v) -> all(getname.(get_prop(g, v, :inputs)) .== inputs) &&
@@ -99,28 +119,15 @@ getinputs(g::MetaDiGraph, v) = get_prop(g, v, :inputs)
 getoutputs(g::MetaDiGraph, v) = get_prop(g, v, :outputs)
 getoperator(g::MetaDiGraph, v) = get_prop(g, v, :operator)
 
-include("optimizations/constantreduction.jl")
-include("optimizations/constantreplacement.jl")
-
-function printdfg(m::Module)
-    nodes = getroots(m.dfg)
-    visited = nodes
-    padding = ""
-
-    while !isempty(nodes)
-        for node in nodes
-            inputs = getinputs(m.dfg, node)
-            outputs = getoutputs(m.dfg, node)
-            op = getoperator(m.dfg, node)
-            println("$(padding)inputs: $inputs")
-            println("$(padding)outputs: $outputs")
-            println("$(padding)op: $op")
-        end
-
-        nodes, visited = traverse(m.dfg, nodes, visited)
-        padding *= "   "
+function extracttrace!(m::Module, trace::Trace)
+    for call in trace
+        addnode!(m, call.inputs, call.outputs, call.op)
+        extracttrace!(m, call.subtrace)
     end
 end
+
+include("optimizations/constantreduction.jl")
+include("optimizations/constantreplacement.jl")
 
 """
     HW.generate(m::Module, netlist::Netlist)
@@ -188,98 +195,3 @@ function generate(m::Module, f)
     return generate(m, netlist)
 end
 generate(c::Tuple{Module, Function}, dut, args...) = generate(c[1], (netlist) -> c[2](dut, c[1], netlist, args...))
-
-# struct Variable{T}
-#     ref::T
-#     name::Symbol
-# end
-
-# unwrap(x::Variable) = x.ref
-# name(x::Variable) = x.name
-
-# struct Parameter{T, S<:Number}
-#     ref::T
-#     name::Symbol
-#     default::S
-# end
-
-# const VarOrParam = Union{<:Variable, <:Parameter}
-
-# unwrap(x::Parameter) = x.ref
-# name(x::Parameter) = x.name
-
-struct TraceCall
-    inputs::Vector{Net}
-    outputs::Vector{Net}
-    operator::Symbol
-    subtrace::Vector{TraceCall}
-end
-
-const Trace = Vector{TraceCall}
-
-Base.show(io::IO, c::TraceCall) =
-    print(io, "TraceCall($(length(c.subtrace)))($(c.inputs) => $(c.outputs))")
-Base.show(io::IO, ::MIME"text/plain", c::TraceCall) = print(io, strip("""
-    TraceCall $(c.operator) w/ $(length(c.subtrace))-length subtrace:
-        Inputs:
-            $(map(i -> "$i\n        ", c.inputs)...)
-        Outputs:
-            $(map(i -> "$i\n        ", c.outputs)...)
-    """))
-
-Base.show(io::IO, t::Trace) =
-    print(io, "Trace($(length(t)) nodes)")
-Base.show(io::IO, ::MIME"text/plain", t::Trace) = print(io, strip("""
-    Trace($(length(t)) nodes):
-      $(map(i -> "$i\n  ", t)...)
-    """))
-
-istraceprimitive(x) = false
-
-function enter!(trace::Trace, f, args...)
-    inputs = [Net(jltype = typeof(arg), size = netsize(arg)) for arg in args]
-    outputs = Net[]
-    operator = Symbol(f)
-    trace_call = TraceCall(inputs, outputs, operator, Trace())
-    push!(trace, trace_call)
-
-    return trace_call.subtrace
-end
-
-function exit!(trace::Trace, output)
-    push!(trace[end].outputs, Net(jltype = typeof(output), size = netsize(output)))
-
-    return trace[end]
-end
-
-@kwdef mutable struct HardwareState
-    current_trace::Trace = Trace()
-    trace_stack::Vector{Trace} = [current_trace]
-end
-
-Cassette.@context HardwareCtx
-
-function Cassette.prehook(ctx::HardwareCtx, f, args...)
-    subtrace = enter!(ctx.metadata.current_trace, f, args...)
-    !istraceprimitive(f) && push!(ctx.metadata.trace_stack, subtrace)
-    ctx.metadata.current_trace = ctx.metadata.trace_stack[end]
-end
-
-function Cassette.posthook(ctx::HardwareCtx, output, f, args...)
-    if !istraceprimitive(f)
-        removed_trace = pop!(ctx.metadata.trace_stack)
-        ctx.metadata.current_trace = isempty(ctx.metadata.trace_stack) ? removed_trace :
-                                                                         ctx.metadata.trace_stack[end]
-    end
-    exit!(ctx.metadata.current_trace, output)
-end
-
-# function generate(ex; name::Symbol = :top, params::Dict{Symbol, Number} = [])
-#     mod = Module(name; parameters = params)
-    
-#     ctx = HardwareCtx(metadata = mod)
-
-#     Cassette.@overdub ctx ex
-
-#     return mod
-# end
