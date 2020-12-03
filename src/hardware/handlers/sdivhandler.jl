@@ -2,34 +2,24 @@
     id = 0
 end
 
-@register(SDivHandler, /, begin
-    [SBit, SBit] => [SBit]
-    [SBit, Vector{SBit}] => [Vector{SBit}]
-    [Vector{SBit}, SBit] => [Vector{SBit}]
-    [Vector{SBit}, Vector{SBit}] => [Vector{SBit}]
-    [SBit, Matrix{SBit}] => [Matrix{SBit}]
-    [Matrix{SBit}, SBit] => [Matrix{SBit}]
-    [Matrix{SBit}, Matrix{SBit}] => [Matrix{SBit}]
-end)
+gethandler(::Type{typeof(/)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) = SDivHandler()
 
-function (handler::SDivHandler)(netlist::Netlist,
-                                inputs::Vector{Variable},
-                                outputs::Vector{Variable})
+function (handler::SDivHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # update netlist with inputs
-    setsigned!(netlist, getname(inputs[1]), true)
-    setsigned!(netlist, getname(inputs[2]), true)
+    setsigned!(netlist, inputs[1], true)
+    setsigned!(netlist, inputs[2], true)
 
     # compute output size
-    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name,
-                                            getsize(netlist, getname(inputs[1])),
-                                            getsize(netlist, getname(inputs[2])))
+    lname, rname = handlebroadcast(name(inputs[1]), name(inputs[2]),
+                                   netsize(inputs[1]), netsize(inputs[2]))
+    outsize = netsize(outputs[1])
 
     # update netlist with output
-    setsigned!(netlist, getname(outputs[1]), true)
+    setsigned!(netlist, outputs[1], true)
 
     # add internal nets to netlist
-    update!(netlist, Net(name = "div$(handler.id)_pp", size = outsize))
-    update!(netlist, Net(name = "div$(handler.id)_mp", size = outsize))
+    push!(netlist, Net(name = "div$(handler.id)_pp", size = outsize))
+    push!(netlist, Net(name = "div$(handler.id)_mp", size = outsize))
 
     outstring = """
         $stdcomment
@@ -64,7 +54,7 @@ function (handler::SDivHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A(div$(handler.id)_pp),
                 .B(div$(handler.id)_mp),
-                .Y($(outputs[1].name)_p)
+                .Y($(name(outputs[1]))_p)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -74,7 +64,7 @@ function (handler::SDivHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A(div$(handler.id)_mp),
                 .B(div$(handler.id)_pp),
-                .Y($(outputs[1].name)_m)
+                .Y($(name(outputs[1]))_m)
             );
         // END div$(handler.id)
         \n"""

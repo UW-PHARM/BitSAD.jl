@@ -51,6 +51,14 @@ istraceprimitive(ctx::HardwareCtx, f, args...) =
     istraceprimitive(Cassette.untag(f, ctx), map(arg -> Cassette.untag(arg, ctx), args)...)
 istraceprimitive(f, args...) = (f isa Function) ? false : true
 
+macro trace_primitive(f, args...)
+    return quote
+        # Cassette.overdub(ctx::HardwareCtx, ::typeof($(esc(f))), $(esc.(args)...)) =
+        #     Cassette.fallback($(esc(f)), $(esc.(args)...))
+        HW.istraceprimitive(::typeof($(esc(f))), $(esc.(args)...)) = true
+    end
+end
+
 function enter!(ctx::HardwareCtx, trace::Trace, f, args...; isbroadcast = false)
     inputs = [Net(name = namify(arg, ctx),
                   jltype = Cassette.untagtype(typeof(arg), typeof(ctx)),
@@ -130,6 +138,16 @@ Cassette.overdub(ctx::HardwareCtx, f, args...) = _overdub(ctx, f, args...)
 
 ## Broadcasting hooks
 
+execute_and_tag(ctx::HardwareCtx, f, arg) =
+    Cassette.tag(Cassette.fallback(ctx, Cassette.untag(f, ctx), Cassette.untag(arg, ctx)), ctx, namify(arg, ctx))
+
+function execute_and_tag(ctx::HardwareCtx, f,  args...)
+    untagged_args = map(arg -> Cassette.untag(arg, ctx), args)
+    output_args = Cassette.fallback(ctx, Cassette.untag(f, ctx), untagged_args...)
+
+    return map((out_arg, arg) -> Cassette.tag(out_arg, ctx, namify(arg, ctx)), output_args, args)
+end
+
 _materialize(ctx, x) = Cassette.tag(Base.Broadcast.materialize(Cassette.untag(x, ctx)), ctx, namify(x, ctx))
 
 function Cassette.prehook(ctx::HardwareCtx, ::typeof(Base.broadcasted), f, args...)
@@ -155,49 +173,22 @@ function Cassette.overdub(ctx::HardwareCtx, ::typeof(Base.broadcasted), f, args.
     return Cassette.tag(result, ctx, namify(element_result, ctx))
 end
 
-## Broadcasting primitives
+## Primitives
 #   don't recurse these calls
 
 Cassette.prehook(ctx::HardwareCtx, ::typeof(Base.materialize), args...) = nothing
 Cassette.posthook(ctx::HardwareCtx, output, ::typeof(Base.materialize), args...) = nothing
-Cassette.overdub(ctx::HardwareCtx, ::typeof(Base.materialize), arg) =
-    Cassette.tag(Cassette.fallback(ctx, Base.materialize, arg), ctx, namify(arg, ctx))
+Cassette.overdub(ctx::HardwareCtx, ::typeof(Base.materialize), arg) = execute_and_tag(ctx, Base.materialize, arg)
 
-macro trace_primitive(f, args...)
-    return quote
-        # Cassette.overdub(ctx::HardwareCtx, ::typeof($(esc(f))), $(esc.(args)...)) =
-        #     Cassette.fallback($(esc(f)), $(esc.(args)...))
-        HW.istraceprimitive(::typeof($(esc(f))), $(esc.(args)...)) = true
-    end
-end
+Cassette.prehook(ctx::HardwareCtx, ::typeof(promote), args...) = nothing
+Cassette.posthook(ctx::HardwareCtx, output, ::typeof(promote), args...) = nothing
+Cassette.overdub(ctx::HardwareCtx, ::typeof(promote), args...) = execute_and_tag(ctx, promote, args...)
 
-symbol_name(x) = QuoteNode(:($x))
+Cassette.prehook(ctx::HardwareCtx, ::typeof(convert), args...) = nothing
+Cassette.posthook(ctx::HardwareCtx, output, ::typeof(convert), args...) = nothing
+Cassette.overdub(ctx::HardwareCtx, ::typeof(convert), args...) = execute_and_tag(ctx, convert, args...)
 
-function _generate(name, ex)
-    if @capture(ex, f_(args__))
-        tagged_args = map(arg -> Symbol(symbol_name(arg), :_tag), args)
-        tagged_stmts = map((dest, arg) -> @q($dest = Cassette.tag($(esc(arg)), ctx, string($(symbol_name(arg))))),
-                           tagged_args, args)
-
-        @q begin
-            ctx = Cassette.enabletagging(HardwareCtx(metadata = HardwareState()), $(esc(f)))
-            $(tagged_stmts...)
-            Cassette.@overdub ctx $(esc(f))($(tagged_args...))
-
-            m = Module(name = $(symbol_name(name)))
-            extracttrace!(m, ctx.metadata.current_trace)
-
-            m
-        end
-    else
-        error("@generate expects a function call (e.g. f(x, y))")
-    end
-end
-
-macro generate(ex)
-    return _generate(:top, ex)
-end
-
-macro generate(name, ex)
-    return _generate(name, ex)
-end
+Cassette.prehook(ctx::HardwareCtx, ::typeof(Core._apply_iterate), args...) = nothing
+Cassette.posthook(ctx::HardwareCtx, output, ::typeof(Core._apply_iterate), args...) = nothing
+Cassette.overdub(ctx::HardwareCtx, ::typeof(Core._apply_iterate), args...) =
+    execute_and_tag(ctx, Core._apply_iterate, args...)

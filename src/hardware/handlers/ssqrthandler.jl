@@ -2,20 +2,14 @@
     id = 0
 end
 
-@register(SSqrtHandler, sqrt, begin
-    [SBit] => [SBit]
-    [Vector{SBit}] => [Vector{SBit}]
-    [Matrix{SBit}] => [Matrix{SBit}]
-end)
+gethandler(::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) = SSqrtHandler()
 
-function (handler::SSqrtHandler)(netlist::Netlist,
-                                 inputs::Vector{Variable},
-                                 outputs::Vector{Variable})
+function (handler::SSqrtHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # compute output size
-    outsize = getsize(netlist, getname(outputs[1]))
+    outsize = netsize(outputs[1])
 
     # add output net to netlist
-    setsigned!(netlist, getname(outputs[1]), true)
+    setsigned!(netlist, outputs[1], true)
 
     outstring = """
         $stdcomment
@@ -25,11 +19,11 @@ function (handler::SSqrtHandler)(netlist::Netlist,
             ) sqrt$(handler.id) (
                 .CLK  (CLK),
                 .nRST (nRST),
-                .up   ($(inputs[1].name)_p),
-                .un   ($(inputs[2].name)_m),
-                .y    ($(outputs[1].name)_p)
+                .up   ($(name(inputs[1]))_p),
+                .un   ($(name(inputs[2]))_m),
+                .y    ($(name(outputs[1]))_p)
             );
-        assign $(outputs[1].name)_m = 1'b0;
+        assign $(name(outputs[1]))_m = 1'b0;
         // END sqrt$(handler.id)
         \n"""
 
