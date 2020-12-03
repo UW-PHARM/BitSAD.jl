@@ -2,30 +2,20 @@
     id = 0
 end
 
-@register(SAddHandler, +, begin
-    [SBit, SBit] => [SBit]
-    [SBit, Vector{SBit}] => [Vector{SBit}]
-    [Vector{SBit}, SBit] => [Vector{SBit}]
-    [Vector{SBit}, Vector{SBit}] => [Vector{SBit}]
-    [SBit, Matrix{SBit}] => [Matrix{SBit}]
-    [Matrix{SBit}, SBit] => [Matrix{SBit}]
-    [Matrix{SBit}, Matrix{SBit}] => [Matrix{SBit}]
-end)
+gethandler(::Type{typeof(+)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) = SAddHandler()
 
-function (handler::SAddHandler)(netlist::Netlist,
-                                inputs::Vector{Variable},
-                                outputs::Vector{Variable})
+function (handler::SAddHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # update netlist with inputs
-    setsigned!(netlist, getname(inputs[1]), true)
-    setsigned!(netlist, getname(inputs[2]), true)
+    setsigned!(netlist, inputs[1], true)
+    setsigned!(netlist, inputs[2], true)
 
-    # compute output size
-    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name,
-                                            getsize(netlist, getname(inputs[1])),
-                                            getsize(netlist, getname(inputs[2])))
+    # compute output naming
+    lname, rname = handlebroadcast(name(inputs[1]), name(inputs[2]),
+                                   netsize(inputs[1]), netsize(inputs[2]))
+    outsize = netsize(outputs[1])
 
     # update netlist with output
-    setsigned!(netlist, getname(outputs[1]), true)
+    setsigned!(netlist, outputs[1], true)
 
     outstring = """
         $stdcomment
@@ -38,7 +28,7 @@ function (handler::SAddHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A($(lname("_p"))),
                 .B($(rname("_p"))),
-                .Y($(outputs[1].name)_p)
+                .Y($(name(outputs[1]))_p)
             );
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -48,7 +38,7 @@ function (handler::SAddHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A($(lname("_m"))),
                 .B($(rname("_m"))),
-                .Y($(outputs[1].name)_m)
+                .Y($(name(outputs[1]))_m)
             );
         // END add$(handler.id)
         \n"""

@@ -2,22 +2,22 @@
     id = 0
 end
 
-@register(TransposeHandler, permutedims, begin
-    [Vector{SBit}] => [Matrix{SBit}]
-    [Vector{DBit}] => [Matrix{DBit}]
-    [Matrix{SBit}] => [Matrix{SBit}]
-    [Matrix{DBit}] => [Matrix{DBit}]
-end)
+# @register(TransposeHandler, permutedims, begin
+#     [Vector{SBit}] => [Matrix{SBit}]
+#     [Vector{DBit}] => [Matrix{DBit}]
+#     [Matrix{SBit}] => [Matrix{SBit}]
+#     [Matrix{DBit}] => [Matrix{DBit}]
+# end)
 
-function (handler::TransposeHandler)(netlist::Netlist,
-                                     inputs::Vector{Variable},
-                                     outputs::Vector{Variable})
+gethandler(::Type{typeof(permutedims)}, ::Type{<:SBitstreamLike}) = TransposeHandler()
+
+function (handler::TransposeHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # compute output size
-    outsize = getsize(netlist, getname(outputs[1]))
+    outsize = netsize(outputs[1])
 
     # add output net to netlist
-    setsigned!(netlist, getname(outputs[1]), true)
-    setreg!(netlist, getname(outputs[1]))
+    setsigned!(netlist, outputs[1], true)
+    setreg!(netlist, outputs[1])
 
     outstring = """
         $stdcomment
@@ -26,8 +26,8 @@ function (handler::TransposeHandler)(netlist::Netlist,
         always @(*) begin
             for (i = 0; i < $(outsize[2]); i = i + 1) begin
                 for (j = 0; j < $(outsize[1]); j = j + 1) begin
-                    $(outputs[1].name)_p[(j*$(outsize[2])) + i] <= $(inputs[1].name)_p[(i*$(outsize[1])) + j];
-                    $(outputs[1].name)_m[(j*$(outsize[2])) + i] <= $(inputs[1].name)_m[(i*$(outsize[1])) + j];
+                    $(name(outputs[1]))_p[(j*$(outsize[2])) + i] <= $(name(inputs[1]))_p[(i*$(outsize[1])) + j];
+                    $(name(outputs[1]))_m[(j*$(outsize[2])) + i] <= $(name(inputs[1]))_m[(i*$(outsize[1])) + j];
                 end
             end
         end

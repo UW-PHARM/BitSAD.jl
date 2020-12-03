@@ -1,5 +1,7 @@
 using Base: @kwdef
 
+const Operation = @NamedTuple{name::Symbol, type::DataType, broadcasted::Bool}
+
 """
     Module
 
@@ -23,7 +25,7 @@ See also: [HW.generate](@ref)
     parameters::Dict{Symbol, Number} = Dict{Symbol, Number}()
     submodules::Dict{Symbol, Symbol} = Dict{Symbol, Symbol}()
     dfg::MetaDiGraph{Int, Float64} = MetaDiGraph()
-    handlers::Dict{Operation, AbstractHandler} = Dict{Operation, AbstractHandler}()
+    handlers::Dict{Tuple{Bool, Vararg{Type}}, AbstractHandler} = Dict{Tuple{Bool, Vararg{Type}}, AbstractHandler}()
 end
 
 Base.show(io::IO, m::Module) =
@@ -76,7 +78,7 @@ function traverse(g::MetaDiGraph, vs::Vector{T}, visited = T[]) where T
     return parents, union(parents, visited)
 end
 
-function addnode!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Symbol)
+function addnode!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Operation)
     add_vertex!(m.dfg)
     node = nv(m.dfg)
     set_prop!(m.dfg, node, :inputs, inputs)
@@ -98,7 +100,7 @@ function addnode!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Symb
     return m
 end
 
-function updatetype!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Symbol)
+function updatetype!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Operation)
     innames = getname.(inputs)
     outnames = getname.(outputs)
     v = findnode(m.dfg, innames, outnames, op)
@@ -120,14 +122,26 @@ getoutputs(g::MetaDiGraph, v) = get_prop(g, v, :outputs)
 getoperator(g::MetaDiGraph, v) = get_prop(g, v, :operator)
 
 function extracttrace!(m::Module, trace::Trace)
+    _checkconstant(x) = x
+    _checkconstant(x::Real) = (@set! x.class = :constant)
+
     for call in trace
-        addnode!(m, call.inputs, call.outputs, call.op)
-        extracttrace!(m, call.subtrace)
+        if hassubtrace(call)
+            extracttrace!(m, call.subtrace)
+        else
+            # check for constants
+            map(_checkconstant, call.inputs)
+
+            op = (name = call.operator, type = call.optype, broadcasted = call.broadcasted)
+            addnode!(m, call.inputs, call.outputs, op)
+        end
     end
+
+    return m
 end
 
-include("optimizations/constantreduction.jl")
-include("optimizations/constantreplacement.jl")
+# include("optimizations/constantreduction.jl")
+# include("optimizations/constantreplacement.jl")
 
 """
     HW.generate(m::Module, netlist::Netlist)
@@ -145,20 +159,21 @@ Users will most likely call the last method form above.
 - `dut`: an instance of the circuit struct
 - `args`: example arguments to circuit
 """
-function generate(m::Module, netlist::Netlist)
+function generate(m::Module)
     outstr = ""
-    m = deepcopy(m)
+    netlist = Net[]
+    # m = deepcopy(m)
 
-    printdfg(m)
-    println()
+    # printdfg(m)
+    # println()
 
     # run constant reduction
-    constantreduction!(m, netlist)
-    printdfg(m)
-    println()
-    constantreplacement!(m, netlist)
-    printdfg(m)
-    println()
+    # constantreduction!(m, netlist)
+    # printdfg(m)
+    # println()
+    # constantreplacement!(m, netlist)
+    # printdfg(m)
+    # println()
 
     # start at inputs
     nodes = getroots(m.dfg)
@@ -169,12 +184,23 @@ function generate(m::Module, netlist::Netlist)
         for node in nodes
             inputs = getinputs(m.dfg, node)
             outputs = getoutputs(m.dfg, node)
-            op = Operation(gettype.(inputs), gettype.(outputs), getoperator(m.dfg, node))
+            operator = getoperator(m.dfg, node)
+            op = (operator.broadcasted, operator.type, jltype.(inputs)...)
+
+            # check if input is already in netlist
+            # if not assume it is an input to full DFG
+            for input in inputs
+                (input ∈ netlist) && @set! input.class = :input
+            end
+
+            # add "edges" to netlist
+            append!(netlist, inputs)
+            append!(netlist, outputs)
 
             if haskey(m.handlers, op)
                 handler = m.handlers[op]
             else
-                handler = gethandler(op)()
+                handler = gethandler(op...)
                 m.handlers[op] = handler
             end
 
@@ -187,11 +213,36 @@ function generate(m::Module, netlist::Netlist)
 
     return outstr
 end
-function generate(m::Module, f)
-    # get runtime info and populate netlist
-    netlist = Netlist()
-    f(netlist)
 
-    return generate(m, netlist)
+## Utilities for translating a call to a Module by tracing
+
+symbol_name(x) = QuoteNode(:($x))
+
+function _trace_module(name, ex)
+    if @capture(ex, f_(args__))
+        tagged_args = map(arg -> Symbol(symbol_name(arg), :_tag), args)
+        tagged_stmts = map((dest, arg) -> @q($dest = Cassette.tag($(esc(arg)), ctx, string($(symbol_name(arg))))),
+                           tagged_args, args)
+
+        @q begin
+            ctx = Cassette.enabletagging(HardwareCtx(metadata = HardwareState()), $(esc(f)))
+            $(tagged_stmts...)
+            Cassette.@overdub ctx $(esc(f))($(tagged_args...))
+
+            m = Module(name = $(symbol_name(name)))
+            extracttrace!(m, ctx.metadata.current_trace)
+
+            m, ctx.metadata.current_trace
+        end
+    else
+        error("@generate expects a function call (e.g. f(x, y))")
+    end
 end
-generate(c::Tuple{Module, Function}, dut, args...) = generate(c[1], (netlist) -> c[2](dut, c[1], netlist, args...))
+
+macro trace(ex)
+    return _trace_module(:top, ex)
+end
+
+macro trace(name, ex)
+    return _trace_module(name, ex)
+end

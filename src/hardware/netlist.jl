@@ -34,8 +34,12 @@ Base.show(io::IO, n::Net) =
 
 netsize(x) = (1, 1)
 netsize(x::AbstractArray) = size(x)
+netsize(x::AbstractVector) = (length(x), 1)
+netsize(x::Net) = x.size
 
 name(x::Net) = x.name
+
+jltype(x::Net) = x.jltype
 
 isreg(x::Net) = (x.type == :reg)
 iswire(x::Net) = !isreg(x)
@@ -53,50 +57,39 @@ const Netlist = Vector{Net}
 inputs(n::Netlist) = filter(isinput, n)
 outputs(n::Netlist) = filter(isoutput, n)
 
-find(n::Netlist, x::String) = findfirst(λ -> λ.name == x, n)
-contains(n::Netlist, x::String) = !isnothing(find(n, x))
+find(n::Netlist, x::Net) = findfirst(λ -> λ.name == name(x), n)
+Base.in(n::Netlist, x::Net) = !isnothing(find(n, x))
 
-function getsize(n::Netlist, x::String)
-    i = find(n, x)
-    isnothing(i) && error("Cannot get size for net $x since it does not exist in netlist.")
+# function getsize(n::Netlist, x::String)
+#     i = find(n, x)
+#     isnothing(i) && error("Cannot get size for net $x since it does not exist in netlist.")
 
-    return n[i].size
-end
-getsize(n::Netlist, x::Vector{String}) = map(λ -> getsize(n, λ), x)
+#     return n[i].size
+# end
+# getsize(n::Netlist, x::Vector{String}) = map(λ -> getsize(n, λ), x)
 
-delete!(n::Netlist, x::String) = deleteat!(n, find(n, x))
+Base.delete!(n::Netlist, x::Net) = deleteat!(n, find(n, x))
 
-function update!(n::Netlist, x::Net)
-    i = findfirst(λ -> λ.name == x.name, n)
-    if isnothing(i)
-        push!(n, x)
-    else
-        n[i] = x
-    end
-
-    return n
-end
-
-function setreg!(n::Netlist, x::String)
+function setreg!(n::Netlist, x::Net)
     i = find(n, x)
     isnothing(i) && error("Cannot set net $x as register because it does not exist in netlist.")
-    update!(n, Net(name = x, type = :reg, class = n[i].class, signed = n[i].signed, size = n[i].size))
+    @set! n[i].type = :reg
 
     return n
 end
 
-function setwire!(n::Netlist, x::String)
+function setwire!(n::Netlist, x::Net)
     i = find(n, x)
     isnothing(i) && error("Cannot set net $x as wire because it does not exist in netlist.")
-    update!(n, Net(name = x, type = :wire, class = n[i].class, signed = n[i].signed, size = n[i].size))
+    @set! n[i].type = :wire
 
     return n
 end
 
-function setsigned!(n::Netlist, x::String, signed::Bool)
+function setsigned!(n::Netlist, x::Net, signed::Bool)
     i = find(n, x)
     isnothing(i) && error("Cannot set net $x as signed = $signed because it does not exist in netlist.")
-    update!(n, Net(name = x, type = n[i].type, class = n[i].class, signed = signed, size = n[i].size))
+    @set! n[i].signed = signed
 
     return n
 end

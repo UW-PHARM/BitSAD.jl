@@ -23,7 +23,7 @@ Fields:
 """
 struct SBitstream{T<:Real} <: AbstractBitstream
     bits::Queue{SBit}
-    value::Float64
+    value::T
     id::UInt32
 
     function SBitstream{T}(bits::Queue{SBit}, value::T, id::UInt32 = _genid()) where {T<:Real}
@@ -35,6 +35,7 @@ struct SBitstream{T<:Real} <: AbstractBitstream
     end
 end
 SBitstream(value::T) where {T<:Real} = SBitstream{T}(Queue{SBit}(), value)
+SBitstream{T}(value::Real) where {T<:Real} = SBitstream(convert(T, value))
 
 const SBitstreamLike = Union{<:SBitstream, VecOrMat{<:SBitstream}}
 
