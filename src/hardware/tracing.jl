@@ -33,6 +33,7 @@ hassubtrace(c::TraceCall) = !isempty(c.subtrace)
     current_trace::Trace = Trace()
     trace_stack::Vector{Trace} = [current_trace]
     output_map::Dict{Tuple{Bool, Vararg{String}}, String} = Dict{Tuple{Bool, Vararg{String}}, String}()
+    struct_map::Dict{String, Int} = Dict{String, Int}()
 end
 
 exists(state::HardwareState, isbroadcast, f, args...) = haskey(state.output_map, (isbroadcast, f, args...))
@@ -45,11 +46,25 @@ end
 
 get_output(state::HardwareState, isbroadcast, f, args...) = state.output_map[(isbroadcast, f, args...)]
 
+function get_structname!(state::HardwareState, ::T) where T
+    fname = lowercase(string(nameof(T)))
+    if haskey(state.struct_map, fname)
+        state.struct_map[fname] += 1
+        return "$(fname)$(state.struct_map[fname])"
+    else
+        state.struct_map[fname] = 0
+        return "$(fname)0"
+    end
+end
+        
+
 Cassette.@context HardwareCtx
+
+_isstruct(f::T) where T = isstructtype(T) && !(f isa Function)
 
 istraceprimitive(ctx::HardwareCtx, f, args...) =
     istraceprimitive(Cassette.untag(f, ctx), map(arg -> Cassette.untag(arg, ctx), args)...)
-istraceprimitive(f, args...) = (f isa Function) ? false : true
+istraceprimitive(f, args...) = _isstruct(f) ? true : false
 
 # macro trace_primitive(f, args...)
 #     return quote
@@ -60,12 +75,12 @@ istraceprimitive(f, args...) = (f isa Function) ? false : true
 # end
 
 function enter!(ctx::HardwareCtx, trace::Trace, f, args...; isbroadcast = false)
-    inputs = [Net(name = namify(arg, ctx),
+    inputs = [Net(name = namify!(arg, ctx),
                   jltype = Cassette.untagtype(typeof(arg), typeof(ctx)),
                   size = netsize(Cassette.untag(arg, ctx)))
               for arg in args]
     outputs = Net[]
-    operator = Symbol(namify(f, ctx))
+    operator = Symbol(namify!(f, ctx))
     optype = Cassette.untagtype(typeof(f), typeof(ctx))
     trace_call = TraceCall(inputs, outputs, operator, optype, isbroadcast, Trace())
     push!(trace, trace_call)
@@ -74,7 +89,7 @@ function enter!(ctx::HardwareCtx, trace::Trace, f, args...; isbroadcast = false)
 end
 
 function exit!(ctx::HardwareCtx, trace::Trace, output)
-    push!(trace[end].outputs, Net(name = namify(output, ctx),
+    push!(trace[end].outputs, Net(name = namify!(output, ctx),
                                   jltype = Cassette.untagtype(typeof(output), typeof(ctx)),
                                   size = netsize(Cassette.untag(output, ctx))))
 
@@ -83,7 +98,9 @@ end
 
 Cassette.metadatatype(::Type{<:HardwareCtx}, ::DataType) = String
 
-namify(x, ctx) = Cassette.hasmetadata(x, ctx) ? Cassette.metadata(x, ctx) : string(Cassette.untag(x, ctx))
+namify!(x, ctx) = Cassette.hasmetadata(x, ctx) ? Cassette.metadata(x, ctx) :
+                    _isstruct(x) ? get_structname!(ctx.metadata, Cassette.untag(x, ctx)) :
+                                   string(Cassette.untag(x, ctx))
 
 generate_output_name(f, args) =
     "net_$(f)_$(first(args))$(map(arg -> "_" * arg, Base.tail(args))...)"
@@ -92,8 +109,8 @@ compress_name(name) =
     mapreduce(x -> startswith(x, ".") ? first(x, 2) : first(x, 1), *, split(replace(name, "net_" => ""), "_"))
 
 function select_output_name!(ctx::HardwareCtx, f, args...; isbroadcast = false)
-    f_name = isbroadcast ? "." * namify(f, ctx) : namify(f, ctx)
-    arg_names = namify.(args, Ref(ctx))
+    f_name = isbroadcast ? "." * namify!(f, ctx) : namify!(f, ctx)
+    arg_names = namify!.(args, Ref(ctx))
     if exists(ctx.metadata, isbroadcast, f_name, arg_names...)
         return get_output(ctx.metadata, isbroadcast, f_name, arg_names...)
     else
@@ -112,7 +129,7 @@ end
 
 function Cassette.posthook(ctx::HardwareCtx, output, f, args...)
     if !istraceprimitive(ctx, f, args...)
-        println("Popping $(namify(f, ctx))")
+        println("Popping $(namify!(f, ctx))")
         removed_trace = pop!(ctx.metadata.trace_stack)
         ctx.metadata.current_trace = isempty(ctx.metadata.trace_stack) ? removed_trace :
                                                                          ctx.metadata.trace_stack[end]
@@ -139,16 +156,16 @@ Cassette.overdub(ctx::HardwareCtx, f, args...) = _overdub(ctx, f, args...)
 ## Broadcasting hooks
 
 execute_and_tag(ctx::HardwareCtx, f, arg) =
-    Cassette.tag(Cassette.fallback(ctx, Cassette.untag(f, ctx), Cassette.untag(arg, ctx)), ctx, namify(arg, ctx))
+    Cassette.tag(Cassette.fallback(ctx, Cassette.untag(f, ctx), Cassette.untag(arg, ctx)), ctx, namify!(arg, ctx))
 
 function execute_and_tag(ctx::HardwareCtx, f,  args...)
     untagged_args = map(arg -> Cassette.untag(arg, ctx), args)
     output_args = Cassette.fallback(ctx, Cassette.untag(f, ctx), untagged_args...)
 
-    return map((out_arg, arg) -> Cassette.tag(out_arg, ctx, namify(arg, ctx)), output_args, args)
+    return map((out_arg, arg) -> Cassette.tag(out_arg, ctx, namify!(arg, ctx)), output_args, args)
 end
 
-_materialize(ctx, x) = Cassette.tag(Base.Broadcast.materialize(Cassette.untag(x, ctx)), ctx, namify(x, ctx))
+_materialize(ctx, x) = Cassette.tag(Base.Broadcast.materialize(Cassette.untag(x, ctx)), ctx, namify!(x, ctx))
 
 function Cassette.prehook(ctx::HardwareCtx, ::typeof(Base.broadcasted), f, args...)
     materialized_args = map(arg -> _materialize(ctx, arg), args)
@@ -164,13 +181,13 @@ function Cassette.posthook(ctx::HardwareCtx, output, ::typeof(Base.broadcasted),
 end
 
 function Cassette.overdub(ctx::HardwareCtx, ::typeof(Base.broadcasted), f, args...)
-    arg_names = namify.(args, Ref(ctx))
+    arg_names = namify!.(args, Ref(ctx))
     unwrapped_args = map(arg -> Cassette.untag(arg, ctx), args)
     element_args = map((arg, name) -> Cassette.tag(first(arg), ctx, name), unwrapped_args, arg_names)
     element_result = _overdub(ctx, f, element_args...; isbroadcast = true)
     result = Base.broadcasted(Cassette.untag(f, ctx), unwrapped_args...)
 
-    return Cassette.tag(result, ctx, namify(element_result, ctx))
+    return Cassette.tag(result, ctx, namify!(element_result, ctx))
 end
 
 ## Primitives

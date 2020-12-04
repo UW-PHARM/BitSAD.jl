@@ -36,6 +36,8 @@ struct SBitstream{T<:Real} <: AbstractBitstream
 end
 SBitstream(value::T) where {T<:Real} = SBitstream{T}(Queue{SBit}(), value)
 SBitstream{T}(value::Real) where {T<:Real} = SBitstream(convert(T, value))
+Base.convert(::Type{SBitstream{T}}, s::SBitstream) where {T<:Real} =
+    SBitstream{T}(s.bits, convert(T, s.value), s.id)
 
 const SBitstreamLike = Union{<:SBitstream, VecOrMat{<:SBitstream}}
 
