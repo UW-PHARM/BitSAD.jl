@@ -6,6 +6,7 @@ end
     id = 0
 end
 
+istraceprimitive(::typeof(*), ::SBitstreamLike, ::SBitstreamLike) = true
 gethandler(broadcasted::Bool, ::Type{<:typeof(*)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) =
     broadcasted ? SMatMultHandler() : SMultHandler()
 

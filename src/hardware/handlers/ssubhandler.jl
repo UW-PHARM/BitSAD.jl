@@ -2,7 +2,8 @@
     id = 0
 end
 
-gethandler(::Type{typeof(-)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}) = SSubHandler()
+istraceprimitive(::typeof(-), ::SBitstreamLike, ::SBitstreamLike) = true
+gethandler(::Type{typeof(-)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) = SSubHandler()
 
 function (handler::SSubHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # update netlist with inputs

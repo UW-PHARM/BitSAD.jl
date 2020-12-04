@@ -9,6 +9,7 @@ end
 #     [Matrix{DBit}] => [Matrix{DBit}]
 # end)
 
+istraceprimitive(::typeof(permutedims), ::SBitstreamLike) = true
 gethandler(::Type{typeof(permutedims)}, ::Type{<:SBitstreamLike}) = TransposeHandler()
 
 function (handler::TransposeHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})

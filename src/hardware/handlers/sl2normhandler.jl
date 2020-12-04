@@ -2,6 +2,7 @@
     id = 0
 end
 
+istraceprimitive(::typeof(norm), ::Vector{<:SBitstream}) = true
 gethandler(::Type{typeof(norm)}, ::Type{Vector{<:SBitstream}}) = SL2NormHandler()
 
 function (handler::SL2NormHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})

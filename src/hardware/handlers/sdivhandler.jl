@@ -2,6 +2,7 @@
     id = 0
 end
 
+istraceprimitive(::typeof(/), ::SBitstreamLike, ::SBitstreamLike) = true
 gethandler(::Type{typeof(/)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) = SDivHandler()
 
 function (handler::SDivHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})

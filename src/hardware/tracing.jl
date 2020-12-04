@@ -51,13 +51,13 @@ istraceprimitive(ctx::HardwareCtx, f, args...) =
     istraceprimitive(Cassette.untag(f, ctx), map(arg -> Cassette.untag(arg, ctx), args)...)
 istraceprimitive(f, args...) = (f isa Function) ? false : true
 
-macro trace_primitive(f, args...)
-    return quote
-        # Cassette.overdub(ctx::HardwareCtx, ::typeof($(esc(f))), $(esc.(args)...)) =
-        #     Cassette.fallback($(esc(f)), $(esc.(args)...))
-        HW.istraceprimitive(::typeof($(esc(f))), $(esc.(args)...)) = true
-    end
-end
+# macro trace_primitive(f, args...)
+#     return quote
+#         # Cassette.overdub(ctx::HardwareCtx, ::typeof($(esc(f))), $(esc.(args)...)) =
+#         #     Cassette.fallback($(esc(f)), $(esc.(args)...))
+#         HW.istraceprimitive(::typeof($(esc(f))), $(esc.(args)...)) = true
+#     end
+# end
 
 function enter!(ctx::HardwareCtx, trace::Trace, f, args...; isbroadcast = false)
     inputs = [Net(name = namify(arg, ctx),
