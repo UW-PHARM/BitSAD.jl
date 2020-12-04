@@ -2,6 +2,7 @@
     id = 0
 end
 
+istraceprimitive(::typeof(÷), ::SBitstreamLike, ::Real) = true
 gethandler(::Type{typeof(÷)}, ::Type{<:SBitstreamLike}, ::Type{<:Real}) = SFixedGainDivHandler()
 
 function (handler::SFixedGainDivHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
@@ -19,7 +20,7 @@ function (handler::SFixedGainDivHandler)(netlist::Netlist, inputs::Vector{Net}, 
         // BEGIN fdiv$(handler.id)
         stoch_fixed_gain_div_mat #(
                 .COUNTER_SIZE(8),
-                .GAIN($(name(inputs[2])),
+                .GAIN($(name(inputs[2]))),
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
             ) fdiv$(handler.id)_p (
@@ -30,7 +31,7 @@ function (handler::SFixedGainDivHandler)(netlist::Netlist, inputs::Vector{Net}, 
             );
         stoch_fixed_gain_div_mat #(
                 .COUNTER_SIZE(8),
-                .GAIN($(name(inputs[2])),
+                .GAIN($(name(inputs[2]))),
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
             ) fdiv$(handler.id)_m (
