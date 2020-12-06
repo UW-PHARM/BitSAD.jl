@@ -74,8 +74,8 @@ macro simulatable(ex)
     popped_args = map(x -> :(getbit!(ctx.metadata, $x)), argsyms)
 
     return quote
-        function Cassette.overdub(ctx::SimulatableCtx, ::typeof($f), $(args...))
-            opkey = (op = Symbol($f), args = hashn!(UInt32, _getidstr([$(id_args...)])))
+        function Cassette.overdub(ctx::SimulatableCtx, ::typeof($(esc(f))), $(args...))
+            opkey = (op = Symbol($(esc(f))), args = hashn!(UInt32, _getidstr([$(id_args...)])))
             if haskey(ctx.metadata.opmap, opkey)
                 out = ctx.metadata.opmap[opkey]
                 push!(out.val, out.op($(popped_args...)))
@@ -83,8 +83,8 @@ macro simulatable(ex)
         
                 return out.val
             else
-                op = $(optype)($(opargs...))
-                val = Cassette.fallback(ctx, $f, $(argsyms...))
+                op = $(esc(optype))($(opargs...))
+                val = Cassette.fallback(ctx, $(esc(f)), $(argsyms...))
                 push!(val, op($(popped_args...)))
                 setbit!(ctx.metadata, val)
                 ctx.metadata.opmap[opkey] = (val = val, op = op)
