@@ -39,7 +39,7 @@ SBitstream{T}(value::Real) where {T<:Real} = SBitstream(convert(T, value))
 Base.convert(::Type{SBitstream{T}}, s::SBitstream) where {T<:Real} =
     SBitstream{T}(s.bits, convert(T, s.value), s.id)
 
-const SBitstreamLike = Union{<:SBitstream, VecOrMat{<:SBitstream}}
+    const SBitstreamLike = Union{<:SBitstream, VecOrMat{<:SBitstream}, Array{<:SBitstream}}
 
 Base.float(s::SBitstream) = s.value
 Base.zero(::SBitstream{T}) where T = SBitstream(zero(T))
