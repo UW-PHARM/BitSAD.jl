@@ -14,7 +14,7 @@ Hardware generation traverses `dfg` and uses `handlers` to generate Verilog stri
 # Fields:
 - `name::Symbol`: the name of the module
 - `parameters::Dict{Symbol, Number}`: a map from the name of each parameter to its default value
-- `submodules::Dict{Symbol, Symbol}`: a map from the name of each submodule to its type
+- `submodules::Vector{Type}`: a list of submodule types
 - `dfg::MetaDiGraph{Int, Float64}`: a data flow graph representing the circuit to be generated
 - `handlers::Dict{Operation, AbstractHandler}`: a map from operation type to a hardware generation handler.
 
@@ -23,7 +23,7 @@ See also: [HW.generate](@ref)
 @kwdef struct Module
     name::Symbol
     parameters::Dict{Symbol, Number} = Dict{Symbol, Number}()
-    submodules::Dict{Symbol, Symbol} = Dict{Symbol, Symbol}()
+    submodules::Vector{Type} = Type[]
     dfg::MetaDiGraph{Int, Float64} = MetaDiGraph()
     handlers::Dict{Tuple{Bool, Vararg{Type}}, AbstractHandler} = Dict{Tuple{Bool, Vararg{Type}}, AbstractHandler}()
 end
@@ -218,18 +218,22 @@ end
 
 symbol_name(x) = QuoteNode(:($x))
 
-function _trace_module(name, ex)
+function _trace_module(name, submodules, ex)
     if @capture(ex, f_(args__))
         tagged_args = map(arg -> Symbol(symbol_name(arg), :_tag), args)
         tagged_stmts = map((dest, arg) -> @q($dest = Cassette.tag($(esc(arg)), ctx, string($(symbol_name(arg))))),
                            tagged_args, args)
+
+        if !@capture(submodules, [smods__])
+            smods = Symbol[]
+        end
 
         @q begin
             ctx = Cassette.enabletagging(HardwareCtx(metadata = HardwareState()), $(esc(f)))
             $(tagged_stmts...)
             Cassette.@overdub ctx $(esc(f))($(tagged_args...))
 
-            m = Module(name = $(symbol_name(name)))
+            m = Module(name = $(symbol_name(name)), submodules = [$(esc(smods...))])
             extracttrace!(m, ctx.metadata.current_trace)
 
             m, ctx.metadata.current_trace
@@ -240,9 +244,17 @@ function _trace_module(name, ex)
 end
 
 macro trace(ex)
-    return _trace_module(:top, ex)
+    return _trace_module(:top, [], ex)
 end
 
-macro trace(name, ex)
-    return _trace_module(name, ex)
+macro trace(name::Symbol, ex)
+    return _trace_module(name, [], ex)
+end
+
+macro trace(submodules, ex)
+    return _trace_module(:top, submodules, ex)
+end
+
+macro trace(name, submodules, ex)
+    return _trace_module(name, submodules, ex)
 end

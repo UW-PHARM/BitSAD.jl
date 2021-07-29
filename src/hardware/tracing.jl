@@ -56,23 +56,55 @@ function get_structname!(state::HardwareState, ::T) where T
         return "$(fname)0"
     end
 end
-        
+function get_structname(state::HardwareState, ::T) where T
+    fname = lowercase(string(nameof(T)))
+
+    return "$(fname)$(state.struct_map[fname])"
+end
 
 Cassette.@context HardwareCtx
 
 _isstruct(f::T) where T = isstructtype(T) && !(f isa Function)
+_isstruct(f::Symbol) = false
 
 istraceprimitive(ctx::HardwareCtx, f, args...) =
     istraceprimitive(Cassette.untag(f, ctx), map(arg -> Cassette.untag(arg, ctx), args)...)
-istraceprimitive(f, args...) = _isstruct(f) ? true : false
+istraceprimitive(f, args...) = (!_isstruct(f) && !(f isa Function)) ? true : false
 
-# macro trace_primitive(f, args...)
-#     return quote
-#         # Cassette.overdub(ctx::HardwareCtx, ::typeof($(esc(f))), $(esc.(args)...)) =
-#         #     Cassette.fallback($(esc(f)), $(esc.(args)...))
-#         HW.istraceprimitive(::typeof($(esc(f))), $(esc.(args)...)) = true
-#     end
-# end
+Cassette.metadatatype(::Type{<:HardwareCtx}, ::DataType) = String
+
+function namify!(x, ctx)
+    if Cassette.hasmetadata(x, ctx)
+        return Cassette.metadata(x, ctx)
+    elseif _isstruct(x)
+        return get_structname!(ctx.metadata, Cassette.untag(x, ctx))
+    else
+        return string(Cassette.untag(x, ctx))
+    end
+end
+
+generate_output_name(f, args) =
+    "net_$(f)_$(first(args))$(map(arg -> "_" * arg, Base.tail(args))...)"
+
+function compress_name(name)
+    (name == "getproperty" || name == "getfield") && return name
+    subparts = split(replace(name, "net_" => ""), "_")
+
+    return mapreduce(x -> startswith(x, ".") ? first(x, 2) : first(x, 1), *, subparts)
+end
+
+function select_output_name!(ctx::HardwareCtx, f, args...; isbroadcast = false)
+    f_name = isbroadcast ? "." * namify!(f, ctx) : namify!(f, ctx)
+    arg_names = namify!.(args, Ref(ctx))
+    if exists(ctx.metadata, isbroadcast, f_name, arg_names...)
+        return get_output(ctx.metadata, isbroadcast, f_name, arg_names...)
+    else
+        name = generate_output_name(compress_name(f_name), compress_name.(arg_names))
+        set_output!(ctx.metadata, name, isbroadcast, f_name, arg_names...)
+
+        return name
+    end
+end
 
 function enter!(ctx::HardwareCtx, trace::Trace, f, args...; isbroadcast = false)
     inputs = [Net(name = namify!(arg, ctx),
@@ -96,34 +128,12 @@ function exit!(ctx::HardwareCtx, trace::Trace, output)
     return trace[end]
 end
 
-Cassette.metadatatype(::Type{<:HardwareCtx}, ::DataType) = String
-
-namify!(x, ctx) = Cassette.hasmetadata(x, ctx) ? Cassette.metadata(x, ctx) :
-                    _isstruct(x) ? get_structname!(ctx.metadata, Cassette.untag(x, ctx)) :
-                                   string(Cassette.untag(x, ctx))
-
-generate_output_name(f, args) =
-    "net_$(f)_$(first(args))$(map(arg -> "_" * arg, Base.tail(args))...)"
-
-compress_name(name) =
-    mapreduce(x -> startswith(x, ".") ? first(x, 2) : first(x, 1), *, split(replace(name, "net_" => ""), "_"))
-
-function select_output_name!(ctx::HardwareCtx, f, args...; isbroadcast = false)
-    f_name = isbroadcast ? "." * namify!(f, ctx) : namify!(f, ctx)
-    arg_names = namify!.(args, Ref(ctx))
-    if exists(ctx.metadata, isbroadcast, f_name, arg_names...)
-        return get_output(ctx.metadata, isbroadcast, f_name, arg_names...)
-    else
-        name = generate_output_name(compress_name(f_name), compress_name.(arg_names))
-        set_output!(ctx.metadata, name, isbroadcast, f_name, arg_names...)
-
-        return name
-    end
-end
-
 function Cassette.prehook(ctx::HardwareCtx, f, args...)
     subtrace = enter!(ctx, ctx.metadata.current_trace, f, args...)
-    !istraceprimitive(ctx, f, args...) && push!(ctx.metadata.trace_stack, subtrace)
+    if !istraceprimitive(ctx, f, args...)
+        println("Pushing $(namify!(f, ctx))")
+        push!(ctx.metadata.trace_stack, subtrace)
+    end
     ctx.metadata.current_trace = ctx.metadata.trace_stack[end]
 end
 
@@ -146,7 +156,11 @@ function _overdub(ctx::HardwareCtx, f, args...; isbroadcast = false)
         name = select_output_name!(ctx, f, args...; isbroadcast = isbroadcast)
 
         return Cassette.tag(result, ctx, name)
-    else 
+    else
+        if _isstruct(unwrapped_f)
+            f = Cassette.tag(unwrapped_f, ctx, get_structname(ctx.metadata, unwrapped_f))
+        end
+
         return Cassette.recurse(ctx, f, args...)
     end
 end
@@ -192,6 +206,9 @@ end
 
 ## Primitives
 #   don't recurse these calls
+
+istraceprimitive(::typeof(getfield), ::Any, ::Symbol) = true
+istraceprimitive(::typeof(getproperty), ::Any, ::Symbol) = true
 
 Cassette.prehook(ctx::HardwareCtx, ::typeof(Base.materialize), args...) = nothing
 Cassette.posthook(ctx::HardwareCtx, output, ::typeof(Base.materialize), args...) = nothing
