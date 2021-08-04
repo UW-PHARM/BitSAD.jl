@@ -75,7 +75,7 @@ function (op::SSignedAdder)(x::SBit, y::SBit)
     pbit = op.padder(x.pos, y.pos)
     nbit = op.nadder(x.neg, y.neg)
 
-    return (pbit, nbit)
+    return SBit((pbit, nbit))
 end
 
 @kwdef mutable struct SSaturatingSubtractor
