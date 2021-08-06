@@ -53,13 +53,9 @@ is_trace_primitive(::typeof(Base.broadcasted),
                    ::typeof(+),
                    ::SBitstreamLike,
                    ::SBitstreamLike...) = true
-getsimulator(::typeof(+), x::SBitstream, xs::SBitstream...) = (xs...) -> begin
-    adders = [SSignedAdder() for _ in 1:(length(xs) - 1)]
-
-    return apply_binary_to_vararg(adders)
-end
-getsimulator(::typeof(Base.broadcasted), ::typeof(+), x::SBitstreamLike, xs::SBitstreamLike...) =
-    getsimulator.(+, x, xs...)
+getsimulator(::typeof(+), x::SBitstream, y::SBitstream) = SSignedAdder()
+getsimulator(::typeof(Base.broadcasted), ::typeof(+), x::SBitstreamLike, y::SBitstreamLike) =
+    getsimulator.(+, x, y)
 
 Base.:(-)(x::SBitstream, y::SBitstream) = SBitstream(x.value - y.value)
 is_trace_primitive(::typeof(-), ::SBitstreamLike, ::SBitstreamLike...) = true
@@ -67,11 +63,9 @@ is_trace_primitive(::typeof(Base.broadcasted),
                    ::typeof(-),
                    ::SBitstreamLike,
                    ::SBitstreamLike...) = true
-getsimulator(::typeof(+), x::SBitstreamLike, xs::SBitstreamLike...) = (xs...) -> begin
-    subtractors = [SSignedSubtractor() for _ in 1:(length(xs) - 1)]
-
-    return apply_binary_to_vararg(subtractors)
-end
+getsimulator(::typeof(+), x::SBitstreamLike, y::SBitstream) = SSignedSubtractor()
+getsimulator(::typeof(Base.broadcasted), ::typeof(-), x::SBitstreamLike, y::SBitstreamLike) =
+    getsimulator.(-, x, y)
 
 Base.:(*)(x::SBitstream, y::SBitstream) = SBitstream(x.value * y.value)
 is_trace_primitive(::typeof(*), ::SBitstreamLike, ::SBitstreamLike...) = true
@@ -79,11 +73,9 @@ is_trace_primitive(::typeof(Base.broadcasted),
                    ::typeof(*),
                    ::SBitstreamLike,
                    ::SBitstreamLike...) = true
-getsimulator(::typeof(*), x::SBitstreamLike, xs::SBitstreamLike...) = (xs...) -> begin
-    multipliers = [SSignedMultiplier() for _ in 1:(length(xs) - 1)]
-
-    return apply_binary_to_vararg(multipliers)
-end
+getsimulator(::typeof(*), x::SBitstreamLike, y::SBitstream) = SSignedMultiplier()
+getsimulator(::typeof(Base.broadcasted), ::typeof(*), x::SBitstreamLike, y::SBitstreamLike) =
+    getsimulator.(*, x, y)
 
 function Base.:(/)(x::SBitstream, y::SBitstream)
     if y.value <= 0
@@ -97,11 +89,9 @@ is_trace_primitive(::typeof(Base.broadcasted),
                    ::typeof(/),
                    ::SBitstreamLike,
                    ::SBitstreamLike...) = true
-getsimulator(::typeof(/), x::SBitstreamLike, xs::SBitstreamLike...) = (xs...) -> begin
-    dividers = [SSignedDivider() for _ in 1:(length(xs) - 1)]
-
-    return apply_binary_to_vararg(dividers)
-end
+getsimulator(::typeof(/), x::SBitstreamLike, y::SBitstream) = SSignedDivider()
+getsimulator(::typeof(Base.broadcasted), ::typeof(/), x::SBitstreamLike, y::SBitstreamLike) =
+    getsimulator.(/, x, y)
 
 function Base.:(÷)(x::SBitstream, y::Real)
     if y < 1
@@ -115,21 +105,21 @@ is_trace_primitive(::typeof(Base.broadcasted),
                    ::typeof(÷),
                    ::SBitstreamLike,
                    ::Real) = true
-getsimulator(::typeof(÷), x::SBitstreamLike, y::Real) = (x, y) -> SSignedFixedGainDivider()
+getsimulator(::typeof(÷), x::SBitstreamLike, y::Real) = SSignedFixedGainDivider()
 
 Base.sqrt(x::SBitstream) = SBitstream(sqrt(x.value))
 is_trace_primitive(::typeof(sqrt), x::SBitstreamLike) = true
 is_trace_primitive(::typeof(Base.broadcasted),
                    ::typeof(sqrt),
                    ::SBitstreamLike) = true
-getsimulator(::typeof(sqrt), x::SBitstreamLike) = x -> SSquareRoot()
+getsimulator(::typeof(sqrt), x::SBitstreamLike) = SSquareRoot()
 
 decorrelate(x::SBitstream) = SBitstream(x.value)
 is_trace_primitive(::typeof(decorrelate), x::SBitstreamLike) = true
 is_trace_primitive(::typeof(Base.broadcasted),
                    ::typeof(decorrelate),
                    ::SBitstreamLike) = true
-getsimulator(::typeof(decorrelate), x::SBitstreamLike) = x -> SSignedDecorrelator()
+getsimulator(::typeof(decorrelate), x::SBitstreamLike) = SSignedDecorrelator()
 
 Base.:(*)(x::AbstractVecOrMat{<:SBitstream}, y::AbstractVecOrMat{<:SBitstream}) =
     SBitstream.(float.(x) * float.(y))
@@ -137,11 +127,11 @@ is_trace_primitive(::typeof(*),
                    ::AbstractVecOrMat{<:SBitstream},
                    ::AbstractVecOrMat{<:SBitstream}) = true
 getsimulator(::typeof(*), x::AbstractVecOrMat{<:SBitstream}, y::AbstractVecOrMat{<:SBitstream}) =
-    (x, y) -> SSignedMatMultiplier(size(x, 1), size(y, 2))
+    SSignedMatMultiplier(size(x, 1), size(y, 2))
 
 LinearAlgebra.norm(x::AbstractVector{<:SBitstream}) = SBitstream(norm(float.(x)))
 is_trace_primitive(::typeof(LinearAlgebra.norm), ::AbstractVector{<:SBitstream}) = true
-getsimulator(::typeof(LinearAlgebra.norm), x::AbstractVector{<:SBitstream}) = x -> SL2Normer()
+getsimulator(::typeof(LinearAlgebra.norm), x::AbstractVector{<:SBitstream}) = SL2Normer()
 
 """
     generate(s::SBitstream, T::Integer = 1)

@@ -59,11 +59,9 @@ function _popcalls(ctx, args)
     return calls, new_args
 end
 
-function _unbroadcasted_transform(ctx, call, mksim)
+function _unbroadcasted_transform(ctx, call, sim)
     # insert calls to pop bits from the args
     popcalls, popbits = _popcalls(ctx, call.args)
-    # create a new simulator instance
-    sim = mksim(call.args...)
     # evaluate simulator on popped bits
     bit = Ghost.mkcall(sim, popbits...)
     # push resulting bits onto bitstream
@@ -72,15 +70,13 @@ function _unbroadcasted_transform(ctx, call, mksim)
     return [call, popcalls..., bit, psh], 1
 end
 
-function _broadcasted_transform(ctx, call, mksim)
+function _broadcasted_transform(ctx, call, sim)
     # ignore first (function) arg of broadcasted
     args = call.args[2:end]
     # insert calls to pop bits from the args
     popcalls, popbits = _popcalls(ctx, args)
     # materialize broadcasted
     mat = Ghost.mkcall(Base.materialize, Ghost.Variable(call))
-    # create a new simulator instance
-    sim = mksim(args...)
     # evaluate simulator on popped bits
     bit = Ghost.mkcall(sim, popbits...)
     # push resulting bits onto bitstream
@@ -89,15 +85,13 @@ function _broadcasted_transform(ctx, call, mksim)
     return [call, mat, popcalls..., bit, psh], 1
 end
 
-function _broadcasted_transform(ctx, call, mksims::AbstractArray)
+function _broadcasted_transform(ctx, call, sims::AbstractArray)
     # ignore first (function) arg of broadcasted
     args = call.args[2:end]
     # insert calls to pop bits from the args
     popcalls, popbits = _popcalls(ctx, args)
     # materialize broadcasted
     mat = Ghost.mkcall(Base.materialize, Ghost.Variable(call))
-    # create multiple instances of simulator
-    sims = map((f, a...) -> f(a...), mksims, args...)
     # evaluate simulators element-wise on popped bits
     bits = Ghost.mkcall(map, (f, a...) -> f(a...), sims, popbits...)
     # push resulting bits onto bitstreams
@@ -106,9 +100,9 @@ function _broadcasted_transform(ctx, call, mksims::AbstractArray)
     return [call, mat, popcalls..., bits, psh], 1
 end
 
-_handle_bcast_and_transform(ctx, call, mksim) =
-    _isbcast(call.fn) ? _broadcasted_transform(ctx, call, mksim) :
-                        _unbroadcasted_transform(ctx, call, mksim)
+_handle_bcast_and_transform(ctx, call, sim) =
+    _isbcast(call.fn) ? _broadcasted_transform(ctx, call, sim) :
+                        _unbroadcasted_transform(ctx, call, sim)
 
 _simtransform(ctx, input::Ghost.Input) =
     _gettapeval(Ghost.Variable(input)) isa SBitstreamLike ?
@@ -125,8 +119,8 @@ function _simtransform(ctx, call::Ghost.Call)
         return [], ctx.opmap[(call.fn, call.args...)].id
     else
         # get the simulator for this call signature
-        mksim = getsimulator(call.fn, map(arg -> _gettapeval(arg), call.args)...)
-        return _handle_bcast_and_transform(ctx, call, mksim)
+        sim = getsimulator(call.fn, map(arg -> _gettapeval(arg), call.args)...)
+        return _handle_bcast_and_transform(ctx, call, sim)
     end
 end
 
@@ -138,7 +132,7 @@ setbit!(x::AbstractArray{<:SBitstream}, bits) = push!.(x, bits)
 
 is_simulatable_primitive(sig...) = is_trace_primitive(sig...)
 
-function simulatable(f, args...)
+function simulator(f, args...)
     tape = trace(f, args...;
                  is_primitive = is_simulatable_primitive,
                  ctx = SimulatableContext())
@@ -147,18 +141,4 @@ function simulatable(f, args...)
 
     return tape
 end
-
-## Utilities for defining simulatable operators
-
-function apply_binary_to_vararg(ops)
-    function apply_ops(xs...)
-        acc = first(xs)
-        for (op, x) in zip(ops, Base.tail(xs))
-            acc = op(acc, x)
-        end
-
-        return acc
-    end
-
-    return apply_ops
-end
+simulatable(f, args...) = Ghost.compile(simulator(f, args...))
