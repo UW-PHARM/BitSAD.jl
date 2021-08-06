@@ -134,7 +134,7 @@ Users will most likely call the last method form above.
 - `dut`: an instance of the circuit struct
 - `args`: example arguments to circuit
 """
-function generate(m::Module)
+function generateverilog(m::Module)
     outstr = ""
     netlist = getnetlist(m)
 

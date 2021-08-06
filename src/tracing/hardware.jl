@@ -8,22 +8,25 @@ is_hardware_primitive(sig...) = is_trace_primitive(sig...)
 function generatehw(f, args...;
                     top = _nameof(f),
                     submodules = [],
-                    transforms = [constantreplacement!])
+                    transforms = [constantreduction!])
     # get tape and transform
-    tape = BitSAD.trace(f, args...;
-                        is_primitive = is_hardware_primitive,
-                        submodules = submodules)
-    BitSAD.transform!(BitSAD._squash_binary_vararg, tape)
+    tape = trace(f, args...;
+                 is_primitive = is_hardware_primitive,
+                 submodules = submodules)
+    transform!(_squash_binary_vararg, tape)
 
     # extract tape into module
-    m = BitSAD.Module(fn = f, name = top)
-    BitSAD.extracttrace!(m, tape)
+    m = Module(fn = f, name = top)
+    extracttrace!(m, tape)
 
     # apply transformations
     foreach(t! -> t!(m), transforms)
 
+    # replace constants with Verilog strings
+    constantreplacement!(m)
+
     # generate verilog string
-    return BitSAD.generate(m), m
+    return generateverilog(m), m
 end
 
 _getstructname(::T) where T = lowercase(string(nameof(T)))
@@ -53,7 +56,6 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
             # handle calls to getproperty
             if call.fn == Base.getproperty
                 _handle_getproperty!(m, call, param_map, const_map)
-                @show param_map
                 continue
             end
 

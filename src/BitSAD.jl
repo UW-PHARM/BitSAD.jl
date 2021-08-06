@@ -32,6 +32,7 @@ include("tracing/simulatable.jl")
 include("tracing/netlist.jl")
 include("tracing/circuit.jl")
 include("tracing/transforms/constantreplacement.jl")
+include("tracing/transforms/constantreduction.jl")
 include("tracing/hardware.jl")
 
 include("hardware/utils.jl") 

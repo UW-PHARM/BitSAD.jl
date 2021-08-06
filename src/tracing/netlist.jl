@@ -6,38 +6,39 @@ _checkclass(class) = (class != :input &&
                       class != :constant &&
                       class != :parameter) &&
     error("Cannot create net with class $class (use :input, :output, :internal, :constant, or :parameter)")
-_checksize(size) = any(size .< 1) &&
-    error("Cannot create net with size $size (size[i] must be >= 1)")
 
-@kwdef struct Net
-    name::String = ""
-    jltype::Type = Any
-    type::Symbol = :wire
-    class::Symbol = :internal
-    signed::Bool = false
-    size::Tuple{Int, Int}
+struct Net
+    name::String
+    value
+    type::Symbol
+    class::Symbol
+    signed::Bool
+    size
 
-    function Net(name, jltype, type, class, signed, size)
+    function Net(name, value, type, class, signed, size)
         _checktype(type)
         _checkclass(class)
-        _checksize(size)
 
-        new(name, jltype, type, class, signed, size)
+        new(name, value, type, class, signed, size)
     end
 end
-Net(x; kwargs...) = Net(; jltype = typeof(x), size = netsize(x), kwargs...)
+Net(; name = "", value = missing, type = :wire, class = :internal, signed = false, size = (1, 1)) =
+    Net(name, value, type, class, signed, size)
+Net(x; kwargs...) = Net(; value = x, size = netsize(x), kwargs...)
 
 Base.show(io::IO, n::Net) =
-    print(io, "Net{$(n.class), $(n.type)}($(n.name)::$(n.jltype))($(n.size[1])x$(n.size[2]))")
+    print(io, "Net{$(n.class), $(n.type)}($(n.name)::$(jltypeof(n)))($(n.size[1])x$(n.size[2]))")
+
+name(x::Net) = x.name
+
+value(x::Net) = x.value
+
+jltypeof(x::Net) = typeof(value(x))
 
 netsize(x) = (1, 1)
 netsize(x::AbstractArray) = size(x)
 netsize(x::AbstractVector) = (length(x), 1)
 netsize(x::Net) = x.size
-
-name(x::Net) = x.name
-
-jltypeof(x::Net) = x.jltype
 
 isreg(x::Net) = (x.type == :reg)
 iswire(x::Net) = !isreg(x)
