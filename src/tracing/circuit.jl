@@ -24,7 +24,7 @@ See also: [HW.generate](@ref)
 @kwdef struct Module{T}
     fn::T
     name::Symbol = _nameof(fn)
-    parameters::Dict{Symbol, Number} = Dict{Symbol, Number}()
+    parameters::Dict{String, String} = Dict{String, String}()
     submodules::Vector{Type} = Type[]
     dfg::MetaDiGraph{Int, Float64} = MetaDiGraph()
     handlers::Dict{Tuple{Bool, Vararg{Type}}, Any} = Dict{Tuple{Bool, Vararg{Type}}, Any}()
@@ -118,6 +118,54 @@ function printdfg(m::Module)
     end
 end
 
+function _printnet(net::Net)
+    reg = isreg(net) ? "reg" : ""
+    bitlength = prod(netsize(net)) - 1
+    bitstr = (bitlength == 0) ? "" : "[$bitlength:0]"
+    names = issigned(net) ? "$(name(net))_p, $(name(net))_m" : name(net)
+
+    return join([reg, bitstr, names], " ")
+end
+
+function _generatetopmatter(m::Module, netlist::Netlist)
+    netlist = unique(netlist)
+    inputs = filter(isinput, netlist)
+    outputs = filter(isoutput, netlist)
+    parameters = filter(isparameter, netlist)
+    internals = filter(isinternal, netlist)
+    wires = filter(iswire, internals)
+    regs = filter(isreg, internals)
+
+    outstr = "module $(m.name)(CLK, nRST, "
+
+    outstr *= join(name.(inputs), ", ")
+    outstr *= ", "
+    outstr *= join(name.(outputs), ", ")
+    outstr *= ");\n"
+
+    outstr *= join(map(parameters) do param
+        "parameter $(name(param)) = $(m.parameters[name(param)]);"
+    end, "\n")
+    outstr *= "\n"
+
+    outstr *= join(map(inputs) do input
+        "input $(_printnet(input));"
+    end, "\n")
+    outstr *= "\n"
+    outstr *= join(map(outputs) do output
+        "output $(_printnet(output));"
+    end, "\n")
+    outstr *= "\n"
+    outstr *= join(map(_printnet, regs), "\n")
+    outstr *= "\n"
+    outstr *= join(map(wires) do wire
+        "wire $(_printnet(wire));"
+    end, "\n")
+    outstr *= "\n\n"
+
+    return outstr
+end
+
 """
     HW.generate(m::Module, netlist::Netlist)
     HW.generate(m::Module, f)
@@ -163,6 +211,10 @@ function generateverilog(m::Module)
         # move one level up in the DFG
         nodes, visited = traverse(m.dfg, nodes, visited)
     end
+
+    # print top matter
+    outstr = _generatetopmatter(m, netlist) * outstr
+    outstr *= "\nendmodule"
 
     return outstr
 end

@@ -34,9 +34,9 @@ _getstructname(::T) where T = lowercase(string(nameof(T)))
 function _handle_getproperty!(m::Module, call, param_map, const_map)
     if m.fn == _gettapeval(call.args[1])
         val = _gettapeval(call)
-        prop = _gettapeval(call.args[2])
-        m.parameters[prop] = val
-        param_map[Ghost.Variable(call)] = string(prop)
+        prop = string(_gettapeval(call.args[2]))
+        m.parameters[prop] = string(val)
+        param_map[Ghost.Variable(call)] = prop
     else
         const_map[Ghost.Variable(call)] = string(_gettapeval(call))
     end
@@ -92,6 +92,10 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
             end
             outval = isbroadcast ? Base.materialize(_gettapeval(call)) : _gettapeval(call)
             output = Net(outval; name = "net_$(call.id)")
+
+            if tape.result == Ghost.Variable(call)
+                output = setclass(output, :output)
+            end
 
             addnode!(m, inputs, [output], op)
         end

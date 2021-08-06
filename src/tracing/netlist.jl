@@ -56,7 +56,7 @@ const Netlist = Vector{Net}
 inputs(n::Netlist) = filter(isinput, n)
 outputs(n::Netlist) = filter(isoutput, n)
 
-find(n::Netlist, x::Net) = findfirst(λ -> λ.name == name(x), n)
+find(n::Netlist, x::Net) = findall(λ -> λ.name == name(x), n)
 Base.in(n::Netlist, x::Net) = !isnothing(find(n, x))
 
 # function getsize(n::Netlist, x::String)
@@ -75,9 +75,26 @@ function setname(x::Net, name)
     return x
 end
 function setname!(n::Netlist, x::Net, name)
-    i = find(n, x)
-    isnothing(i) && error("Cannot name net $x to $name because it does not exist in netlist.")
-    n[i] = setname(n[i], name)
+    is = find(n, x)
+    isempty(is) && error("Cannot name net $x to $name because it does not exist in netlist.")
+    for i in is
+        n[i] = setname(n[i], name)
+    end
+
+    return n
+end
+
+function setvalue(x::Net, value)
+    @set! x.value = value
+
+    return x
+end
+function setvalue!(n::Netlist, x::Net, value)
+    is = find(n, x)
+    isempty(is) && error("Cannot set net $x value to $value because it does not exist in netlist.")
+    for i in is
+        n[i] = setvalue(n[i], value)
+    end
 
     return n
 end
@@ -89,9 +106,11 @@ function setclass(x::Net, class)
     return x
 end
 function setclass!(n::Netlist, x::Net, class)
-    i = find(n, x)
-    isnothing(i) && error("Cannot set net $x as $class because it does not exist in netlist.")
-    n[i] = setclass(n[i], class)
+    is = find(n, x)
+    isempty(is) && error("Cannot set net $x as $class because it does not exist in netlist.")
+    for i in is
+        n[i] = setclass(n[i], class)
+    end
 
     return n
 end
@@ -102,9 +121,11 @@ function setreg(x::Net)
     return x
 end
 function setreg!(n::Netlist, x::Net)
-    i = find(n, x)
-    isnothing(i) && error("Cannot set net $x as register because it does not exist in netlist.")
-    n[i] = setreg(n[i])
+    is = find(n, x)
+    isempty(is) && error("Cannot set net $x as register because it does not exist in netlist.")
+    for i in is
+        n[i] = setreg(n[i])
+    end
 
     return n
 end
@@ -115,9 +136,11 @@ function setwire(x::Net)
     return x
 end
 function setwire!(n::Netlist, x::Net)
-    i = find(n, x)
-    isnothing(i) && error("Cannot set net $x as wire because it does not exist in netlist.")
-    n[i] = setwire(n[i])
+    is = find(n, x)
+    isempty(is) && error("Cannot set net $x as wire because it does not exist in netlist.")
+    for i in is
+        n[i] = setwire(n[i])
+    end
 
     return n
 end
@@ -128,9 +151,11 @@ function setsigned(x::Net, signed)
     return x
 end
 function setsigned!(n::Netlist, x::Net, signed)
-    i = find(n, x)
-    isnothing(i) && error("Cannot set net $x as signed = $signed because it does not exist in netlist.")
-    n[i] = setsigned(n[i], signed)
+    is = find(n, x)
+    isempty(is) && error("Cannot set net $x as signed = $signed because it does not exist in netlist.")
+    for i in is
+        n[i] = setsigned(n[i], signed)
+    end
 
     return n
 end

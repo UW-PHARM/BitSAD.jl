@@ -25,7 +25,7 @@ function constantreplacement!(m::Module)
         inputs = getinputs(m.dfg, v)
         for input in inputs
             if isconstant(input)
-                width = getfxpwidths(parse(Float64, name(input)))
+                width = getfxpwidths(value(input))
                 maxintwidth = max(maxintwidth, width.integral)
                 maxfracwidth = max(maxfracwidth, width.fractional)
             end
@@ -39,8 +39,11 @@ function constantreplacement!(m::Module)
         inputs = getinputs(m.dfg, v)
         for (i, input) in enumerate(inputs)
             if isconstant(input)
-                conststr = getfixedpoint(parse(Float64, name(input)), width)
+                conststr = getfixedpoint(value(input), width)
                 inputs[i] = setname(input, conststr)
+            elseif isparameter(input)
+                conststr = getfixedpoint(value(input), width)
+                m.parameters[name(input)] = conststr
             end
         end
         set_prop!(m.dfg, v, :inputs, inputs)
