@@ -1,14 +1,16 @@
-@kwdef mutable struct SMultHandler <: AbstractHandler
+@kwdef mutable struct SMultHandler
     id = 0
 end
 
-@kwdef mutable struct SMatMultHandler <: AbstractHandler
+@kwdef mutable struct SMatMultHandler
     id = 0
 end
 
-istraceprimitive(::typeof(*), ::SBitstreamLike, ::SBitstreamLike) = true
-gethandler(broadcasted::Bool, ::Type{<:typeof(*)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) =
-    broadcasted ? SMatMultHandler() : SMultHandler()
+gethandler(broadcasted::Bool,
+           ::Type{<:typeof(*)},
+           ::Type{<:SBitstreamLike},
+           ::Type{<:SBitstreamLike}) =
+    broadcasted ? SMultHandler() : SMatMultHandler()
 
 function (handler::SMultHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # update netlist with inputs
@@ -16,8 +18,8 @@ function (handler::SMultHandler)(netlist::Netlist, inputs::Vector{Net}, outputs:
     setsigned!(netlist, inputs[2], true)
 
     # compute output size
-    lname, rname = handlebroadcast(name(inputs[1]), name(inputs[2]),
-                                   netsize(inputs[1]), netsize(inputs[2]))
+    lname, rname = handle_broadcast_name(name(inputs[1]), name(inputs[2]),
+                                         netsize(inputs[1]), netsize(inputs[2]))
     outsize = netsize(outputs[1])
 
     # add internal nets to netlist

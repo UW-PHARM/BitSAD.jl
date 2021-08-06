@@ -1,5 +1,3 @@
-using LinearAlgebra
-
 const SBit = @NamedTuple{pos::Bool, neg::Bool}
 Base.convert(::Type{SBit}, b::Tuple{Bool, Bool}) = (pos = b[1], neg = b[2])
 Base.promote_rule(::Type{SBit}, ::Type{Tuple{Bool, Bool}}) = SBit
@@ -23,20 +21,19 @@ Fields:
 struct SBitstream{T<:Real} <: AbstractBitstream
     bits::Queue{SBit}
     value::T
-    id::UInt32
 
-    function SBitstream{T}(bits::Queue{SBit}, value::T, id::UInt32 = _genid()) where {T<:Real}
+    function SBitstream{T}(bits::Queue{SBit}, value::T) where {T<:Real}
         if value > 1 || value < -1
             @warn "SBitstream can only be ∈ [-1, 1] (saturation occurring)."
         end
 
-        new{T}(bits, min(max(value, -1), 1), id)
+        new{T}(bits, min(max(value, -1), 1))
     end
 end
 SBitstream(value::T) where {T<:Real} = SBitstream{T}(Queue{SBit}(), value)
 SBitstream{T}(value::Real) where {T<:Real} = SBitstream(convert(T, value))
 Base.convert(::Type{SBitstream{T}}, s::SBitstream) where {T<:Real} =
-    SBitstream{T}(s.bits, convert(T, s.value), s.id)
+    SBitstream{T}(s.bits, convert(T, s.value))
 
 const SBitstreamLike = Union{<:SBitstream, AbstractArray{<:SBitstream}}
 
@@ -44,19 +41,9 @@ Base.float(s::SBitstream) = s.value
 Base.zero(::SBitstream{T}) where T = SBitstream(zero(T))
 Base.one(::SBitstream{T}) where T = SBitstream(one(T))
 
-Base.show(io::IO, s::SBitstream) = print(io, "SBitstream($(s.value), $(s.id))")
+Base.show(io::IO, s::SBitstream) = print(io, "SBitstream($(s.value))")
 Base.show(io::IO, ::MIME"text/plain", s::SBitstream{T}) where T =
-    print(io, "SBitstream{$T}(value = $(s.value), id = $(s.id))\n    with $(length(s)) bits enqueue.")
-
-Base.iterate(s::SBitstream, state...) = iterate(s.bits, state...)
-
-Base.length(s::SBitstream) = length(s.bits)
-
-Base.eltype(s::SBitstream) = eltype(s.bits)
-
-Base.getindex(s::SBitstream, i::Integer) = Iterators.take(s.bits, i) |> collect |> last
-Base.firstindex(s::SBitstream) = 1
-Base.lastindex(s::SBitstream) = length(s)
+    print(io, "SBitstream{$T}(value = $(s.value))\n    with $(length(s)) bits enqueue.")
 
 include("./soperators.jl")
 
@@ -171,7 +158,7 @@ function generate(s::SBitstream, T::Integer = 1)
 end
 generate!(s::SBitstream, T::Integer = 1) = push!(s, generate(s, T))
 
-pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : dequeue!(s.bits)
+Base.pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : dequeue!(s.bits)
 
 """
     estimate(buffer::AbstractVector)

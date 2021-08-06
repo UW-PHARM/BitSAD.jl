@@ -1,9 +1,9 @@
-@kwdef mutable struct SAddHandler <: AbstractHandler
+@kwdef mutable struct SAddHandler
     id = 0
 end
 
-istraceprimitive(::typeof(+), ::SBitstreamLike, ::SBitstreamLike) = true
-gethandler(::Type{typeof(+)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) = SAddHandler()
+gethandler(::Bool, ::Type{typeof(+)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) =
+    SAddHandler()
 
 function (handler::SAddHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # update netlist with inputs
@@ -11,8 +11,8 @@ function (handler::SAddHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::
     setsigned!(netlist, inputs[2], true)
 
     # compute output naming
-    lname, rname = handlebroadcast(name(inputs[1]), name(inputs[2]),
-                                   netsize(inputs[1]), netsize(inputs[2]))
+    lname, rname = handle_broadcast_name(name(inputs[1]), name(inputs[2]),
+                                         netsize(inputs[1]), netsize(inputs[2]))
     outsize = netsize(outputs[1])
 
     # update netlist with output

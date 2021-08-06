@@ -1,9 +1,9 @@
-@kwdef mutable struct SFixedGainDivHandler <: AbstractHandler
+@kwdef mutable struct SFixedGainDivHandler
     id = 0
 end
 
-istraceprimitive(::typeof(÷), ::SBitstreamLike, ::Real) = true
-gethandler(::Type{typeof(÷)}, ::Type{<:SBitstreamLike}, ::Type{<:Real}) = SFixedGainDivHandler()
+gethandler(::Bool, ::Type{typeof(÷)}, ::Type{<:SBitstreamLike}, ::Type{<:Real}) =
+    SFixedGainDivHandler()
 
 function (handler::SFixedGainDivHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # update netlist with inputs
@@ -47,5 +47,3 @@ function (handler::SFixedGainDivHandler)(netlist::Netlist, inputs::Vector{Net}, 
 
     return outstring
 end
-
-allowconstreplace(::Type{SFixedGainDivHandler}) = false

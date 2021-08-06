@@ -1,15 +1,7 @@
-@kwdef mutable struct TransposeHandler <: AbstractHandler
+@kwdef mutable struct TransposeHandler
     id = 0
 end
 
-# @register(TransposeHandler, permutedims, begin
-#     [Vector{SBit}] => [Matrix{SBit}]
-#     [Vector{DBit}] => [Matrix{DBit}]
-#     [Matrix{SBit}] => [Matrix{SBit}]
-#     [Matrix{DBit}] => [Matrix{DBit}]
-# end)
-
-istraceprimitive(::typeof(permutedims), ::SBitstreamLike) = true
 gethandler(::Type{typeof(permutedims)}, ::Type{<:SBitstreamLike}) = TransposeHandler()
 
 function (handler::TransposeHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})

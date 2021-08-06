@@ -1,8 +1,7 @@
-@kwdef mutable struct SSqrtHandler <: AbstractHandler
+@kwdef mutable struct SSqrtHandler
     id = 0
 end
 
-istraceprimitive(::typeof(sqrt), ::SBitstreamLike) = true
 gethandler(::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) = SSqrtHandler()
 
 function (handler::SSqrtHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})

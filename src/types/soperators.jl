@@ -1,5 +1,3 @@
-using Base: @kwdef
-
 abstract type SOperator end
 
 @kwdef mutable struct SDecorrelator

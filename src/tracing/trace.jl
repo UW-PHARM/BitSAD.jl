@@ -3,12 +3,12 @@ _typeof(T::Type) = T
 
 is_trace_primitive(x...) = false
 
-function trace(f, args...; submodules = [], ctx = Dict{Any, Any}())
+function trace(f, args...; is_primitive = is_trace_primitive, submodules = [], ctx = Dict{Any, Any}())
     primitive_sigs =
         Ghost.FunctionResolver{Bool}([Tuple{_typeof(f), Vararg} => true for f in submodules])
     is_primitive_or_submodule(sig) =
         Ghost.is_primitive(sig) ||
-        is_trace_primitive(Ghost.get_type_parameters(sig)...) ||
+        is_primitive(Ghost.get_type_parameters(sig)...) ||
         sig ∈ primitive_sigs
     _, tape = Ghost.trace(f, args...; is_primitive = is_primitive_or_submodule, ctx = ctx)
 
@@ -46,6 +46,26 @@ function transform!(f, fctx, tape::Ghost.Tape)
     end
 
     return tape
+end
+transform!(f, tape::Ghost.Tape) = transform!(f, (x...) -> nothing, tape)
+
+squashable(x) = false
+for op in (:+, :-, :*, :/, :÷)
+    @eval squashable(::typeof($op)) = true
+end
+
+_squash_binary_vararg(ctx, entry) = [entry], 1
+function _squash_binary_vararg(ctx, call::Ghost.Call)
+    squashable(call.fn) || return [call], 1
+
+    new_calls = accumulate(call.args[2:end]; init = call.args[1]) do x, y
+        xvar = (x isa Ghost.Call) ? Ghost.Variable(x) : x
+        yvar = (y isa Ghost.Call) ? Ghost.Variable(y) : y
+
+        return Ghost.mkcall(call.fn, xvar, yvar)
+    end
+
+    return new_calls, length(new_calls)
 end
 
 # TODO: do we need macros for defining primitive operations?

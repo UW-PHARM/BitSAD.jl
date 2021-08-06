@@ -1,5 +1,3 @@
-import Base: push!, pop!, length
-
 """
     AbstractBitstream
 
@@ -19,13 +17,13 @@ Fields:
 - `s::AbstractBitstream`: the bitstream object
 - `b`: the bit(s) to push onto the stream
 """
-push!(s::AbstractBitstream, b) = enqueue!(s.bits, b)
-function push!(s::AbstractBitstream, bs::Vector)
+Base.push!(s::AbstractBitstream, b) = enqueue!(s.bits, b)
+function Base.push!(s::AbstractBitstream, bs::Vector)
     for b in bs
         push!(s, b)
     end
 end
-push!(s::VecOrMat{<:AbstractBitstream}, bs::VecOrMat) = push!.(s, bs)
+Base.push!(s::VecOrMat{<:AbstractBitstream}, bs::VecOrMat) = push!.(s, bs)
 
 """
     pop!(s::AbstractBitstream)
@@ -35,8 +33,8 @@ Pop a bit from bitstream `s`.
 Fields:
 - `s::AbstractBitstream`: the bitstream object
 """
-pop!(s::AbstractBitstream) = dequeue!(s.bits)
-pop!(s::VecOrMat{<:AbstractBitstream}) = pop!.(s)
+Base.pop!(s::AbstractBitstream) = dequeue!(s.bits)
+Base.pop!(s::VecOrMat{<:AbstractBitstream}) = pop!.(s)
 
 """
     observe(s::AbstractBitstream)
@@ -54,4 +52,12 @@ observe(s::VecOrMat{<:AbstractBitstream}) = observe.(s)
 
 Return the number of bits in `s`.
 """
-length(s::AbstractBitstream) = length(s.bits)
+Base.length(s::AbstractBitstream) = length(s.bits)
+
+Base.iterate(s::AbstractBitstream, state...) = iterate(s.bits, state...)
+
+Base.eltype(s::AbstractBitstream) = eltype(s.bits)
+
+Base.getindex(s::AbstractBitstream, i::Integer) = Iterators.take(s.bits, i) |> collect |> last
+Base.firstindex(s::AbstractBitstream) = 1
+Base.lastindex(s::AbstractBitstream) = length(s)

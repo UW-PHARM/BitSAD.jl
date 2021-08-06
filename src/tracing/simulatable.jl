@@ -1,21 +1,3 @@
-_isbound(var) = !isnothing(var._op)
-
-_gettapeop(var::Ghost.Variable) =
-    _isbound(var) ? var._op :
-                    error("Cannot get operation on tape for unbound variable.")
-
-_gettapeval(var::Ghost.Variable) =
-    _isbound(var) ? var._op.val :
-                    error("Cannot get value on tape for unbound variable.")
-_gettapeval(var) = var
-
-_issimulatable(op) = false
-_issimulatable(var::Ghost.Variable) = 
-    (_gettapeval(var) isa Base.Broadcast.Broadcasted) ? _issimulatable(_gettapeop(var)) :
-                                                        _gettapeval(var) isa SBitstreamLike
-_issimulatable(input::Ghost.Input) = input.val isa SBitstreamLike
-_issimulatable(call::Ghost.Call) = any(_issimulatable, call.args)
-
 struct SimulatableContext
     # map from original variable to popped variable
     popmap::Dict{Ghost.Variable, Ghost.Variable}
@@ -124,9 +106,6 @@ function _broadcasted_transform(ctx, call, mksims::AbstractArray)
     return [call, mat, popcalls..., bits, psh], 1
 end
 
-_isbcast(::typeof(Base.broadcasted)) = true
-_isbcast(x) = false
-
 _handle_bcast_and_transform(ctx, call, mksim) =
     _isbcast(call.fn) ? _broadcasted_transform(ctx, call, mksim) :
                         _unbroadcasted_transform(ctx, call, mksim)
@@ -151,15 +130,6 @@ function _simtransform(ctx, call::Ghost.Call)
     end
 end
 
-# struct Sim{T}
-#     args::T
-# end
-# Sim(args...) = Sim(args)
-
-# (::Sim)(args...) = args[1]
-
-# getsimulator(args...) = Sim
-
 getbit(x) = x
 getbit(x::SBitstreamLike) = pop!.(x)
 
@@ -168,8 +138,11 @@ setbit!(x::AbstractArray{<:SBitstream}, bits) = push!.(x, bits)
 
 is_simulatable_primitive(sig...) = is_trace_primitive(sig...)
 
-function simulatable(f, args...; submodules = [])
-    tape = trace(f, args...; submodules = submodules, ctx = SimulatableContext())
+function simulatable(f, args...)
+    tape = trace(f, args...;
+                 is_primitive = is_simulatable_primitive,
+                 ctx = SimulatableContext())
+    transform!(_squash_binary_vararg, tape)
     transform!(_simtransform, _update_ctx!, tape)
 
     return tape

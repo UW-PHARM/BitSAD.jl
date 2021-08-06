@@ -1,8 +1,7 @@
-@kwdef mutable struct SSubHandler <: AbstractHandler
+@kwdef mutable struct SSubHandler
     id = 0
 end
 
-istraceprimitive(::typeof(-), ::SBitstreamLike, ::SBitstreamLike) = true
 gethandler(::Type{typeof(-)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) = SSubHandler()
 
 function (handler::SSubHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
@@ -11,8 +10,8 @@ function (handler::SSubHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::
     setsigned!(netlist, inputs[2], true)
 
     # compute output size
-    lname, rname = handlebroadcast(name(inputs[1]), name(inputs[2]),
-                                   netsize(inputs[1]), netsize(inputs[2]))
+    lname, rname = handle_broadcast_name(name(inputs[1]), name(inputs[2]),
+                                         netsize(inputs[1]), netsize(inputs[2]))
     outsize = netsize(outputs[1])
 
     # add output net to netlist
