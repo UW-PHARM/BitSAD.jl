@@ -111,6 +111,7 @@ _simtransform(ctx, input::Ghost.Input) =
 function _simtransform(ctx, call::Ghost.Call)
     # if the args don't contain SBitstreamLike, then skip
     _issimulatable(call) || return [call], 1
+    (call.fn == getindex) && return [call], 1
 
     # if call has already been transformed,
     #  then delete this call and rebind to the transformed call
@@ -133,9 +134,20 @@ setbit!(x::AbstractArray{<:SBitstream}, bits) = push!.(x, bits)
 is_simulatable_primitive(sig...) = is_trace_primitive(sig...)
 
 function simulator(f, args...)
-    tape = trace(f, args...;
-                 is_primitive = is_simulatable_primitive,
-                 ctx = SimulatableContext())
+    # if f itself is a primitive, do a manual tape
+    if is_simulatable_primitive(f, args...)
+        tape = Ghost.Tape(SimulatableContext())
+        inputs = Ghost.inputs!(tape, f, args...)
+        if _isstruct(f)
+            tape.result = push!(tape, Ghost.mkcall(inputs...))
+        else
+            tape.result = push!(tape, Ghost.mkcall(f, inputs[2:end]...))
+        end
+    else
+        tape = trace(f, args...;
+                     is_primitive = is_simulatable_primitive,
+                     ctx = SimulatableContext())
+    end
     transform!(_squash_binary_vararg, tape)
     transform!(_simtransform, _update_ctx!, tape)
 
