@@ -10,19 +10,19 @@
         @test x.value == 0.5 && y.value == 0.1
         @test float(x) == x.value
         @testset for op in (+, -, *)
-            @test op(x, y).value == op(x.value, y.value)
-            @test op(x, w).value == op(x.value, w.value)
+            @test float(op(x, y)) == op(float(x), float(y))
+            @test float(op(x, w)) == op(float(x), float(w))
         end
-        @test (y / x).value == y.value / x.value
-        @test_logs (:warn, "SBitstream can only be ∈ [-1, 1] (saturation occurring).") (x / y).value == 1
-        @test (x ÷ 2).value == x.value / 2
-        @test (w ÷ 2).value == w.value / 2
+        @test float(y / x) == float(y) / float(x)
+        @test_logs (:warn, "SBitstream can only be ∈ [-1, 1] (saturation occurring).") float(x / y) == 1
+        @test float(x ÷ 2) == float(x) / 2
+        @test float(w ÷ 2) == float(w) / 2
         @test_throws ErrorException x ÷ 0.2
-        @test sqrt(x).value == sqrt(x.value)
-        @test decorrelate(x).value == x.value
+        @test float(sqrt(x)) == sqrt(float(x))
+        @test float(decorrelate(x)) == float(x)
         @test float.(X * Y) == float.(X) * float.(Y)
         @test float.(X * v) == float.(X) * float.(v)
-        @test norm(v).value == norm(float.(v))
+        @test float(norm(v)) == norm(float.(v))
     end
 
     @testset "Sample Generation" begin

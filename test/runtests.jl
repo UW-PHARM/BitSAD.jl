@@ -5,4 +5,4 @@ using LinearAlgebra: norm
 
 include("bitstream.jl")
 include("sbitstream.jl")
-include("dbitstream.jl")
+# include("dbitstream.jl")
