@@ -47,90 +47,81 @@ Base.show(io::IO, ::MIME"text/plain", s::SBitstream{T}) where T =
 
 include("./soperators.jl")
 
-Base.:(+)(x::SBitstream, y::SBitstream) = SBitstream(x.value + y.value)
-is_trace_primitive(::typeof(+), ::SBitstream, ::SBitstream...) = true
-is_trace_primitive(::typeof(Base.broadcasted),
-                   ::typeof(+),
-                   ::SBitstreamLike,
-                   ::SBitstreamLike...) = true
-getsimulator(::typeof(+), x::SBitstream, y::SBitstream) = SSignedAdder()
-getsimulator(::typeof(Base.broadcasted), ::typeof(+), x::SBitstreamLike, y::SBitstreamLike) =
-    getsimulator.(+, x, y)
+Base.:(+)(x::SBitstream, y::SBitstream) = SBitstream(float(x) + float(y))
 
-Base.:(-)(x::SBitstream, y::SBitstream) = SBitstream(x.value - y.value)
-is_trace_primitive(::typeof(-), ::SBitstreamLike, ::SBitstreamLike...) = true
-is_trace_primitive(::typeof(Base.broadcasted),
-                   ::typeof(-),
-                   ::SBitstreamLike,
-                   ::SBitstreamLike...) = true
-getsimulator(::typeof(+), x::SBitstreamLike, y::SBitstream) = SSignedSubtractor()
-getsimulator(::typeof(Base.broadcasted), ::typeof(-), x::SBitstreamLike, y::SBitstreamLike) =
-    getsimulator.(-, x, y)
+Base.:(-)(x::SBitstream, y::SBitstream) = SBitstream(float(x) - float(y))
 
-Base.:(*)(x::SBitstream, y::SBitstream) = SBitstream(x.value * y.value)
-is_trace_primitive(::typeof(*), ::SBitstreamLike, ::SBitstreamLike...) = true
-is_trace_primitive(::typeof(Base.broadcasted),
-                   ::typeof(*),
-                   ::SBitstreamLike,
-                   ::SBitstreamLike...) = true
-getsimulator(::typeof(*), x::SBitstreamLike, y::SBitstream) = SSignedMultiplier()
-getsimulator(::typeof(Base.broadcasted), ::typeof(*), x::SBitstreamLike, y::SBitstreamLike) =
-    getsimulator.(*, x, y)
+Base.:(*)(x::SBitstream, y::SBitstream) = SBitstream(float(x) * float(y))
 
 function Base.:(/)(x::SBitstream, y::SBitstream)
-    if y.value <= 0
+    if float(y) <= 0
         error("SBitstream only supports divisors > 0 (y == $y).")
     end
 
-    SBitstream(x.value / y.value)
+    SBitstream(float(x) / y.value)
 end
-is_trace_primitive(::typeof(/), ::SBitstreamLike, ::SBitstreamLike...) = true
-is_trace_primitive(::typeof(Base.broadcasted),
-                   ::typeof(/),
-                   ::SBitstreamLike,
-                   ::SBitstreamLike...) = true
-getsimulator(::typeof(/), x::SBitstreamLike, y::SBitstream) = SSignedDivider()
-getsimulator(::typeof(Base.broadcasted), ::typeof(/), x::SBitstreamLike, y::SBitstreamLike) =
-    getsimulator.(/, x, y)
+
+for (op, sim) in ((:+, :SSignedAdder),
+                  (:-, :SSignedSubtractor),
+                  (:*, :SSignedMultiplier),
+                  (:/, :SSignedDivider))
+    @eval begin
+        is_trace_primitive(::Type{typeof($op)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}) = true
+        is_trace_primitive(::Type{typeof(Base.broadcasted)},
+                           ::Type{typeof($op)},
+                           ::Type{<:SBitstreamLike},
+                           ::Type{<:SBitstreamLike}) = true
+        getsimulator(::typeof($op), x::SBitstream, y::SBitstream) = $(sim)()
+        getsimulator(::typeof(Base.broadcasted),
+                     ::typeof($op),
+                     x::SBitstreamLike,
+                     y::SBitstreamLike) = getsimulator.($op, x, y)
+    end
+end
 
 function Base.:(÷)(x::SBitstream, y::Real)
     if y < 1
         error("SBitstream only supports fixed-gain divisors >= 1 (y == $y).")
     end
 
-    SBitstream(x.value / y)
+    SBitstream(float(x) / y)
 end
-is_trace_primitive(::typeof(÷), ::SBitstreamLike, ::Real) = true
-is_trace_primitive(::typeof(Base.broadcasted),
-                   ::typeof(÷),
-                   ::SBitstreamLike,
-                   ::Real) = true
-getsimulator(::typeof(÷), x::SBitstreamLike, y::Real) = SSignedFixedGainDivider()
+is_trace_primitive(::Type{typeof(÷)}, ::Type{<:SBitstreamLike}, ::Type{<:Real}) = true
+is_trace_primitive(::Type{typeof(Base.broadcasted)},
+                   ::Type{typeof(÷)},
+                   ::Type{<:SBitstreamLike},
+                   ::Type{<:Real}) = true
+getsimulator(::typeof(÷), x::SBitstream, y::Real) = SSignedFixedGainDivider()
+getsimulator(::typeof(Base.broadcasted), ::typeof(÷), x::SBitstreamLike, y::Real) =
+    getsimulator.(÷, x, y)
 
 Base.sqrt(x::SBitstream) = SBitstream(sqrt(x.value))
-is_trace_primitive(::typeof(sqrt), x::SBitstreamLike) = true
-is_trace_primitive(::typeof(Base.broadcasted),
-                   ::typeof(sqrt),
-                   ::SBitstreamLike) = true
-getsimulator(::typeof(sqrt), x::SBitstreamLike) = SSquareRoot()
+is_trace_primitive(::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) = true
+is_trace_primitive(::Type{typeof(Base.broadcasted)},
+                   ::Type{typeof(sqrt)},
+                   ::Type{<:SBitstreamLike}) = true
+getsimulator(::typeof(sqrt), x::SBitstream) = SSquareRoot()
+getsimulator(::typeof(Base.broadcasted), ::typeof(sqrt), x::SBitstream) = getsimulator.(sqrt, x)
 
 decorrelate(x::SBitstream) = SBitstream(x.value)
-is_trace_primitive(::typeof(decorrelate), x::SBitstreamLike) = true
-is_trace_primitive(::typeof(Base.broadcasted),
-                   ::typeof(decorrelate),
-                   ::SBitstreamLike) = true
+is_trace_primitive(::Type{typeof(decorrelate)}, ::Type{SBitstreamLike}) = true
+is_trace_primitive(::Type{typeof(Base.broadcasted)},
+                   ::Type{typeof(decorrelate)},
+                   ::Type{SBitstreamLike}) = true
 getsimulator(::typeof(decorrelate), x::SBitstreamLike) = SSignedDecorrelator()
+getsimulator(::typeof(Base.broadcasted), ::typeof(decorrelate), x::SBitstreamLike) =
+    getsimulator.(decorrelate, x)
 
 Base.:(*)(x::AbstractVecOrMat{<:SBitstream}, y::AbstractVecOrMat{<:SBitstream}) =
     SBitstream.(float.(x) * float.(y))
-is_trace_primitive(::typeof(*),
-                   ::AbstractVecOrMat{<:SBitstream},
-                   ::AbstractVecOrMat{<:SBitstream}) = true
+is_trace_primitive(::Type{typeof(*)},
+                   ::Type{<:AbstractVecOrMat{<:SBitstream}},
+                   ::Type{<:AbstractVecOrMat{<:SBitstream}}) = true
 getsimulator(::typeof(*), x::AbstractVecOrMat{<:SBitstream}, y::AbstractVecOrMat{<:SBitstream}) =
     SSignedMatMultiplier(size(x, 1), size(y, 2))
 
 LinearAlgebra.norm(x::AbstractVector{<:SBitstream}) = SBitstream(norm(float.(x)))
-is_trace_primitive(::typeof(LinearAlgebra.norm), ::AbstractVector{<:SBitstream}) = true
+is_trace_primitive(::Type{typeof(LinearAlgebra.norm)}, ::Type{<:AbstractVector{<:SBitstream}}) = true
 getsimulator(::typeof(LinearAlgebra.norm), x::AbstractVector{<:SBitstream}) = SL2Normer()
 
 """

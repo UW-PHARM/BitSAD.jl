@@ -28,6 +28,9 @@ function _update_ctx!(ctx::SimulatableContext, vars)
     if _issimulatable(vars[1])
         if vars[1] isa Ghost.Input && length(vars) > 1
             ctx.popmap[Ghost.Variable(vars[1])] = Ghost.Variable(vars[2])
+        elseif vars[1] isa Ghost.Call && _isbcast(vars[1].fn) && length(vars) > 1
+            ctx.popmap[Ghost.Variable(vars[1])] = Ghost.Variable(vars[end - 1])
+            ctx.popmap[Ghost.Variable(vars[2])] = Ghost.Variable(vars[end - 1])
         elseif vars[1] isa Ghost.Call && length(vars) > 1
             ctx.popmap[Ghost.Variable(vars[1])] = Ghost.Variable(vars[end - 1])
         # elseif vars[1] isa Ghost.Call # identity replacement
@@ -57,6 +60,22 @@ function _popcalls(ctx, args)
     end
 
     return calls, new_args
+end
+
+function _wrap_bcast_bits(popbits)
+    wrap_calls = []
+    wrap_bits = []
+    for bit in popbits
+        if _gettapeval(bit) isa SBit
+            call = Ghost.mkcall(Ref, bit)
+            push!(wrap_calls, call)
+            push!(wrap_bits, Ghost.Variable(call))
+        else
+            push!(wrap_bits, bit)
+        end
+    end
+
+    return wrap_calls, wrap_bits
 end
 
 function _unbroadcasted_transform(ctx, call, sim)
@@ -93,11 +112,13 @@ function _broadcasted_transform(ctx, call, sims::AbstractArray)
     # materialize broadcasted
     mat = Ghost.mkcall(Base.materialize, Ghost.Variable(call))
     # evaluate simulators element-wise on popped bits
-    bits = Ghost.mkcall(map, (f, a...) -> f(a...), sims, popbits...)
+    wrapcalls, wrapbits = _wrap_bcast_bits(popbits)
+    bits = Ghost.mkcall(Base.broadcasted, (f, a...) -> f(a...), sims, wrapbits...)
+    matbits = Ghost.mkcall(Base.materialize, Ghost.Variable(bits))
     # push resulting bits onto bitstreams
-    psh = Ghost.mkcall(setbit!, Ghost.Variable(mat), Ghost.Variable(bits))
+    psh = Ghost.mkcall(setbit!, Ghost.Variable(mat), Ghost.Variable(matbits))
 
-    return [call, mat, popcalls..., bits, psh], 1
+    return [call, mat, popcalls..., wrapcalls..., bits, matbits, psh], 1
 end
 
 _handle_bcast_and_transform(ctx, call, sim) =
@@ -109,20 +130,19 @@ _simtransform(ctx, input::Ghost.Input) =
         ([input, Ghost.mkcall(getbit, Ghost.Variable(input))], 1) :
         ([input], 1)
 function _simtransform(ctx, call::Ghost.Call)
-    # if the args don't contain SBitstreamLike, then skip
-    _issimulatable(call) || return [call], 1
-    (call.fn == getindex) && return [call], 1
-
     # if call has already been transformed,
     #  then delete this call and rebind to the transformed call
+    haskey(ctx.opmap, (call.fn, call.args...)) && return [], ctx.opmap[(call.fn, call.args...)].id
+
+    # if the args don't contain SBitstreamLike, then skip
+    sig = Ghost.get_type_parameters(Ghost.call_signature(call.fn, _gettapeval.(call.args)...))
+    is_simulatable_primitive(sig...) || return [call], 1
+    # (call.fn == getindex) && return [call], 1
+
     # otherwise, transform this call while handling broadcasting
-    if haskey(ctx.opmap, (call.fn, call.args...))
-        return [], ctx.opmap[(call.fn, call.args...)].id
-    else
-        # get the simulator for this call signature
-        sim = getsimulator(call.fn, map(arg -> _gettapeval(arg), call.args)...)
-        return _handle_bcast_and_transform(ctx, call, sim)
-    end
+    # get the simulator for this call signature
+    sim = getsimulator(call.fn, map(arg -> _gettapeval(arg), call.args)...)
+    return _handle_bcast_and_transform(ctx, call, sim)
 end
 
 getbit(x) = x
@@ -135,7 +155,7 @@ is_simulatable_primitive(sig...) = is_trace_primitive(sig...)
 
 function simulator(f, args...)
     # if f itself is a primitive, do a manual tape
-    if is_simulatable_primitive(f, args...)
+    if is_simulatable_primitive(Ghost.get_type_parameters(Ghost.call_signature(f, args...))...)
         tape = Ghost.Tape(SimulatableContext())
         inputs = Ghost.inputs!(tape, f, args...)
         if _isstruct(f)
@@ -145,7 +165,7 @@ function simulator(f, args...)
         end
     else
         tape = trace(f, args...;
-                     is_primitive = is_simulatable_primitive,
+                     isprimitive = is_simulatable_primitive,
                      ctx = SimulatableContext())
     end
     transform!(_squash_binary_vararg, tape)

@@ -11,7 +11,7 @@ function generatehw(f, args...;
                     transforms = [constantreduction!])
     # get tape and transform
     tape = trace(f, args...;
-                 is_primitive = is_hardware_primitive,
+                 isprimitive = is_hardware_primitive,
                  submodules = submodules)
     transform!(_squash_binary_vararg, tape)
 

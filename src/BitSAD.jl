@@ -13,8 +13,7 @@ export AbstractBitstream
 export SBit, SBitstream
 # export DBit, DBitstream
 export pos, neg
-# export zero, one
-# export +, -, *, /, ÷, sqrt, decorrelate, norm
+export decorrelate
 export generate, generate!, estimate, estimate!, observe
 # export SDM
 export simulatable

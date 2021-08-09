@@ -3,12 +3,18 @@ _typeof(T::Type) = T
 
 is_trace_primitive(x...) = false
 
-function trace(f, args...; is_primitive = is_trace_primitive, submodules = [], ctx = Dict{Any, Any}())
+## Default primitives
+
+is_trace_primitive(::Type{typeof(LinearAlgebra.norm)},
+                   ::Type{<:AbstractVector},
+                   ::Type{<:Any}) = true
+
+function trace(f, args...; isprimitive = is_trace_primitive, submodules = [], ctx = Dict{Any, Any}())
     primitive_sigs =
         Ghost.FunctionResolver{Bool}([Tuple{_typeof(f), Vararg} => true for f in submodules])
     is_primitive_or_submodule(sig) =
         Ghost.is_primitive(sig) ||
-        is_primitive(Ghost.get_type_parameters(sig)...) ||
+        isprimitive(Ghost.get_type_parameters(sig)...) ||
         sig ∈ primitive_sigs
     _, tape = Ghost.trace(f, args...; is_primitive = is_primitive_or_submodule, ctx = ctx)
 
