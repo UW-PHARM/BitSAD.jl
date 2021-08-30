@@ -32,6 +32,20 @@ function (op::SDecorrelator)(x::Bool)
 
     return z
 end
+function Base.show(io::IO, x::SDecorrelator)
+    print(io, "SDecorrelator(")
+    join(io, map((:stepval, :rngrange, :counter)) do field
+        string(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SDecorrelator)
+    print(io, "SDecorrelator(")
+    join(io, map((:stepval, :rngrange, :counter)) do field
+        string(field) * " = " * string(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
 
 """
     SSignedDecorrelator
@@ -43,6 +57,14 @@ A stochastic bitstream decorrelator.
     ndecorr::SDecorrelator = SDecorrelator()
 end
 (op::SSignedDecorrelator)(x::SBit) = SBit((op.pdecorr(x.pos), op.ndecorr(x.neg)))
+Base.show(io::IO, ::SSignedDecorrelator) = print(io, "SSignedDecorrelator(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedDecorrelator)
+    print(io, "SSignedDecorrelator(")
+    show(io, x.pdecorr)
+    print(io, ", ")
+    show(io, x.ndecorr)
+    print(io, ")")
+end
 
 @kwdef mutable struct SAdder
     counter::Int = 0
@@ -59,6 +81,16 @@ function (op::SAdder)(x::Bool, y::Bool)
 
     return z
 end
+function Base.show(io::IO, x::SAdder)
+    print(io, "SAdder(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SAdder)
+    print(io, "SAdder(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
+end
 
 """
     SSignedAdder
@@ -74,6 +106,14 @@ function (op::SSignedAdder)(x::SBit, y::SBit)
     nbit = op.nadder(x.neg, y.neg)
 
     return SBit((pbit, nbit))
+end
+Base.show(io::IO, ::SSignedAdder) = print(io, "SSignedAdder(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedAdder)
+    print(io, "SSignedAdder(")
+    show(io, x.padder)
+    print(io, ", ")
+    show(io, x.nadder)
+    print(io, ")")
 end
 
 @kwdef mutable struct SSaturatingSubtractor
@@ -97,6 +137,16 @@ function (op::SSaturatingSubtractor)(x::Bool, y::Bool)
 
     return z
 end
+function Base.show(io::IO, x::SSaturatingSubtractor)
+    print(io, "SSaturatingSubtractor(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SSaturatingSubtractor)
+    print(io, "SSaturatingSubtractor(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
+end
 
 """
     SSignedSubtractor
@@ -119,6 +169,14 @@ function (op::SSignedSubtractor)(x::SBit, y::SBit)
     z = (op.padder(pp, np), op.nadder(pn, nn))
 
     return SBit(z)
+end
+Base.show(io::IO, ::SSignedSubtractor) = print(io, "SSignedSubtractor(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedSubtractor)
+    print(io, "SSignedSubtractor(")
+    join(io, map(fieldnames(SSignedSubtractor)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
 end
 
 struct SMultiplier end
@@ -156,6 +214,14 @@ function (op::SSignedMultiplier)(x::SBit, y::SBit)
 
     return SBit(z)
 end
+Base.show(io::IO, ::SSignedMultiplier) = print(io, "SSignedMultiplier(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedMultiplier)
+    print(io, "SSignedMultiplier(")
+    join(io, map(fieldnames(SSignedMultiplier)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
 
 @kwdef mutable struct SDivider
     counter::Int = 0
@@ -174,6 +240,16 @@ function (op::SDivider)(x::Bool, y::Bool)
     op.zand = z && y
 
     return z
+end
+function Base.show(io::IO, x::SDivider)
+    print(io, "SDivider(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SDivider)
+    print(io, "SDivider(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
 end
 
 """
@@ -195,6 +271,14 @@ function (op::SSignedDivider)(x::SBit, y::SBit)
 
     return SBit(z)
 end
+Base.show(io::IO, ::SSignedDivider) = print(io, "SSignedDivider(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedDivider)
+    print(io, "SSignedDivider(")
+    join(io, map(fieldnames(SSignedDivider)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
 
 @kwdef mutable struct SFixedGainDivider
     counter::Int = 0
@@ -211,6 +295,16 @@ function (op::SFixedGainDivider)(x::Bool, y::Real)
 
     return z
 end
+function Base.show(io::IO, x::SFixedGainDivider)
+    print(io, "SFixedGainDivider(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SFixedGainDivider)
+    print(io, "SFixedGainDivider(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
+end
 
 """
     SSignedFixedGainDivider
@@ -222,6 +316,14 @@ A stochastic bitstream fixed gain divide operator.
     ndiv::SFixedGainDivider = SFixedGainDivider()
 end
 (op::SSignedFixedGainDivider)(x::SBit, y::Real) = SBit((op.pdiv(x.pos, y), op.ndiv(x.neg, y)))
+Base.show(io::IO, ::SSignedFixedGainDivider) = print(io, "SSignedFixedGainDivider(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedFixedGainDivider)
+    print(io, "SSignedFixedGainDivider(")
+    join(io, map(fieldnames(SSignedFixedGainDivider)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
 
 """
     SSquareRoot
@@ -255,6 +357,16 @@ function (op::SSquareRoot)(x::SBit)
 
     return SBit((z, false))
 end
+function Base.show(io::IO, x::SSquareRoot)
+    print(io, "SSquareRoot(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SSquareRoot)
+    print(io, "SSquareRoot(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
+end
 
 struct SMatMultiplier
     counters::Array{Int, 2}
@@ -274,6 +386,16 @@ function (op::SMatMultiplier)(x::VecOrMat{Bool}, y::VecOrMat{Bool})
 end
 (op::SMatMultiplier)(x::BitArray, y::BitArray) =
     op(convert(Array{Bool, ndims(x)}, x), convert(Array{Bool, ndims(y)}, y))
+function Base.show(io::IO, x::SMatMultiplier)
+    print(io, "SMatMultiplier(")
+    show(io, x.counter)
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SMatMultiplier)
+    println(io, "SMatMultiplier(counter = ")
+    show(io, MIME("text/plain"), x.counter)
+    print(io, "\n)")
+end
 
 """
     SSignedMatMultiplier
@@ -320,6 +442,14 @@ function (op::SSignedMatMultiplier)(x::VecOrMat{SBit}, y::VecOrMat{SBit})
 
     return (size(z, 2) == 1) ? SBit.(dropdims(z; dims = 2)) : SBit.(z)
 end
+Base.show(io::IO, ::SSignedMatMultiplier) = print(io, "SSignedMatMultiplier(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedMatMultiplier)
+    print(io, "SSignedMatMultiplier(")
+    join(io, map(fieldnames(SSignedMatMultiplier)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
 
 """
     SL2Normer
@@ -344,4 +474,12 @@ function (op::SL2Normer)(x::Vector{SBit})
     z = op.root(xtx)
 
     return z
+end
+Base.show(io::IO, ::SL2Normer) = print(io, "SL2Normer(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SL2Normer)
+    print(io, "SL2Normer(")
+    join(io, map((:dot, :root)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
 end

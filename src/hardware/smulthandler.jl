@@ -6,10 +6,12 @@ end
     id = 0
 end
 
+gethandler(::Type{typeof(*)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}) = SMultHandler()
+
 gethandler(broadcasted::Bool,
-           ::Type{<:typeof(*)},
-           ::Type{<:SBitstreamLike},
-           ::Type{<:SBitstreamLike}) =
+           ::Type{typeof(*)},
+           ::Type{<:AbstractArray{<:SBitstream}},
+           ::Type{<:AbstractArray{<:SBitstream}}) =
     broadcasted ? SMultHandler() : SMatMultHandler()
 
 function (handler::SMultHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})

@@ -174,3 +174,4 @@ function simulator(f, args...)
     return tape
 end
 simulatable(f, args...) = Ghost.compile(simulator(f, args...))
+show_simulatable(f, args...) = Ghost.to_expr(simulator(f, args...))

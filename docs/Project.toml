@@ -1,2 +1,4 @@
 [deps]
-Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+BitSAD = "7f90e340-ca22-4a3e-a259-118ed254aff3"
+Ghost = "4f8f7498-1303-42e1-920c-5033445536df"
+Publish = "f065f642-d108-4f50-8aa5-6749150a895a"

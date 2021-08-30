@@ -138,9 +138,13 @@ function _generatetopmatter(m::Module, netlist::Netlist)
 
     outstr = "module $(m.name)(CLK, nRST, "
 
-    outstr *= join(name.(inputs), ", ")
+    outstr *= join(map(inputs) do input
+        issigned(input) ? "$(name(input))_p, $(name(input))_m" : name(input)
+    end, ", ")
     outstr *= ", "
-    outstr *= join(name.(outputs), ", ")
+    outstr *= join(map(outputs) do output
+        issigned(output) ? "$(name(output))_p, $(name(output))_m" : name(output)
+    end, ", ")
     outstr *= ");\n"
 
     outstr *= join(map(parameters) do param

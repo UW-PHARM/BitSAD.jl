@@ -95,7 +95,7 @@ getsimulator(::typeof(÷), x::SBitstream, y::Real) = SSignedFixedGainDivider()
 getsimulator(::typeof(Base.broadcasted), ::typeof(÷), x::SBitstreamLike, y::Real) =
     getsimulator.(÷, x, y)
 
-Base.sqrt(x::SBitstream) = SBitstream(sqrt(x.value))
+Base.sqrt(x::SBitstream) = SBitstream(sqrt(float(x)))
 is_trace_primitive(::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) = true
 is_trace_primitive(::Type{typeof(Base.broadcasted)},
                    ::Type{typeof(sqrt)},
@@ -103,12 +103,12 @@ is_trace_primitive(::Type{typeof(Base.broadcasted)},
 getsimulator(::typeof(sqrt), x::SBitstream) = SSquareRoot()
 getsimulator(::typeof(Base.broadcasted), ::typeof(sqrt), x::SBitstream) = getsimulator.(sqrt, x)
 
-decorrelate(x::SBitstream) = SBitstream(x.value)
-is_trace_primitive(::Type{typeof(decorrelate)}, ::Type{SBitstreamLike}) = true
+decorrelate(x::SBitstream) = SBitstream(float(x))
+is_trace_primitive(::Type{typeof(decorrelate)}, ::Type{<:SBitstream}) = true
 is_trace_primitive(::Type{typeof(Base.broadcasted)},
                    ::Type{typeof(decorrelate)},
-                   ::Type{SBitstreamLike}) = true
-getsimulator(::typeof(decorrelate), x::SBitstreamLike) = SSignedDecorrelator()
+                   ::Type{<:SBitstreamLike}) = true
+getsimulator(::typeof(decorrelate), x::SBitstream) = SSignedDecorrelator()
 getsimulator(::typeof(Base.broadcasted), ::typeof(decorrelate), x::SBitstreamLike) =
     getsimulator.(decorrelate, x)
 

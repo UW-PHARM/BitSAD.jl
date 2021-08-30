@@ -1,5 +1,19 @@
 # BitSAD
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://UW-PHARM.github.io/BitSAD.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://UW-PHARM.github.io/BitSAD.jl/dev)
-[![Build Status](https://travis-ci.com/UW-PHARM/BitSAD.jl.svg?branch=master)](https://travis-ci.com/UW-PHARM/BitSAD.jl)
+[![CI](https://github.com/UW-PHARM/BitSAD.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/UW-PHARM/BitSAD.jl/actions/workflows/CI.yml)
+
+BitSAD is a domain-specific framework for bitstream computing. It aims to provide a general purpose linear algebra interface for writing algorithms that can be mapped to bitstream computing hardware. Programs written in BitSAD can be turned into synthesizable, verified Verilog code.
+
+See [CITATION.bib](https://github.com/UW-PHARM/BitSAD.jl/blob/master/CITATION.bib) for how to cite BitSAD if you use it in your research.
+
+_**Note:** Deterministic bitstreams are temporarily unavailable._
+
+## Installation
+
+You can install BitSAD by opening a Julia REPL and entering:
+
+```
+> ] add Ghost#main
+> ] add https://github.com/UW-PHARM/BitSAD.jl
+```
