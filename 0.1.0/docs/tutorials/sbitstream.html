@@ -63,7 +63,7 @@
 x = SBitstream(0.3)
 </code></pre>
 <pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.3)
-    with 2 bits enqueue.</code></pre>
+    with 0 bits enqueue.</code></pre>
 <p>Here, we created a <a href="../../docstrings/BitSAD.SBitstream.html"><code>SBitstream</code></a> (the type in BitSAD for stochastic bitstreams) encoding the real value 0.3. <code>SBitstream</code> will keep track of the mean of the Bernoulli distribution, which we can recover with <a href="../../docstrings/Base.float.html"><code>float</code></a>.</p>
 <pre><code cell="sbitstream-101" class="language-julia">float(x)
 </code></pre>
@@ -71,7 +71,7 @@ x = SBitstream(0.3)
 <p>You’ll also notice that there were “0 bits enqueue” in <code>x</code>. This refers to the fact that the bitstream, <code>x</code>, is a sequence of samples. Currently, we have not drawn any samples from <code>x</code>. We can try that now:</p>
 <pre><code cell="sbitstream-101" class="language-julia">xt = pop!(x)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBit(pos = false, neg = false)</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBit(pos = true, neg = false)</code></pre>
 <p>Now, we have a single sample, <code>xt</code>, which is of type <a href="../../docstrings/BitSAD.SBit.html"><code>SBit</code></a>. An <code>SBit</code> is a “stochastic bit” which is just a convenient alias for a <a href="https://docs.julialang.org/en/v1.6/manual/functions/#Named-Tuples"><code>NamedTuple</code></a> with two parts — the positive part (<a href="../../docstrings/BitSAD.pos.html"><code>pos</code></a>) and the negative part (<a href="../../docstrings/BitSAD.neg.html"><code>neg</code></a>).</p>
 <blockquote>
 <p>Wait, I thought stochastic bitstreams were a single bit sequence? <br />
@@ -85,7 +85,7 @@ x = SBitstream(0.3)
 x
 </code></pre>
 <pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.3)
-    with 2 bits enqueue.</code></pre>
+    with 1 bits enqueue.</code></pre>
 <p>We see that <code>x</code> now has a single bit in queue. For convenience, BitSAD provides <a href="../../docstrings/BitSAD.generate!.html"><code>generate!</code></a> to pre-load a <code>SBitstream</code> with samples from the underlying distributions.</p>
 <pre><code cell="sbitstream-101" class="language-julia">generate!(x) # add a single sample
 @show length(x)
@@ -95,18 +95,18 @@ x
 <pre><code class="plaintext cell-output cell-stream">length(x) = 2
 </code></pre>
 <pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.3)
-    with 2 bits enqueue.</code></pre>
+    with 1002 bits enqueue.</code></pre>
 <p>Finally, we can see that the empirical average over the <code>SBit</code>s in queue matches to encoded value quite closely.</p>
 <pre><code cell="sbitstream-101" class="language-julia">abs(estimate(x) - float(x))
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.025349301397205593</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.010379241516966065</code></pre>
 <h2 id="operations-on-sbitstreams"><a href="#operations-on-sbitstreams" class="anchor"></a>Operations on <code>SBitstream</code>s</h2>
 <p>So far, we have not computed any meaningful results with BitSAD. Let’s go back to the multiplication example and try to multiply two <code>SBitstream</code>s.</p>
 <pre><code id="sbitstream-101-z" cell="sbitstream-101" class="language-julia">y = SBitstream(0.5)
 z = x * y
 </code></pre>
 <pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.15)
-    with 1000 bits enqueue.</code></pre>
+    with 0 bits enqueue.</code></pre>
 <p>The result, <code>z</code>, has an encoded value of <code>0.15 = 0.3 * 0.5</code>. Recall that stochastic bitstreams encode the value in the mean of their underlying distributions. Any function on applied to <code>SBitstream</code>s is implying a function over their means. Thus,</p>
 <div class="display-math">\[\mathbb{E} [Z_t] = \mathbb{E} [X_t] \mathbb{E} [Y_t]\]</div>
 <p>We can verify this in BitSAD too.</p>
@@ -127,7 +127,7 @@ end
 
 abs(estimate(z) - float(z))
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.013000000000000012</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.0020000000000000018</code></pre>
 <p>We used a helper function, <code>multiply_sbit</code> to multiply the positive and negative channel of each <code>SBit</code> separately. This resulted in a new <code>SBit</code>, <code>zbit</code>, which we pushed onto <code>z</code>. When we take the empirical average of all these <code>zbit</code>s, we see that it is close to the true mean of <code>z</code>.</p>
 <p>Hopefully, you can now see why stochastic computing can be so resource efficient. Each channel of <code>multiply_sbit</code> only needed to multiply two 1-bit numbers. This can be done with a single AND gate.</p>
 <p>In the next tutorial, you’ll see how to automate the <code>SBit</code>-level simulation we did above, and how to generate synthesizable hardware from a Julia function.</p>

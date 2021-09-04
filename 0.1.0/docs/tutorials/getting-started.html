@@ -82,7 +82,7 @@ result
 <pre><code class="plaintext cell-output cell-stream">float(result) == h(float(x), float(y), float(z)) = true
 </code></pre>
 <pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.34)
-    with 10000 bits enqueue.</code></pre>
+    with 0 bits enqueue.</code></pre>
 <h2 id="simulating-bitstreams"><a href="#simulating-bitstreams" class="anchor"></a>Simulating bitstreams</h2>
 <p>You may have noticed that the printing of <code>result</code> above had the phrase “0 bits enqueue.” Until now, the value of each <code>SBitstream</code> (e.g. <code>float(result)</code>) is the exact mean of the underlying Bernoulli distribution. This is not how functions of bitstreams are computed in hardware. In reality, the hardware would process a sample drawn from each of the input bitstreams. You can simulate this behavior with BitSAD:</p>
 <pre><code cell="getting-started" class="language-julia">num_samples = 10_000
@@ -95,7 +95,7 @@ end
 @show abs(estimate(result) - float(result))
 result
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">abs(estimate(result) - float(result)) = 0.006299999999999972
+<pre><code class="plaintext cell-output cell-stream">abs(estimate(result) - float(result)) = 0.007000000000000006
 </code></pre>
 <pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.34)
     with 10000 bits enqueue.</code></pre>
