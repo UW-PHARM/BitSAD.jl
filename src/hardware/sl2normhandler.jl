@@ -2,7 +2,8 @@
     id = 0
 end
 
-gethandler(::Type{typeof(norm)}, ::Type{Vector{<:SBitstream}}) = SL2NormHandler()
+gethandler(::Type{typeof(LinearAlgebra.norm)}, ::Type{<:AbstractVector{<:SBitstream}}) =
+    SL2NormHandler()
 
 function (handler::SL2NormHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # update netlist with inputs

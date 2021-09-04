@@ -24,10 +24,10 @@ end
 function transform!(f, fctx, tape::Ghost.Tape)
     local entry, rebind_to
     itr = iterate(tape)
-    @debug tape
+
     while !isnothing(itr)
         entry, idx = itr
-        @debug entry
+
         if entry isa Ghost.Call
             new_entries, rebind_to = f(tape.c, entry)
             if isempty(new_entries)
@@ -47,7 +47,7 @@ function transform!(f, fctx, tape::Ghost.Tape)
             fctx(tape.c, vars)
             idx += length(new_entries) - 1
         end
-        @debug tape
+
         itr = iterate(tape, idx)
     end
 
@@ -72,6 +72,50 @@ function _squash_binary_vararg(ctx, call::Ghost.Call)
     end
 
     return new_calls, length(new_calls)
+end
+
+struct TupleCtx
+    tuple_map::Dict{Ghost.Variable, Vector{Ghost.Variable}}
+    indexed_itr_map::Dict{Ghost.Variable, Tuple{Ghost.Variable, Int64}}
+end
+TupleCtx() = TupleCtx(Dict(), Dict())
+
+_reroute_tuple_index(::TupleCtx, entry) = [entry], 1
+function _reroute_tuple_index(ctx::TupleCtx, call::Ghost.Call)
+    if call.fn == tuple
+        ctx.tuple_map[Ghost.Variable(call)] = call.args
+
+        return [call], 1
+    elseif call.fn == Base.indexed_iterate && haskey(ctx.tuple_map, call.args[1])
+        ctx.indexed_itr_map[Ghost.Variable(call)] = (call.args[1], _gettapeval(call.args[2]))
+
+        return [call], 1
+    elseif call.fn == Base.getfield && haskey(ctx.indexed_itr_map, call.args[1])
+        if _gettapeval(call.args[2]) == 1
+            indexed_itr = ctx.indexed_itr_map[call.args[1]]
+            tuple_args = ctx.tuple_map[indexed_itr[1]]
+
+            return [], tuple_args[indexed_itr[2]].id
+        else
+            return [], nothing
+        end
+    elseif call.fn == Base.getindex && haskey(ctx.tuple_map, call.args[1])
+        tuple_args = ctx.tuple_map[call.args[1]]
+
+        return [], tuple_args[_gettapeval(call.args[2])].id
+    else
+        return [call], 1
+    end
+end
+_squash_tuple_index(::TupleCtx, entry) = [entry], 1
+function _squash_tuple_index(ctx::TupleCtx, call::Ghost.Call)
+    if call.fn == tuple
+        return [], nothing
+    elseif call.fn == Base.indexed_iterate && haskey(ctx.tuple_map, call.args[1])
+        return [], nothing
+    else
+        return [call], 1
+    end
 end
 
 # TODO: do we need macros for defining primitive operations?

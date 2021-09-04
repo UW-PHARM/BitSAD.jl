@@ -1,5 +1,3 @@
-abstract type SOperator end
-
 @kwdef mutable struct SDecorrelator
     stepval::Int = 16
     rngrange::Int = 255
@@ -52,7 +50,7 @@ end
 
 A stochastic bitstream decorrelator.
 """
-@kwdef struct SSignedDecorrelator <: SOperator
+@kwdef struct SSignedDecorrelator
     pdecorr::SDecorrelator = SDecorrelator()
     ndecorr::SDecorrelator = SDecorrelator()
 end
@@ -97,7 +95,7 @@ end
 
 A signed stochastic bitstream add operator.
 """
-@kwdef struct SSignedAdder <: SOperator
+@kwdef struct SSignedAdder
     padder::SAdder = SAdder()
     nadder::SAdder = SAdder()
 end
@@ -153,7 +151,7 @@ end
 
 A signed stochastic bitstream subtract operator.
 """
-@kwdef struct SSignedSubtractor <: SOperator
+@kwdef struct SSignedSubtractor
     padder::SAdder = SAdder()
     nadder::SAdder = SAdder()
     ppsub::SSaturatingSubtractor = SSaturatingSubtractor()
@@ -187,7 +185,7 @@ struct SMultiplier end
 
 A signed stochastic bitstream multiply operator.
 """
-@kwdef struct SSignedMultiplier <: SOperator
+@kwdef struct SSignedMultiplier
     ppmult::SMultiplier = SMultiplier()
     pnmult::SMultiplier = SMultiplier()
     npmult::SMultiplier = SMultiplier()
@@ -257,7 +255,7 @@ end
 
 A signed stochastic bitstream divide operator.
 """
-@kwdef struct SSignedDivider <: SOperator
+@kwdef struct SSignedDivider
     pdiv::SDivider = SDivider()
     ndiv::SDivider = SDivider()
     psub::SSaturatingSubtractor = SSaturatingSubtractor()
@@ -311,7 +309,7 @@ end
 
 A stochastic bitstream fixed gain divide operator.
 """
-@kwdef struct SSignedFixedGainDivider <: SOperator
+@kwdef struct SSignedFixedGainDivider
     pdiv::SFixedGainDivider = SFixedGainDivider()
     ndiv::SFixedGainDivider = SFixedGainDivider()
 end
@@ -330,7 +328,7 @@ end
 
 A stochastic bitstream square root operator.
 """
-@kwdef mutable struct SSquareRoot <: SOperator
+@kwdef mutable struct SSquareRoot
     counter::Int = 0
     zand::Bool = false
     buffer::CircularBuffer{Bool} = CircularBuffer{Bool}(1)
@@ -402,7 +400,7 @@ end
 
 A stochastic bitstream matrix multiply operator.
 """
-struct SSignedMatMultiplier <: SOperator
+struct SSignedMatMultiplier
     ppmult::SMatMultiplier
     pnmult::SMatMultiplier
     npmult::SMatMultiplier
@@ -456,7 +454,7 @@ end
 
 A stochastic bitstream L2-norm operator.
 """
-@kwdef struct SL2Normer <: SOperator
+@kwdef struct SL2Normer
     dot::SSignedMatMultiplier = SSignedMatMultiplier(1, 1)
     buffer::CircularBuffer{Matrix{SBit}} = CircularBuffer{Matrix{SBit}}(1)
     root::SSquareRoot = SSquareRoot()

@@ -11,9 +11,9 @@ _**Note:** Deterministic bitstreams are temporarily unavailable._
 
 ## Installation
 
-You can install BitSAD by opening a Julia REPL and entering:
+You can install BitSAD by opening a Julia REPL and entering (note that the `]` indicates [Pkg mode](https://docs.julialang.org/en/v1.6/stdlib/REPL/#Pkg-mode)):
 
 ```
-> ] add Ghost#main
-> ] add https://github.com/UW-PHARM/BitSAD.jl
+] add Ghost#main
+] add https://github.com/UW-PHARM/BitSAD.jl
 ```

@@ -10,10 +10,24 @@ function generatehw(f, args...;
                     submodules = [],
                     transforms = [constantreduction!])
     # get tape and transform
-    tape = trace(f, args...;
-                 isprimitive = is_hardware_primitive,
-                 submodules = submodules)
+    # if f itself is a primitive, do a manual tape
+    if is_hardware_primitive(Ghost.get_type_parameters(Ghost.call_signature(f, args...))...)
+        tape = Ghost.Tape()
+        inputs = Ghost.inputs!(tape, f, args...)
+        if _isstruct(f)
+            tape.result = push!(tape, Ghost.mkcall(inputs...))
+        else
+            tape.result = push!(tape, Ghost.mkcall(f, inputs[2:end]...))
+        end
+    else
+        tape = trace(f, args...;
+                    isprimitive = is_hardware_primitive,
+                    submodules = submodules)
+    end
     transform!(_squash_binary_vararg, tape)
+    tape = Ghost.Tape(tape.ops, tape.result, tape.parent, tape.meta, TupleCtx())
+    transform!(_reroute_tuple_index, tape)
+    transform!(_squash_tuple_index, tape)
 
     # extract tape into module
     m = Module(fn = f, name = top)

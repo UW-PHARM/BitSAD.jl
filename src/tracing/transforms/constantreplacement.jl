@@ -49,5 +49,5 @@ function constantreplacement!(m::Module)
         set_prop!(m.dfg, v, :inputs, inputs)
     end
 
-    return m
+    return width
 end
