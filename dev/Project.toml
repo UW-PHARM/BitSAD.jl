@@ -1,0 +1,30 @@
+name = "BitSAD"
+uuid = "7f90e340-ca22-4a3e-a259-118ed254aff3"
+authors = ["Kyle Daruwalla", "University of Wisconsin-Madison PHARM Group"]
+version = "0.1.0"
+
+[deps]
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+Ghost = "4f8f7498-1303-42e1-920c-5033445536df"
+LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MetaGraphs = "626554b9-1ddb-594c-aa3c-2596fe9399a5"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
+[compat]
+DataStructures = "0.18"
+LightGraphs = "1"
+MetaGraphs = "0.6"
+Setfield = "0.7"
+julia = "1.5"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[publish]
+title = "BitSAD.jl"
+
+[targets]
+test = ["Test"]

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="generator" content="Publish.jl" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="" />
+    <title>BitSAD.jl</title>
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;normalize.css" />
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;tabulator_simple.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;publish.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;default.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;custom.css" />
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.js"></script>
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;contrib&#x2F;auto-render.min.js"></script>
+    <script src="..&#x2F;..&#x2F;versions.js"></script>
+    <script src="..&#x2F;..&#x2F;lunr.js"></script>
+    <script src="..&#x2F;..&#x2F;highlight.min.js"></script>
+    <script src="..&#x2F;..&#x2F;tabulator.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia-repl.min.js"></script>
+    <script src="..&#x2F;..&#x2F;publish.js"></script>
+    
+</head>
+<body>
+    <main id="page">
+        <div class="menu">
+            <div id="projectname">BitSAD.jl</div>
+            <input id="search-input" placeholder="Search">
+            <select id="version-selector"></select>
+            <svg id="menu-toggler" title="Contents" onclick="toggleIndexPage();" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6C2 5.44772 2.44772 5 3 5H21C21.5523 5 22 5.44772 22 6C22 6.55228 21.5523 7 21 7H3C2.44772 7 2 6.55228 2 6Z" fill="currentColor" /><path d="M2 12.0322C2 11.4799 2.44772 11.0322 3 11.0322H21C21.5523 11.0322 22 11.4799 22 12.0322C22 12.5845 21.5523 13.0322 21 13.0322H3C2.44772 13.0322 2 12.5845 2 12.0322Z" fill="currentColor" /><path d="M3 17.0645C2.44772 17.0645 2 17.5122 2 18.0645C2 18.6167 2.44772 19.0645 3 19.0645H21C21.5523 19.0645 22 18.6167 22 18.0645C22 17.5122 21.5523 17.0645 21 17.0645H3Z" fill="currentColor" /></svg>
+        </div>
+        <div id="toc"><p><a href="../../README.html">Introduction</a></p>
+<h1 id="tutorials"><a href="../../#tutorials" class="anchor"></a>Tutorials</h1>
+<ul>
+<li><a href="../../docs/tutorials/getting-started.html">Quickstart</a></li>
+<li><a href="../../docs/tutorials/sbitstream.html">Stochastic bitstreams 101</a></li>
+<li><a href="../../docs/tutorials/simulation-and-hardware.html">Simulation and hardware</a></li>
+<li><a href="../../docs/tutorials/iterative-svd.html">Complex functions of bitstreams</a></li>
+</ul>
+<h1 id="how-to-"><a href="../../#how-to-" class="anchor"></a>How To …</h1>
+<ul>
+<li><a href="../../docs/how-tos/custom-sbitstream.html">Create a custom <code>SBitstream</code> operator</a></li>
+</ul>
+<h1 id="developer-guide"><a href="../../#developer-guide" class="anchor"></a>Developer Guide</h1>
+<!-- * [Archicture overview](dev-guide/architecture.md) -->
+<!-- * [Understanding simulation](dev-guide/simulation.md) -->
+<!-- * [Understanding hardware generation](dev-guide/hardware.md) -->
+<hr />
+<p><a href="../../docstrings.html">API Reference</a></p>
+</div>
+        <article id="content"><h1 id="creating-a-custom-sbitstream-operator"><a href="#creating-a-custom-sbitstream-operator" class="anchor"></a>Creating a custom <code>SBitstream</code> operator</h1>
+<p>In most of the tutorials, we’ve discussed writing functions of <code>SBitstream</code>s, simulating those functions, and generating hardware for those functions. This already covers a large variety of circuits, but in some cases, your circuit will need an custom operator that is not already defined in BitSAD. Defining this operator so that it is simulatable and synthesizable like all the standard BitSAD operators is what this how-to will cover. The entire process requires three pieces:</p>
+<ol>
+<li>Define a Julia function</li>
+<li>Associate the function with a simulator</li>
+<li>Associate the function with a hardware handler</li>
+</ol>
+<h2 id="defining-the-julia-operator"><a href="#defining-the-julia-operator" class="anchor"></a>Defining the Julia operator</h2>
+<p>Let’s start with the easiest step — defining what we want our operator to do to the encoded value of the <code>SBitstream</code> (this is not the bit-level behavior!). We’ll make up a non-sensical operator here, <code>addtimes(x, y)</code>, which adds two <code>SBitstream</code>s then multiplies the result by the first <code>SBitstream</code>.</p>
+<pre><code cell="custom-soperator" class="language-julia">using BitSAD
+
+addtimes(x::SBitstream, y::SBitstream) = SBitstream((float(x) + float(y)) * float(x))
+
+x = SBitstream(0.4)
+y = SBitstream(0.1)
+addtimes(x, y)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.2)
+    with 0 bits enqueue.</code></pre>
+<p>It looks like the encoded floating point value for our function is correct.</p>
+<h2 id="associating-addtimes-with-a-simulator"><a href="#associating-addtimes-with-a-simulator" class="anchor"></a>Associating <code>addtimes</code> with a simulator</h2>
+<p>Next, we need to be able to simulate <code>addtimes</code> at the bit-level. To do this, we’ll define a simulator — a struct that operates on <code>SBit</code>s and stores stateful information for this operation. We’ll make use of the existing simulators in BitSAD to do this, which you can do in your code, or you can define a simulator completely from scratch. All that matters is that your simulator can be called on <code>(x::SBit, y::SBit)</code>.</p>
+<pre><code cell="custom-soperator" class="language-julia">using BitSAD: SSignedAdder, SSignedMultiplier, SSignedDecorrelator
+
+struct AddTimeser
+    adder::SSignedAdder
+    multiplier::SSignedMultiplier
+    decorrelator::SSignedDecorrelator
+end
+AddTimeser() = AddTimeser(SSignedAdder(),
+                          SSignedMultiplier(),
+                          SSignedDecorrelator())
+
+function (addtimeser::AddTimeser)(x::SBit, y::SBit)
+    xdecorrelate = addtimeser.decorrelator(x)
+    z = addtimeser.multiplier(addtimeser.adder(x, y), xdecorrelate)
+
+    return z # our return must be an SBit too
+end
+</code></pre>
+<p>So far, BitSAD doesn’t know that it should map simulated calls to <code>addtimes</code> to an instance of <code>AddTimeser</code>. To do this, we need to <em>extend</em> the simulator interface.</p>
+<pre><code cell="custom-soperator" class="language-julia"># SBitstreamLike = Union{SBitstream, AbstractArray{&lt;:SBitstream}}
+using BitSAD: SBitstreamLike
+
+# BitSAD will recognize call signatures that match this as primitive calls
+# this means BitSAD won't &quot;look inside&quot; the call
+BitSAD.is_trace_primitive(::Type{typeof(addtimes)},
+                          ::Type{&lt;:SBitstream},
+                          ::Type{&lt;:SBitstream}) = true
+
+# getsimulator returns a new instance of the simulator for the primitive call
+# in our case, we return a new AddTimeser
+BitSAD.getsimulator(::typeof(addtimes), ::SBitstream, ::SBitstream) = AddTimeser()
+# we need to explicitly handle broadcasted calls to addtimes
+# here, we return an array of AddTimesers (this is probably what you want to do)
+BitSAD.is_trace_primitive(::Type{Base.broadcasted},
+                          ::Type{typeof(addtimes)},
+                          ::Type{&lt;:SBitstreamLike},
+                          ::Type{&lt;:SBitstreamLike}) = true
+BitSAD.getsimulator(::typeof(Base.broadcasted),
+                    ::typeof(addtimes),
+                    x::SBitstreamLike,
+                    y::SBitstreamLike) = BitSAD.getsimulator.(addtimes, x, y)
+</code></pre>
+<p>Now, whenever BitSAD sees a function call in a simulated program that matches our <code>BitSAD.is_trace_primitive</code> signature, it will call <code>BitSAD.getsimulator</code> to create a new simulator instance, and it will forward the popped bits to that simulator.</p>
+<div class="admonition tip"><p class="admonition-title">Tip</p>
+<p>We implemented the broadcasted simulator for <code>addtimes</code> as many <code>AddTimesers</code> in the same shape as the broadcasted arrays <code>x</code> and <code>y</code>. You can also create a simulator specifically for broadcasted calls that operates on arrays of <code>SBit</code>s. Instead of returning an array of simulators, you would return a single instance of this special broadcast simulator. BitSAD will understand either option and pass the popped bits appropriately.</p>
+</div>
+<p>Let’s see if our simulator works.</p>
+<pre><code cell="custom-soperator" class="language-julia">sim = simulatable(addtimes, x, y)
+sim(addtimes, x, y)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.2)
+    with 1 bits enqueue.</code></pre>
+<h2 id="associating-addtimes-with-a-hardware-handler"><a href="#associating-addtimes-with-a-hardware-handler" class="anchor"></a>Associating <code>addtimes</code> with a hardware handler</h2>
+<p>When BitSAD generates hardware, it uses the same program tracing functionality used in simulation to create a data-flow graph (DFG) of the program. Then it applies a series of transformation passes on the graph to apply optimizations. Finally, it traverses the graph from inputs to outputs, maintaining a <a href="../../docstrings/BitSAD.Netlist.html"><code>BitSAD.Netlist</code></a> along the way. At each node, it invokes the <em>hardware handler</em> associated with that node. A hardware handler is responsible for generating the Verilog instantiation code for each node of a certain type. For example, the <code>BitSAD.SAddHandler</code> writes the Verilog code to instantiate every <code>+</code> operation in the DFG. The reason a single handler instance is called repeatedly to generate each piece of Verilog is so that the handler can ensure that Verilog instance naming is unique.</p>
+<p>Suppose we have the following Verilog module:</p>
+<pre><code class="language-verilog">module AddTimes(CLK, nRST, x_p, x_m, y_p, y_m, z_p, z_m);
+
+// implementation
+
+endmodule
+</code></pre>
+<p>Let’s write a handler in BitSAD that instantiates a new <code>AddTimes</code> whenever <code>addtimes</code> is encountered in the DFG.</p>
+<pre><code cell="custom-soperator" class="language-julia">using BitSAD: Net, Netlist, name, netsize, setsigned!, handle_broadcast_name
+
+mutable struct SAddTimesHandler
+    id::Int
+end
+SAddTimesHandler() = SAddTimesHandler(0)
+
+function (handler::SAddTimesHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
+    # update netlist with inputs
+    setsigned!(netlist, inputs[1], true)
+    setsigned!(netlist, inputs[2], true)
+
+    # compute input naming
+    # handle_broadcast_name is utility that uses the Verilog repeat
+    # operator to &quot;broadcast&quot; a scalar input to the correct size
+    lname, rname = handle_broadcast_name(name(inputs[1]), name(inputs[2]),
+                                         netsize(inputs[1]), netsize(inputs[2]))
+    outsize = netsize(outputs[1])
+
+    # update netlist with output
+    setsigned!(netlist, outputs[1], true)
+
+    outstring = &quot;&quot;&quot;
+        // BEGIN addtimes$(handler.id)
+        AddTimes add$(handler.id) (
+                .CLK(CLK),
+                .nRST(nRST),
+                .x_p($(lname(&quot;_p&quot;))),
+                .x_m($(lname(&quot;_m&quot;))),
+                .y_p($(rname(&quot;_p&quot;))),
+                .y_m($(rname(&quot;_m&quot;))),
+                .z_p($(name(outputs[1]))_p),
+                .z_m($(name(outputs[1]))_m)
+            );
+        // END addtimes$(handler.id)
+        \n&quot;&quot;&quot;
+
+    handler.id += 1
+
+    return outstring
+end
+</code></pre>
+<p>Our <code>SAddTimesHandler</code> (stochastic <code>addtimes</code> handler) contains an <code>id</code> field. We use this to keep track of how many instances of the Verilog module we have created. The handler is callable according to the handler interface which accepts three arguments — a <code>Netlist</code>, a vector of input <code>Net</code>s, and a vector of output <code>Net</code>s. We use the <a href="../../docstrings/BitSAD.setsigned!.html"><code>BitSAD.setsigned!</code></a> function to mark the inputs and outputs as signed. This tells BitSAD that the input/output is actually two wires in Verilog (one for the positive channel and one for the negative channel). By convention, BitSAD represents this as the net’s name with “_p” or “_m” appended. We also used the <a href="../../docstrings/BitSAD.handle_broadcast_name.html"><code>BitSAD.handle_broadcast_name</code></a> to adjust the input names in the presence of a broadcast. Assigning <code>outstring</code> is the important piece of code here. This is the Verilog code that will be produced for each <code>addtimes</code>. You can see we used the <code>id</code> field to name the module instance uniquely, and we passed in the standard <code>CLK</code> and <code>nRST</code> signals.</p>
+<p>At this stage, like our simulator, BitSAD still does not know how to associate nodes in the DFG with our handler. We extend a similar interface to the simulator.</p>
+<pre><code cell="custom-soperator" class="language-julia">BitSAD.gethandler(::Bool,
+                  ::Type{typeof(addtimes)},
+                  ::Type{&lt;:SBitstreamLike},
+                  ::Type{&lt;:SBitstreamLike}) = SAddTimesHandler()
+</code></pre>
+<p>The first <code>Bool</code> argument is <code>true</code> when the operation is broadcasted and <code>false</code> if not. If your operator does not deal with broadcasting, then you can omit this argument.</p>
+<div class="admonition tip"><p class="admonition-title">Tip</p>
+<p>We don’t need to redefine this operation as primitive, since we already extended <code>BitSAD.is_trace_primitive</code>. If you want, you can define <code>BitSAD.is_simulatable_primitive</code> and <code>BitSAD.is_hardware_primitive</code> separately (by default they call <code>BitSAD.is_trace_primitive</code>).</p>
+</div>
+<p>Let’s generate some hardware!</p>
+<pre><code cell="custom-soperator" class="language-julia">verilog_string, _ = generatehw(addtimes, x, y)
+print(verilog_string)
+</code></pre>
+<pre><code class="plaintext cell-output cell-stream">module addtimes(CLK, nRST, net_2_p, net_2_m, net_3_p, net_3_m, net_4_p, net_4_m);
+
+input   net_2_p, net_2_m;
+input   net_3_p, net_3_m;
+output   net_4_p, net_4_m;
+
+
+
+// BEGIN addtimes0
+AddTimes add0 (
+        .CLK(CLK),
+        .nRST(nRST),
+        .x_p(net_2_p),
+        .x_m(net_2_m),
+        .y_p(net_3_p),
+        .y_m(net_3_m),
+        .z_p(net_4_p),
+        .z_m(net_4_m)
+    );
+// END addtimes0
+
+
+endmodule</code></pre>
+<p>And that’s all there is to creating custom operators in BitSAD for <code>SBitstream</code>s.</p>
+</article>
+        <div id="page-navigation">
+            <a id="previous-page" title="Previous" href="..&#x2F;tutorials&#x2F;iterative-svd.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="next-page" title="Next" href="..&#x2F;..&#x2F;docstrings.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
+        </div>
+        <footer>
+            Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language</a>.
+        </footer>
+    </main>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false},
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "\\[", right: "\\]", display: true}
+                ]
+            });
+        });
+    </script>
+</body>
+</html>
