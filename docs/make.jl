@@ -12,4 +12,4 @@ rm("dev", recursive = true, force = true)
 rm(p.env["version"], recursive = true, force = true)
 
 # build documentation
-deploy(Metalhead; root = "/BitSAD.jl", force = true, label = "dev")
+deploy(BitSAD; root = "/BitSAD.jl", force = true, label = "dev")
