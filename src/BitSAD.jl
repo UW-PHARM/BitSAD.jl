@@ -6,7 +6,6 @@ using Random: MersenneTwister
 using Setfield
 using Ghost
 using LightGraphs, MetaGraphs
-using Reexport
 using Base: @kwdef
 
 export AbstractBitstream
