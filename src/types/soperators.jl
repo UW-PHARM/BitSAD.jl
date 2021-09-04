@@ -1,7 +1,3 @@
-using Base: @kwdef
-
-abstract type SOperator end
-
 @kwdef mutable struct SDecorrelator
     stepval::Int = 16
     rngrange::Int = 255
@@ -34,17 +30,39 @@ function (op::SDecorrelator)(x::Bool)
 
     return z
 end
+function Base.show(io::IO, x::SDecorrelator)
+    print(io, "SDecorrelator(")
+    join(io, map((:stepval, :rngrange, :counter)) do field
+        string(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SDecorrelator)
+    print(io, "SDecorrelator(")
+    join(io, map((:stepval, :rngrange, :counter)) do field
+        string(field) * " = " * string(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
 
 """
     SSignedDecorrelator
 
 A stochastic bitstream decorrelator.
 """
-@kwdef struct SSignedDecorrelator <: SOperator
+@kwdef struct SSignedDecorrelator
     pdecorr::SDecorrelator = SDecorrelator()
     ndecorr::SDecorrelator = SDecorrelator()
 end
-(op::SSignedDecorrelator)(x::SBit) = (op.pdecorr(pos(x)), op.ndecorr(neg(x)))
+(op::SSignedDecorrelator)(x::SBit) = SBit((op.pdecorr(x.pos), op.ndecorr(x.neg)))
+Base.show(io::IO, ::SSignedDecorrelator) = print(io, "SSignedDecorrelator(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedDecorrelator)
+    print(io, "SSignedDecorrelator(")
+    show(io, x.pdecorr)
+    print(io, ", ")
+    show(io, x.ndecorr)
+    print(io, ")")
+end
 
 @kwdef mutable struct SAdder
     counter::Int = 0
@@ -61,21 +79,39 @@ function (op::SAdder)(x::Bool, y::Bool)
 
     return z
 end
+function Base.show(io::IO, x::SAdder)
+    print(io, "SAdder(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SAdder)
+    print(io, "SAdder(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
+end
 
 """
     SSignedAdder
 
 A signed stochastic bitstream add operator.
 """
-@kwdef struct SSignedAdder <: SOperator
+@kwdef struct SSignedAdder
     padder::SAdder = SAdder()
     nadder::SAdder = SAdder()
 end
 function (op::SSignedAdder)(x::SBit, y::SBit)
-    pbit = op.padder(pos(x), pos(y))
-    nbit = op.nadder(neg(x), neg(y))
+    pbit = op.padder(x.pos, y.pos)
+    nbit = op.nadder(x.neg, y.neg)
 
-    return (pbit, nbit)
+    return SBit((pbit, nbit))
+end
+Base.show(io::IO, ::SSignedAdder) = print(io, "SSignedAdder(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedAdder)
+    print(io, "SSignedAdder(")
+    show(io, x.padder)
+    print(io, ", ")
+    show(io, x.nadder)
+    print(io, ")")
 end
 
 @kwdef mutable struct SSaturatingSubtractor
@@ -99,13 +135,23 @@ function (op::SSaturatingSubtractor)(x::Bool, y::Bool)
 
     return z
 end
+function Base.show(io::IO, x::SSaturatingSubtractor)
+    print(io, "SSaturatingSubtractor(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SSaturatingSubtractor)
+    print(io, "SSaturatingSubtractor(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
+end
 
 """
     SSignedSubtractor
 
 A signed stochastic bitstream subtract operator.
 """
-@kwdef struct SSignedSubtractor <: SOperator
+@kwdef struct SSignedSubtractor
     padder::SAdder = SAdder()
     nadder::SAdder = SAdder()
     ppsub::SSaturatingSubtractor = SSaturatingSubtractor()
@@ -114,13 +160,21 @@ A signed stochastic bitstream subtract operator.
     nnsub::SSaturatingSubtractor = SSaturatingSubtractor()
 end
 function (op::SSignedSubtractor)(x::SBit, y::SBit)
-    pp = op.ppsub(pos(x), pos(y))
-    pn = op.pnsub(pos(y), pos(x))
-    np = op.npsub(neg(y), neg(x))
-    nn = op.nnsub(neg(x), neg(y))
+    pp = op.ppsub(x.pos, y.pos)
+    pn = op.pnsub(y.pos, x.pos)
+    np = op.npsub(y.neg, x.neg)
+    nn = op.nnsub(x.neg, y.neg)
     z = (op.padder(pp, np), op.nadder(pn, nn))
 
-    return z
+    return SBit(z)
+end
+Base.show(io::IO, ::SSignedSubtractor) = print(io, "SSignedSubtractor(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedSubtractor)
+    print(io, "SSignedSubtractor(")
+    join(io, map(fieldnames(SSignedSubtractor)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
 end
 
 struct SMultiplier end
@@ -131,7 +185,7 @@ struct SMultiplier end
 
 A signed stochastic bitstream multiply operator.
 """
-@kwdef struct SSignedMultiplier <: SOperator
+@kwdef struct SSignedMultiplier
     ppmult::SMultiplier = SMultiplier()
     pnmult::SMultiplier = SMultiplier()
     npmult::SMultiplier = SMultiplier()
@@ -144,10 +198,10 @@ A signed stochastic bitstream multiply operator.
     nadder::SAdder = SAdder()
 end
 function (op::SSignedMultiplier)(x::SBit, y::SBit)
-    pp = op.ppmult(pos(x), pos(y))
-    pn = op.pnmult(pos(x), neg(y))
-    np = op.npmult(neg(x), pos(y))
-    nn = op.nnmult(neg(x), neg(y))
+    pp = op.ppmult(x.pos, y.pos)
+    pn = op.pnmult(x.pos, y.neg)
+    np = op.npmult(x.neg, y.pos)
+    nn = op.nnmult(x.neg, y.neg)
 
     s₁₁ = op.sub11(pp, pn)
     s₁₂ = op.sub12(pn, pp)
@@ -156,7 +210,15 @@ function (op::SSignedMultiplier)(x::SBit, y::SBit)
 
     z = (op.padder(s₁₁, s₁₄), op.nadder(s₁₂, s₁₃))
 
-    return z
+    return SBit(z)
+end
+Base.show(io::IO, ::SSignedMultiplier) = print(io, "SSignedMultiplier(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedMultiplier)
+    print(io, "SSignedMultiplier(")
+    join(io, map(fieldnames(SSignedMultiplier)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
 end
 
 @kwdef mutable struct SDivider
@@ -177,25 +239,43 @@ function (op::SDivider)(x::Bool, y::Bool)
 
     return z
 end
+function Base.show(io::IO, x::SDivider)
+    print(io, "SDivider(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SDivider)
+    print(io, "SDivider(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
+end
 
 """
     SSignedDivider
 
 A signed stochastic bitstream divide operator.
 """
-@kwdef struct SSignedDivider <: SOperator
+@kwdef struct SSignedDivider
     pdiv::SDivider = SDivider()
     ndiv::SDivider = SDivider()
     psub::SSaturatingSubtractor = SSaturatingSubtractor()
     nsub::SSaturatingSubtractor = SSaturatingSubtractor()
 end
 function (op::SSignedDivider)(x::SBit, y::SBit)
-    pp = op.pdiv(pos(x), pos(y))
-    np = op.ndiv(neg(x), pos(y))
+    pp = op.pdiv(x.pos, y.pos)
+    np = op.ndiv(x.neg, y.pos)
 
     z = (op.psub(pp, np), op.nsub(np, pp))
 
-    return z
+    return SBit(z)
+end
+Base.show(io::IO, ::SSignedDivider) = print(io, "SSignedDivider(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedDivider)
+    print(io, "SSignedDivider(")
+    join(io, map(fieldnames(SSignedDivider)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
 end
 
 @kwdef mutable struct SFixedGainDivider
@@ -213,24 +293,42 @@ function (op::SFixedGainDivider)(x::Bool, y::Real)
 
     return z
 end
+function Base.show(io::IO, x::SFixedGainDivider)
+    print(io, "SFixedGainDivider(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SFixedGainDivider)
+    print(io, "SFixedGainDivider(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
+end
 
 """
     SSignedFixedGainDivider
 
 A stochastic bitstream fixed gain divide operator.
 """
-@kwdef struct SSignedFixedGainDivider <: SOperator
+@kwdef struct SSignedFixedGainDivider
     pdiv::SFixedGainDivider = SFixedGainDivider()
     ndiv::SFixedGainDivider = SFixedGainDivider()
 end
-(op::SSignedFixedGainDivider)(x::SBit, y::Real) = (op.pdiv(pos(x), y), op.ndiv(neg(x), y))
+(op::SSignedFixedGainDivider)(x::SBit, y::Real) = SBit((op.pdiv(x.pos, y), op.ndiv(x.neg, y)))
+Base.show(io::IO, ::SSignedFixedGainDivider) = print(io, "SSignedFixedGainDivider(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedFixedGainDivider)
+    print(io, "SSignedFixedGainDivider(")
+    join(io, map(fieldnames(SSignedFixedGainDivider)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
 
 """
     SSquareRoot
 
 A stochastic bitstream square root operator.
 """
-@kwdef mutable struct SSquareRoot <: SOperator
+@kwdef mutable struct SSquareRoot
     counter::Int = 0
     zand::Bool = false
     buffer::CircularBuffer{Bool} = CircularBuffer{Bool}(1)
@@ -245,7 +343,7 @@ A stochastic bitstream square root operator.
 end
 function (op::SSquareRoot)(x::SBit)
     # Update counter
-    op.counter = max(op.counter + 4 * pos(x) - 4 * op.zand, -100)
+    op.counter = max(op.counter + 4 * x.pos - 4 * op.zand, -100)
 
     # Decide output
     r = rand(op.rng, 0:511)
@@ -255,7 +353,17 @@ function (op::SSquareRoot)(x::SBit)
     op.zand = z && pop!(op.buffer)
     push!(op.buffer, z)
 
-    return (z, false)
+    return SBit((z, false))
+end
+function Base.show(io::IO, x::SSquareRoot)
+    print(io, "SSquareRoot(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SSquareRoot)
+    print(io, "SSquareRoot(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
 end
 
 struct SMatMultiplier
@@ -276,13 +384,23 @@ function (op::SMatMultiplier)(x::VecOrMat{Bool}, y::VecOrMat{Bool})
 end
 (op::SMatMultiplier)(x::BitArray, y::BitArray) =
     op(convert(Array{Bool, ndims(x)}, x), convert(Array{Bool, ndims(y)}, y))
+function Base.show(io::IO, x::SMatMultiplier)
+    print(io, "SMatMultiplier(")
+    show(io, x.counter)
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SMatMultiplier)
+    println(io, "SMatMultiplier(counter = ")
+    show(io, MIME("text/plain"), x.counter)
+    print(io, "\n)")
+end
 
 """
     SSignedMatMultiplier
 
 A stochastic bitstream matrix multiply operator.
 """
-struct SSignedMatMultiplier <: SOperator
+struct SSignedMatMultiplier
     ppmult::SMatMultiplier
     pnmult::SMatMultiplier
     npmult::SMatMultiplier
@@ -320,7 +438,15 @@ function (op::SSignedMatMultiplier)(x::VecOrMat{SBit}, y::VecOrMat{SBit})
 
     z = zip(map.(op.padder, s₁, s₄), map.(op.nadder, s₂, s₃)) |> collect
 
-    return (size(z, 2) == 1) ? dropdims(z; dims = 2) : z
+    return (size(z, 2) == 1) ? SBit.(dropdims(z; dims = 2)) : SBit.(z)
+end
+Base.show(io::IO, ::SSignedMatMultiplier) = print(io, "SSignedMatMultiplier(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedMatMultiplier)
+    print(io, "SSignedMatMultiplier(")
+    join(io, map(fieldnames(SSignedMatMultiplier)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
 end
 
 """
@@ -328,14 +454,14 @@ end
 
 A stochastic bitstream L2-norm operator.
 """
-@kwdef struct SL2Normer <: SOperator
+@kwdef struct SL2Normer
     dot::SSignedMatMultiplier = SSignedMatMultiplier(1, 1)
     buffer::CircularBuffer{Matrix{SBit}} = CircularBuffer{Matrix{SBit}}(1)
     root::SSquareRoot = SSquareRoot()
 end
 function (op::SL2Normer)(x::Vector{SBit})
     # get row vector
-    dummybit = map(λ -> SBit((false, false), λ.value, λ.id), permutedims(x))
+    dummybit = fill(SBit((false, false)), size(permutedims(x)))
     xt = isempty(op.buffer) ? dummybit : pop!(op.buffer)
     push!(op.buffer, permutedims(x))
 
@@ -343,7 +469,15 @@ function (op::SL2Normer)(x::Vector{SBit})
     xtx = op.dot(xt, x)[1]
 
     # compute root
-    z = op.root(SBit(xtx, x[1].value, x[1].id))
+    z = op.root(xtx)
 
     return z
+end
+Base.show(io::IO, ::SL2Normer) = print(io, "SL2Normer(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SL2Normer)
+    print(io, "SL2Normer(")
+    join(io, map((:dot, :root)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
 end

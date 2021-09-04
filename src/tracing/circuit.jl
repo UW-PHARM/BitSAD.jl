@@ -1,4 +1,7 @@
-using Base: @kwdef
+const Operation = @NamedTuple{name::Symbol, type::DataType, broadcasted::Bool}
+
+_nameof(x) = nameof(typeof(x))
+_nameof(x::Function) = nameof(x)
 
 """
     Module
@@ -12,23 +15,24 @@ Hardware generation traverses `dfg` and uses `handlers` to generate Verilog stri
 # Fields:
 - `name::Symbol`: the name of the module
 - `parameters::Dict{Symbol, Number}`: a map from the name of each parameter to its default value
-- `submodules::Dict{Symbol, Symbol}`: a map from the name of each submodule to its type
+- `submodules::Vector{Type}`: a list of submodule types
 - `dfg::MetaDiGraph{Int, Float64}`: a data flow graph representing the circuit to be generated
 - `handlers::Dict{Operation, AbstractHandler}`: a map from operation type to a hardware generation handler.
 
 See also: [HW.generate](@ref)
 """
-@kwdef mutable struct Module
-    name::Symbol
-    parameters::Dict{Symbol, Number} = Dict{Symbol, Number}()
-    submodules::Dict{Symbol, Symbol} = Dict{Symbol, Symbol}()
+@kwdef struct Module{T}
+    fn::T
+    name::Symbol = _nameof(fn)
+    parameters::Dict{String, String} = Dict{String, String}()
+    submodules::Vector{Type} = Type[]
     dfg::MetaDiGraph{Int, Float64} = MetaDiGraph()
-    handlers::Dict{Operation, AbstractHandler} = Dict{Operation, AbstractHandler}()
+    handlers::Dict{Tuple{Bool, Vararg{Type}}, Any} = Dict{Tuple{Bool, Vararg{Type}}, Any}()
 end
 
 Base.show(io::IO, m::Module) =
     print(io, "Module $(m.name) with $(length(m.parameters)) parameters and $(length(m.submodules)) submodules.")
-Base.show(io::IO, ::MIME"text/plain", m::Module) = print("""
+Base.show(io::IO, ::MIME"text/plain", m::Module) = print(io, """
     Module $(m.name):
         Parameters:
             $(m.parameters)
@@ -39,16 +43,20 @@ Base.show(io::IO, ::MIME"text/plain", m::Module) = print("""
         Number of outputs: $(length(map(x -> getoutputs(m.dfg, x), getbuds(m.dfg))))
     """)
 
+getinputs(g::MetaDiGraph, v) = get_prop(g, v, :inputs)
+getoutputs(g::MetaDiGraph, v) = get_prop(g, v, :outputs)
+getoperator(g::MetaDiGraph, v) = get_prop(g, v, :operator)
+
 findnode(g::MetaDiGraph, inputs, outputs, operator) =
-    collect(filter_vertices(g, (g, v) -> all(getname.(get_prop(g, v, :inputs)) .== inputs) &&
-                                         all(getname.(get_prop(g, v, :outputs)) .== outputs) &&
+    collect(filter_vertices(g, (g, v) -> all(getname.(getinputs(g, v)) .== inputs) &&
+                                         all(getname.(getoutputs(g, v)) .== outputs) &&
                                          get_prop(g, v, :operator) == operator))
 getroots(g::MetaDiGraph) = collect(filter_vertices(g, (g, v) -> isempty(inneighbors(g, v))))
 getbuds(g::MetaDiGraph) = collect(filter_vertices(g, (g, v) -> isempty(outneighbors(g, v))))
-getparents(g::MetaDiGraph, x::Variable) =
-    filter_vertices(g, (g, v) -> x ∈ get_prop(g, v, :outputs))
-getchildren(g::MetaDiGraph, x::Variable) =
-    filter_vertices(g, (g, v) -> x ∈ get_prop(g, v, :inputs))
+getparents(g::MetaDiGraph, x::Net) =
+    filter_vertices(g, (g, v) -> x ∈ getoutputs(g, v))
+getchildren(g::MetaDiGraph, x::Net) =
+    filter_vertices(g, (g, v) -> x ∈ getinputs(g, v))
 function traverse(g::MetaDiGraph, vs::Vector{T}, visited = T[]) where T
     levelup = unique(reduce(vcat, map(v -> outneighbors(g, v), vs)))
     parents = filter(v -> all(x -> x ∈ visited, inneighbors(g, v)), levelup)
@@ -56,7 +64,7 @@ function traverse(g::MetaDiGraph, vs::Vector{T}, visited = T[]) where T
     return parents, union(parents, visited)
 end
 
-function addnode!(m::Module, inputs::Vector{Variable}, outputs::Vector{Variable}, op::Symbol)
+function addnode!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Operation)
     add_vertex!(m.dfg)
     node = nv(m.dfg)
     set_prop!(m.dfg, node, :inputs, inputs)
@@ -78,29 +86,17 @@ function addnode!(m::Module, inputs::Vector{Variable}, outputs::Vector{Variable}
     return m
 end
 
-function updatetype!(m::Module, inputs::Vector{Variable}, outputs::Vector{Variable}, op::Symbol)
-    innames = getname.(inputs)
-    outnames = getname.(outputs)
-    v = findnode(m.dfg, innames, outnames, op)
-    isempty(v) && error("""
-        Could not update node because it was not found in DFG.
-        inputs: $innames
-        outputs: $outnames
-        operator: $op
-        """)
-    set_prop!(m.dfg, v[1], :inputs, inputs)
-    set_prop!(m.dfg, v[1], :outputs, outputs)
-    set_prop!(m.dfg, v[1], :operator, op)
+function getnetlist(m::Module)
+    netlist = Net[]
+    for v in vertices(m.dfg)
+        inputs = getinputs(m.dfg, v)
+        outputs = getoutputs(m.dfg, v)
+        append!(netlist, inputs)
+        append!(netlist, outputs)
+    end
 
-    return m
+    return netlist
 end
-
-getinputs(g::MetaDiGraph, v) = get_prop(g, v, :inputs)
-getoutputs(g::MetaDiGraph, v) = get_prop(g, v, :outputs)
-getoperator(g::MetaDiGraph, v) = get_prop(g, v, :operator)
-
-include("optimizations/constantreduction.jl")
-include("optimizations/constantreplacement.jl")
 
 function printdfg(m::Module)
     nodes = getroots(m.dfg)
@@ -122,6 +118,58 @@ function printdfg(m::Module)
     end
 end
 
+function _printnet(net::Net)
+    reg = isreg(net) ? "reg" : ""
+    bitlength = prod(netsize(net)) - 1
+    bitstr = (bitlength == 0) ? "" : "[$bitlength:0]"
+    names = issigned(net) ? "$(name(net))_p, $(name(net))_m" : name(net)
+
+    return join([reg, bitstr, names], " ")
+end
+
+function _generatetopmatter(m::Module, netlist::Netlist)
+    netlist = unique(netlist)
+    inputs = filter(isinput, netlist)
+    outputs = filter(isoutput, netlist)
+    parameters = filter(isparameter, netlist)
+    internals = filter(isinternal, netlist)
+    wires = filter(iswire, internals)
+    regs = filter(isreg, internals)
+
+    outstr = "module $(m.name)(CLK, nRST, "
+
+    outstr *= join(map(inputs) do input
+        issigned(input) ? "$(name(input))_p, $(name(input))_m" : name(input)
+    end, ", ")
+    outstr *= ", "
+    outstr *= join(map(outputs) do output
+        issigned(output) ? "$(name(output))_p, $(name(output))_m" : name(output)
+    end, ", ")
+    outstr *= ");\n"
+
+    outstr *= join(map(parameters) do param
+        "parameter $(name(param)) = $(m.parameters[name(param)]);"
+    end, "\n")
+    outstr *= "\n"
+
+    outstr *= join(map(inputs) do input
+        "input $(_printnet(input));"
+    end, "\n")
+    outstr *= "\n"
+    outstr *= join(map(outputs) do output
+        "output $(_printnet(output));"
+    end, "\n")
+    outstr *= "\n"
+    outstr *= join(map(_printnet, regs), "\n")
+    outstr *= "\n"
+    outstr *= join(map(wires) do wire
+        "wire $(_printnet(wire));"
+    end, "\n")
+    outstr *= "\n\n"
+
+    return outstr
+end
+
 """
     HW.generate(m::Module, netlist::Netlist)
     HW.generate(m::Module, f)
@@ -138,20 +186,9 @@ Users will most likely call the last method form above.
 - `dut`: an instance of the circuit struct
 - `args`: example arguments to circuit
 """
-function generate(m::Module, netlist::Netlist)
+function generateverilog(m::Module)
     outstr = ""
-    m = deepcopy(m)
-
-    printdfg(m)
-    println()
-
-    # run constant reduction
-    constantreduction!(m, netlist)
-    printdfg(m)
-    println()
-    constantreplacement!(m, netlist)
-    printdfg(m)
-    println()
+    netlist = getnetlist(m)
 
     # start at inputs
     nodes = getroots(m.dfg)
@@ -162,12 +199,13 @@ function generate(m::Module, netlist::Netlist)
         for node in nodes
             inputs = getinputs(m.dfg, node)
             outputs = getoutputs(m.dfg, node)
-            op = Operation(gettype.(inputs), gettype.(outputs), getoperator(m.dfg, node))
+            operator = getoperator(m.dfg, node)
+            op = (operator.broadcasted, operator.type, jltypeof.(inputs)...)
 
             if haskey(m.handlers, op)
                 handler = m.handlers[op]
             else
-                handler = gethandler(op)()
+                handler = gethandler(op...)
                 m.handlers[op] = handler
             end
 
@@ -178,13 +216,9 @@ function generate(m::Module, netlist::Netlist)
         nodes, visited = traverse(m.dfg, nodes, visited)
     end
 
+    # print top matter
+    outstr = _generatetopmatter(m, netlist) * outstr
+    outstr *= "\nendmodule"
+
     return outstr
 end
-function generate(m::Module, f)
-    # get runtime info and populate netlist
-    netlist = Netlist()
-    f(netlist)
-
-    return generate(m, netlist)
-end
-generate(c::Tuple{Module, Function}, dut, args...) = generate(c[1], (netlist) -> c[2](dut, c[1], netlist, args...))

@@ -1,48 +1,41 @@
-@kwdef mutable struct SMultHandler <: AbstractHandler
+@kwdef mutable struct SMultHandler
     id = 0
 end
 
-@kwdef mutable struct SMatMultHandler <: AbstractHandler
+@kwdef mutable struct SMatMultHandler
     id = 0
 end
 
-@register(SMultHandler, *, begin
-    [SBit, SBit] => [SBit]
-    [SBit, Vector{SBit}] => [Vector{SBit}]
-    [Vector{SBit}, SBit] => [Vector{SBit}]
-    [SBit, Matrix{SBit}] => [Matrix{SBit}]
-    [Matrix{SBit}, SBit] => [Matrix{SBit}]
-end)
-@register(SMatMultHandler, *, begin
-    [Vector{SBit}, Matrix{SBit}] => [Matrix{SBit}]
-    [Matrix{SBit}, Vector{SBit}] => [Vector{SBit}]
-    [Matrix{SBit}, Matrix{SBit}] => [Matrix{SBit}]
-end)
+gethandler(::Type{typeof(*)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}) = SMultHandler()
 
-function (handler::SMultHandler)(netlist::Netlist,
-                                 inputs::Vector{Variable},
-                                 outputs::Vector{Variable})
+gethandler(broadcasted::Bool,
+           ::Type{typeof(*)},
+           ::Type{<:AbstractArray{<:SBitstream}},
+           ::Type{<:AbstractArray{<:SBitstream}}) =
+    broadcasted ? SMultHandler() : SMatMultHandler()
+
+function (handler::SMultHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # update netlist with inputs
-    setsigned!(netlist, getname(inputs[1]), true)
-    setsigned!(netlist, getname(inputs[2]), true)
+    setsigned!(netlist, inputs[1], true)
+    setsigned!(netlist, inputs[2], true)
 
     # compute output size
-    lname, rname, outsize = handlebroadcast(inputs[1].name, inputs[2].name,
-                                            getsize(netlist, getname(inputs[1])),
-                                            getsize(netlist, getname(inputs[2])))
+    lname, rname = handle_broadcast_name(name(inputs[1]), name(inputs[2]),
+                                         netsize(inputs[1]), netsize(inputs[2]))
+    outsize = netsize(outputs[1])
 
     # add internal nets to netlist
-    update!(netlist, Net(name = "mult$(handler.id)_pp", size = outsize))
-    update!(netlist, Net(name = "mult$(handler.id)_pm", size = outsize))
-    update!(netlist, Net(name = "mult$(handler.id)_mp", size = outsize))
-    update!(netlist, Net(name = "mult$(handler.id)_mm", size = outsize))
-    update!(netlist, Net(name = "mult$(handler.id)_11", size = outsize))
-    update!(netlist, Net(name = "mult$(handler.id)_12", size = outsize))
-    update!(netlist, Net(name = "mult$(handler.id)_13", size = outsize))
-    update!(netlist, Net(name = "mult$(handler.id)_14", size = outsize))
+    push!(netlist, Net(name = "mult$(handler.id)_pp", size = outsize))
+    push!(netlist, Net(name = "mult$(handler.id)_pm", size = outsize))
+    push!(netlist, Net(name = "mult$(handler.id)_mp", size = outsize))
+    push!(netlist, Net(name = "mult$(handler.id)_mm", size = outsize))
+    push!(netlist, Net(name = "mult$(handler.id)_11", size = outsize))
+    push!(netlist, Net(name = "mult$(handler.id)_12", size = outsize))
+    push!(netlist, Net(name = "mult$(handler.id)_13", size = outsize))
+    push!(netlist, Net(name = "mult$(handler.id)_14", size = outsize))
 
     # add output net to netlist
-    setsigned!(netlist, getname(outputs[1]), true)
+    setsigned!(netlist, outputs[1], true)
 
     outstring = """
         $stdcomment
@@ -99,7 +92,7 @@ function (handler::SMultHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A(mult$(handler.id)_11),
                 .B(mult$(handler.id)_14),
-                .Y($(outputs[1].name)_p)
+                .Y($(name(outputs[1]))_p)
             );
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -109,7 +102,7 @@ function (handler::SMultHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A(mult$(handler.id)_12),
                 .B(mult$(handler.id)_13),
-                .Y($(outputs[1].name)_m)
+                .Y($(name(outputs[1]))_m)
             );
         // END mult$(handler.id)
         \n"""
@@ -119,30 +112,28 @@ function (handler::SMultHandler)(netlist::Netlist,
     return outstring
 end
 
-function (handler::SMatMultHandler)(netlist::Netlist,
-                                    inputs::Vector{Variable},
-                                    outputs::Vector{Variable})
+function (handler::SMatMultHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
     # update netlist with inputs
-    setsigned!(netlist, getname(inputs[1]), true)
-    setsigned!(netlist, getname(inputs[2]), true)
+    setsigned!(netlist, inputs[1], true)
+    setsigned!(netlist, inputs[2], true)
 
     # compute output size
-    m, n = getsize(netlist, getname(inputs[1]))
-    _, p = getsize(netlist, getname(inputs[2]))
-    outsize = getsize(netlist, getname(outputs[1]))
+    m, n = netsize(inputs[1])
+    _, p = netsize(inputs[2])
+    outsize = netsize(outputs[1])
 
     # add output net to netlist
-    setsigned!(netlist, getname(outputs[1]), true)
+    setsigned!(netlist, outputs[1], true)
 
     # add internal nets to netlist
-    update!(netlist, Net(name = "mmult$(handler.id)_pp", size = outsize))
-    update!(netlist, Net(name = "mmult$(handler.id)_pm", size = outsize))
-    update!(netlist, Net(name = "mmult$(handler.id)_mp", size = outsize))
-    update!(netlist, Net(name = "mmult$(handler.id)_mm", size = outsize))
-    update!(netlist, Net(name = "mmult$(handler.id)_11", size = outsize))
-    update!(netlist, Net(name = "mmult$(handler.id)_12", size = outsize))
-    update!(netlist, Net(name = "mmult$(handler.id)_13", size = outsize))
-    update!(netlist, Net(name = "mmult$(handler.id)_14", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_pp", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_pm", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_mp", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_mm", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_11", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_12", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_13", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_14", size = outsize))
 
     outstring = """
         $stdcomment
@@ -154,8 +145,8 @@ function (handler::SMatMultHandler)(netlist::Netlist,
             ) mmult$(handler.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1].name)_p),
-                .B($(inputs[2].name)_p),
+                .A($(name(inputs[1]))_p),
+                .B($(name(inputs[2]))_p),
                 .Y(mmult$(handler.id)_pp)
             );
         stoch_matrix_mult #(
@@ -165,8 +156,8 @@ function (handler::SMatMultHandler)(netlist::Netlist,
             ) mmult$(handler.id)_pm (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1].name)_p),
-                .B($(inputs[2].name)_m),
+                .A($(name(inputs[1]))_p),
+                .B($(name(inputs[2]))_m),
                 .Y(mmult$(handler.id)_pm)
             );
         stoch_matrix_mult #(
@@ -176,8 +167,8 @@ function (handler::SMatMultHandler)(netlist::Netlist,
             ) mmult$(handler.id)_mp (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1].name)_m),
-                .B($(inputs[2].name)_p),
+                .A($(name(inputs[1]))_m),
+                .B($(name(inputs[2]))_p),
                 .Y(mmult$(handler.id)_mp)
             );
         stoch_matrix_mult #(
@@ -187,8 +178,8 @@ function (handler::SMatMultHandler)(netlist::Netlist,
             ) mmult$(handler.id)_mm (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(inputs[1].name)_m),
-                .B($(inputs[2].name)_m),
+                .A($(name(inputs[1]))_m),
+                .B($(name(inputs[2]))_m),
                 .Y(mmult$(handler.id)_mm)
             );
         stoch_sat_sub_mat #(
@@ -239,7 +230,7 @@ function (handler::SMatMultHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A(mmult$(handler.id)_11),
                 .B(mmult$(handler.id)_14),
-                .Y($(outputs[1].name)_p)
+                .Y($(name(outputs[1]))_p)
             );
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -249,7 +240,7 @@ function (handler::SMatMultHandler)(netlist::Netlist,
                 .nRST(nRST),
                 .A(mmult$(handler.id)_12),
                 .B(mmult$(handler.id)_13),
-                .Y($(outputs[1].name)_m)
+                .Y($(name(outputs[1]))_m)
             );
         // END mmult$(handler.id)
         \n"""

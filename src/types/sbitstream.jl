@@ -1,43 +1,12 @@
-import Base: +, -, *, /, ÷, sqrt, float
-import LinearAlgebra: norm
+const SBit = @NamedTuple{pos::Bool, neg::Bool}
+Base.convert(::Type{SBit}, b::Tuple{Bool, Bool}) = (pos = b[1], neg = b[2])
+Base.promote_rule(::Type{SBit}, ::Type{Tuple{Bool, Bool}}) = SBit
 
-_genid() = unsafe_trunc(UInt32, uuid4().value)
-_indexid(id::UInt32, idx::Integer) = unsafe_trunc(UInt32, uuid5(UUID(id), "[$idx]").value)
-_getidstr(x::AbstractBit) = digits(UInt8, x.id)
-_getidstr(x::VecOrMat{<:AbstractBit}) = vcat(map(λ -> digits(UInt8, λ.id), x)...)
-_getidstr(x) = Vector{UInt8}(string(x))
+pos(b::SBit) = b.pos
+neg(b::SBit) = b.neg
 
-"""
-    SBit
-
-A stochastic bit is a pair of unipolar bits (positive and negative channels).
-
-Fields:
-- `bit::Tuple{Bool, Bool}`: a sample of a bitstream
-- `value::Float64`: the underlying floating-point number being represented
-- `id::UInt32`: a unique identifier for all samples of this bitstream
-"""
-struct SBit <: AbstractBit
-    bit::Tuple{Bool, Bool}
-    value::Float64
-    id::UInt32
-
-    function SBit(bit::Tuple{Bool, Bool}, value::Float64, id::UInt32)
-        if value > 1 || value < -1
-            @warn "SBitstream can only be ∈ [-1, 1] (saturation occurring)."
-        end
-
-        new(bit, min(max(value, -1), 1), id)
-    end
-end
-function SBit(bits::VecOrMat{Tuple{Bool, Bool}}, values::VecOrMat{Float64}, id::UInt32)
-    arr = similar(bits, SBit)
-    for (i, bit) in enumerate(bits)
-        arr[i] = SBit(bit, values[i], _indexid(id, i))
-    end
-
-    return arr
-end
+Base.show(io::IO, b::SBit) = print(io, "($(b.pos), $(b.neg))")
+Base.show(io::IO, ::MIME"text/plain", b::SBit) = print(io, "SBit(pos = $(b.pos), neg = $(b.neg))")
 
 """
     SBitstream
@@ -48,160 +17,156 @@ between [-1, 1].
 Fields:
 - `bits::Queue{SBit}`: the underlying bitstream
 - `value::Float64`: the underlying floating-point number being represented
-- `id::UInt32`: a unique identifier for this bitstream (set automatically)
 """
-struct SBitstream <: AbstractBitstream
+struct SBitstream{T<:Real} <: AbstractBitstream
     bits::Queue{SBit}
-    value::Float64
-    id::UInt32
+    value::T
 
-    function SBitstream(bits::Queue{SBit}, value::Float64, id::UInt32 = _genid())
+    function SBitstream{T}(bits::Queue{SBit}, value::T) where {T<:Real}
         if value > 1 || value < -1
             @warn "SBitstream can only be ∈ [-1, 1] (saturation occurring)."
         end
 
-        new(bits, min(max(value, -1), 1), id)
+        new{T}(bits, min(max(value, -1), 1))
     end
 end
-SBitstream(value::Real, id::UInt32 = _genid()) = SBitstream(Queue{SBit}(), float(value), id)
-function SBitstream(values::VecOrMat{Float64}, id::UInt32 = _genid())
-    arr = similar(values, SBitstream)
-    for (i, value) in enumerate(values)
-        arr[i] = SBitstream(value, _indexid(id, i))
-    end
+SBitstream(value::T) where {T<:Real} = SBitstream{T}(Queue{SBit}(), value)
+SBitstream{T}(value::Real) where {T<:Real} = SBitstream(convert(T, value))
+Base.convert(::Type{SBitstream{T}}, s::SBitstream) where {T<:Real} =
+    SBitstream{T}(s.bits, convert(T, s.value))
 
-    return arr
-end
+const SBitstreamLike = Union{<:SBitstream, AbstractArray{<:SBitstream}}
 
-"""
-    pos(b::SBit)
+Base.float(s::SBitstream) = s.value
+Base.zero(::SBitstream{T}) where T = SBitstream(zero(T))
+Base.one(::SBitstream{T}) where T = SBitstream(one(T))
 
-Return the positive channel bit of a stochastic bit.
-"""
-pos(b::SBit) = b.bit[1]
-
-"""
-    neg(b::SBit)
-
-Return the negative channel bit of a stochastic bit.
-"""
-neg(b::SBit) = b.bit[2]
-
-"""
-    float(b::SBit)
-    float(s::SBitstream)
-
-Return the underlying floating-point value of
-a stochastic bit or bitstream.
-"""
-float(b::SBit) = b.value
-float(s::SBitstream) = s.value
+Base.show(io::IO, s::SBitstream) = print(io, "SBitstream($(s.value))")
+Base.show(io::IO, ::MIME"text/plain", s::SBitstream{T}) where T =
+    print(io, "SBitstream{$T}(value = $(s.value))\n    with $(length(s)) bits enqueue.")
 
 include("./soperators.jl")
-include("./simulatable.jl")
 
-# SBit operator definitions #
-@simulatable(SSignedAdder,      +(x::SBit, y::SBit) = x.value + y.value)
-@simulatable(SSignedSubtractor, -(x::SBit, y::SBit) = x.value - y.value)
-@simulatable(SSignedMultiplier, *(x::SBit, y::SBit) = x.value * y.value)
-@simulatable(SSignedDivider,
-function /(x::SBit, y::SBit)
-    if y.value <= 0
-        error("SBit only supports divisors > 0 (y == $y).")
+Base.:(+)(x::SBitstream, y::SBitstream) = SBitstream(float(x) + float(y))
+
+Base.:(-)(x::SBitstream, y::SBitstream) = SBitstream(float(x) - float(y))
+
+Base.:(*)(x::SBitstream, y::SBitstream) = SBitstream(float(x) * float(y))
+
+function Base.:(/)(x::SBitstream, y::SBitstream)
+    if float(y) <= 0
+        error("SBitstream only supports divisors > 0 (y == $y).")
     end
 
-    x.value / y.value
-end)
-@simulatable(SSignedFixedGainDivider,
-function ÷(x::SBit, y::Real)
+    SBitstream(float(x) / y.value)
+end
+
+for (op, sim) in ((:+, :SSignedAdder),
+                  (:-, :SSignedSubtractor),
+                  (:*, :SSignedMultiplier),
+                  (:/, :SSignedDivider))
+    @eval begin
+        is_trace_primitive(::Type{typeof($op)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}) = true
+        is_trace_primitive(::Type{typeof(Base.broadcasted)},
+                           ::Type{typeof($op)},
+                           ::Type{<:SBitstreamLike},
+                           ::Type{<:SBitstreamLike}) = true
+        getsimulator(::typeof($op), x::SBitstream, y::SBitstream) = $(sim)()
+        getsimulator(::typeof(Base.broadcasted),
+                     ::typeof($op),
+                     x::SBitstreamLike,
+                     y::SBitstreamLike) = getsimulator.($op, x, y)
+    end
+end
+
+function Base.:(÷)(x::SBitstream, y::Real)
     if y < 1
-        error("SBit only supports fixed-gain divisors >= 1 (y == $y).")
+        error("SBitstream only supports fixed-gain divisors >= 1 (y == $y).")
     end
 
-    x.value / y
-end)
-@simulatable(SSquareRoot,         sqrt(x::SBit) = sqrt(x.value))
-@simulatable(SSignedDecorrelator, decorrelate(x::SBit) = x.value)
-@simulatable(SSignedMatMultiplier,
-    *(x::VecOrMat{SBit}, y::VecOrMat{SBit}) = float.(x) * float.(y), (size(x, 1), size(y, 2)))
-@simulatable(SL2Normer,           norm(x::Vector{SBit}) = norm(float.(x)))
-
-# SBitstream operator definitions #
-for op in (:+, :-, :*, :/)
-    @eval function $(op)(x::SBitstream, y::SBitstream)
-        zbit = $(op)(pop!(x), pop!(y))
-        z = SBitstream(zbit.value, zbit.id)
-        push!(z, zbit)
-
-        return z
-    end
+    SBitstream(float(x) / y)
 end
-for op in (:sqrt, :decorrelate)
-    @eval function $(op)(x::SBitstream)
-        zbit = $(op)(pop!(x))
-        z = SBitstream(zbit.value, zbit.id)
-        push!(z, zbit)
+is_trace_primitive(::Type{typeof(÷)}, ::Type{<:SBitstreamLike}, ::Type{<:Real}) = true
+is_trace_primitive(::Type{typeof(Base.broadcasted)},
+                   ::Type{typeof(÷)},
+                   ::Type{<:SBitstreamLike},
+                   ::Type{<:Real}) = true
+getsimulator(::typeof(÷), x::SBitstream, y::Real) = SSignedFixedGainDivider()
+getsimulator(::typeof(Base.broadcasted), ::typeof(÷), x::SBitstreamLike, y::Real) =
+    getsimulator.(÷, x, y)
 
-        return z
-    end
-end
-function ÷(x::SBitstream, y::Real)
-    zbit = pop!(x) ÷ y
-    z = SBitstream(zbit.value, zbit.id)
-    push!(z, zbit)
+Base.sqrt(x::SBitstream) = SBitstream(sqrt(float(x)))
+is_trace_primitive(::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) = true
+is_trace_primitive(::Type{typeof(Base.broadcasted)},
+                   ::Type{typeof(sqrt)},
+                   ::Type{<:SBitstreamLike}) = true
+getsimulator(::typeof(sqrt), x::SBitstream) = SSquareRoot()
+getsimulator(::typeof(Base.broadcasted), ::typeof(sqrt), x::SBitstream) = getsimulator.(sqrt, x)
 
-    return z
-end
-function *(x::VecOrMat{SBitstream}, y::VecOrMat{SBitstream})
-    zbit = pop!.(x) * pop!.(y)
-    z = map(λ -> SBitstream(λ.value, λ.id), zbit)
-    push!.(z, zbit)
+decorrelate(x::SBitstream) = SBitstream(float(x))
+is_trace_primitive(::Type{typeof(decorrelate)}, ::Type{<:SBitstream}) = true
+is_trace_primitive(::Type{typeof(Base.broadcasted)},
+                   ::Type{typeof(decorrelate)},
+                   ::Type{<:SBitstreamLike}) = true
+getsimulator(::typeof(decorrelate), x::SBitstream) = SSignedDecorrelator()
+getsimulator(::typeof(Base.broadcasted), ::typeof(decorrelate), x::SBitstreamLike) =
+    getsimulator.(decorrelate, x)
 
-    return z
-end
-function norm(x::Vector{SBitstream})
-    zbit = norm(pop!.(x))
-    z = SBitstream(zbit.value, zbit.id)
-    push!(z, zbit)
+Base.:(*)(x::AbstractVecOrMat{<:SBitstream}, y::AbstractVecOrMat{<:SBitstream}) =
+    SBitstream.(float.(x) * float.(y))
+is_trace_primitive(::Type{typeof(*)},
+                   ::Type{<:AbstractVecOrMat{<:SBitstream}},
+                   ::Type{<:AbstractVecOrMat{<:SBitstream}}) = true
+getsimulator(::typeof(*), x::AbstractVecOrMat{<:SBitstream}, y::AbstractVecOrMat{<:SBitstream}) =
+    SSignedMatMultiplier(size(x, 1), size(y, 2))
 
-    return z
-end
+LinearAlgebra.norm(x::AbstractVector{<:SBitstream}) = SBitstream(norm(float.(x)))
+is_trace_primitive(::Type{typeof(LinearAlgebra.norm)}, ::Type{<:AbstractVector{<:SBitstream}}) = true
+getsimulator(::typeof(LinearAlgebra.norm), x::AbstractVector{<:SBitstream}) = SL2Normer()
 
 """
     generate(s::SBitstream, T::Integer = 1)
     generate!(s::SBitstream, T::Integer = 1)
 
-Generate `T` samples of the bitstream.
-Add them to its queue for `generate!`.
+Generate `T` samples of the bitstream, `s`.
+Add them to the queue for `generate!`, otherwise return the vector of bits.
 """
 function generate(s::SBitstream, T::Integer = 1)
-    r = rand(T)
-    bits = (s.value >= 0) ? zip(r .< abs(s.value), fill(false, T)) :
-                            zip(fill(false, T), r .< abs(s.value))
-    sbits = map(x -> SBit(x, s.value, s.id), bits)
+    bits = rand(T) .< abs(s.value)
+    sbits = map(b -> (s.value >= 0) ? (pos = b, neg = false) : (pos = false, neg = b), bits)
 
     return sbits
 end
 generate!(s::SBitstream, T::Integer = 1) = push!(s, generate(s, T))
 
-push!(s::SBitstream, b::SBit) = enqueue!(s.bits, SBit(b.bit, b.value, s.id))
-pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : dequeue!(s.bits)
+Base.pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : dequeue!(s.bits)
+
+"""
+    estimate(buffer::AbstractVector)
+    estimate(s::SBitstream)
+
+Get the empirical mean of the bits in `buffer`/`s`
+"""
+estimate(buffer::AbstractVector) = sum(buffer) / length(buffer)
+estimate(s::SBitstream) = mapreduce(x -> x.pos - x.neg, +, s.bits) / length(s)
 
 """
     estimate!(buffer::AbstractVector, b::SBit)
     estimate!(buffer::AbstractVector, b::VecOrMat{SBit})
-    estimate!(buffer::AbstractVector)
+    estimate(buffer::AbstractVector)
+    estimate(s::SBitstream)
 
-Push `b` into the `buffer` and return the current estimate.
+Push `b` into the `buffer` and return the current [`estimate`](#).
 """
-function estimate!(buffer::AbstractVector, b::SBit)
+function estimate!(buffer::AbstractVector, s::SBitstream)
+    b = observe(s)
     push!(buffer, pos(b) - neg(b))
 
-    return sum(buffer) / length(buffer)
+    return estimate(buffer)
 end
-function estimate!(buffer::AbstractVector, bs::VecOrMat{SBit})
+function estimate!(buffer::AbstractVector, s::VecOrMat{<:SBitstream})
+    bs = observe(s)
     push!(buffer, pos.(bs) - neg.(bs))
 
-    return sum(buffer) / length(buffer)
+    return estimate(buffer)
 end
-estimate!(buffer::AbstractVector) = sum(buffer) / length(buffer)
