@@ -42,6 +42,7 @@
 <h1 id="how-to-"><a href="../../#how-to-" class="anchor"></a>How To …</h1>
 <ul>
 <li><a href="../../docs/how-tos/custom-sbitstream.html">Create a custom <code>SBitstream</code> operator</a></li>
+<li><a href="../../docs/how-tos/nosim.html">Create a simulation nop</a></li>
 </ul>
 <h1 id="developer-guide"><a href="../../#developer-guide" class="anchor"></a>Developer Guide</h1>
 <!-- * [Archicture overview](dev-guide/architecture.md) -->
@@ -95,7 +96,7 @@ end
 @show abs(estimate(result) - float(result))
 result
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">abs(estimate(result) - float(result)) = 0.007000000000000006
+<pre><code class="plaintext cell-output cell-stream">abs(estimate(result) - float(result)) = 0.0005000000000000004
 </code></pre>
 <pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.34)
     with 10000 bits enqueue.</code></pre>

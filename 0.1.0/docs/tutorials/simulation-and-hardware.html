@@ -42,6 +42,7 @@
 <h1 id="how-to-"><a href="../../#how-to-" class="anchor"></a>How To …</h1>
 <ul>
 <li><a href="../../docs/how-tos/custom-sbitstream.html">Create a custom <code>SBitstream</code> operator</a></li>
+<li><a href="../../docs/how-tos/nosim.html">Create a simulation nop</a></li>
 </ul>
 <h1 id="developer-guide"><a href="../../#developer-guide" class="anchor"></a>Developer Guide</h1>
 <!-- * [Archicture overview](dev-guide/architecture.md) -->
@@ -82,11 +83,11 @@ end
 
 abs(estimate(z) - float(z))
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.007000000000000006</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.017000000000000015</code></pre>
 <p>What’s actually happening inside <code>fsim</code>? We can take a peek under the hood with <a href="../../docstrings/BitSAD.show_simulatable.html"><code>show_simulatable</code></a> which will print out the Julia function being compiled by BitSAD.</p>
 <pre><code cell="sim-and-hw" class="language-julia">BitSAD.show_simulatable(f, x, y)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_f#360&quot;(x1::typeof(Main.anonymous.f), x2::SBitstream{Float64}, x4::SBitstream{Float64})
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_f#398&quot;(x1::typeof(Main.anonymous.f), x2::SBitstream{Float64}, x4::SBitstream{Float64})
       x3 = (BitSAD.getbit)(x2)
       x5 = (BitSAD.getbit)(x4)
       x6 = (*)(x2, x4)
@@ -113,7 +114,7 @@ z = h(x, y)
 <p><code>h</code> calls <code>g(x, y)</code> twice, and as we can see it causes no issues when running the code. In hardware, <code>g</code> is a stateful operator, so it cannot be called twice, since multiple invocations will produce different outputs. Instead, we want to re-use the first evaluation of <code>g(x, y)</code>. BitSAD does this automatically.</p>
 <pre><code cell="sim-and-hw" class="language-julia">BitSAD.show_simulatable(h, x, y)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_h#361&quot;(x1::typeof(Main.anonymous.h), x2::SBitstream{Float64}, x4::SBitstream{Float64})
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_h#399&quot;(x1::typeof(Main.anonymous.h), x2::SBitstream{Float64}, x4::SBitstream{Float64})
       x3 = (BitSAD.getbit)(x2)
       x5 = (BitSAD.getbit)(x4)
       x6 = (+)(x2, x4)
@@ -135,7 +136,7 @@ end
 
 abs(estimate(z) - float(z))
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.1479999999999999</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.12199999999999989</code></pre>
 <p>Note that the algorithmic-level of <code>h</code> had no issues (<code>float(z) == 0.64</code>), but the bit-level output has measurable error. BitSAD was designed to make spotting issues that appear at the hardware-level easier. How can we fix this? In stochastic computing circuits, we can <a href="../../docstrings/BitSAD.decorrelate.html"><code>decorrelate</code></a> bitstreams to make them independent.</p>
 <pre><code cell="sim-and-hw" class="language-julia">hfixed(x, y) = g(x, y) * decorrelate(g(x, y))
 z = hfixed(x, y)
@@ -147,7 +148,7 @@ end
 @show BitSAD.show_simulatable(hfixed, x, y)
 abs(estimate(z) - float(z))
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">BitSAD.show_simulatable(hfixed, x, y) = :(function var&quot;##tape_hfixed#364&quot;(x1::typeof(Main.anonymous.hfixed), x2::SBitstream{Float64}, x4::SBitstream{Float64})
+<pre><code class="plaintext cell-output cell-stream">BitSAD.show_simulatable(hfixed, x, y) = :(function var&quot;##tape_hfixed#402&quot;(x1::typeof(Main.anonymous.hfixed), x2::SBitstream{Float64}, x4::SBitstream{Float64})
       x3 = (BitSAD.getbit)(x2)
       x5 = (BitSAD.getbit)(x4)
       x6 = (+)(x2, x4)
@@ -162,7 +163,7 @@ abs(estimate(z) - float(z))
       return x12
   end)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.039000000000000146</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.05500000000000016</code></pre>
 <h2 id="generating-hardware"><a href="#generating-hardware" class="anchor"></a>Generating hardware</h2>
 <p>With BitSAD, we’ve been able to create functions on stochastic bitstreams, and we verified that they should work at the bit-level. The next step is to generate hardware for these functions! BitSAD can take any Julia function and generate synthesizable Verilog code.</p>
 <p>Let’s start by creating hardware for <code>f</code>.</p>
