@@ -175,16 +175,31 @@ end
 simulatable(f, args...) = Ghost.compile(simulator(f, args...))
 show_simulatable(f, args...) = Ghost.to_expr(simulator(f, args...))
 
-macro nosim(ex)
+macro nosim(ex, kws...)
+    kwargs = isempty(kws) ? false :
+             (kws[1].args[1] == :kwargs) ? kws[1].args[2] :
+             error("Unrecognized options: $kws")
     if @capture(ex, f_(args__))
         argtypes = map(args) do arg
             @capture(arg, x_::T_) ? T : :Any
         end
         primitive_sig = [:(::Type{<:$(esc(T))}) for T in argtypes]
 
-        return quote
-            BitSAD.is_simulatable_primitive(::Type{typeof($(esc(f)))}, $(primitive_sig...)) = true
-            BitSAD.getsimulator(::typeof($(esc(f))), $(esc.(args)...)) = nothing
+        if kwargs
+            return quote
+                BitSAD.is_simulatable_primitive(::Type{Core.kwftype($(esc(f)))},
+                                                kwargs,
+                                                ::Type{typeof($(esc(f)))},
+                                                $(primitive_sig...)) = true
+                BitSAD.getsimulator(::Core.kwftype($(esc(f))),
+                                    ::typeof($(esc(f))),
+                                    $(esc.(args)...)) = nothing
+            end
+        else
+            return quote
+                BitSAD.is_simulatable_primitive(::Type{typeof($(esc(f)))}, $(primitive_sig...)) = true
+                BitSAD.getsimulator(::typeof($(esc(f))), $(esc.(args)...)) = nothing
+            end
         end
     else
         error("Cannot parse @nosim $ex (expects @nosim f(arg1, arg2::T, ...).")
