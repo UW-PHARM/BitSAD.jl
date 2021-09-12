@@ -10,6 +10,7 @@
 # How To ...
 
 * [Create a custom `SBitstream` operator](docs/how-tos/custom-sbitstream.md)
+* [Create a simulation nop](docs/how-tos/nosim.md)
 
 # Developer Guide
 

@@ -137,12 +137,11 @@ function _simtransform(ctx, call::Ghost.Call)
     # if the args don't contain SBitstreamLike, then skip
     sig = Ghost.get_type_parameters(Ghost.call_signature(call.fn, _gettapeval.(call.args)...))
     is_simulatable_primitive(sig...) || return [call], 1
-    # (call.fn == getindex) && return [call], 1
 
     # otherwise, transform this call while handling broadcasting
     # get the simulator for this call signature
     sim = getsimulator(call.fn, map(arg -> _gettapeval(arg), call.args)...)
-    return _handle_bcast_and_transform(ctx, call, sim)
+    return isnothing(sim) ? ([call], 1) : _handle_bcast_and_transform(ctx, call, sim)
 end
 
 getbit(x) = x
@@ -175,3 +174,19 @@ function simulator(f, args...)
 end
 simulatable(f, args...) = Ghost.compile(simulator(f, args...))
 show_simulatable(f, args...) = Ghost.to_expr(simulator(f, args...))
+
+macro nosim(ex)
+    if @capture(ex, f_(args__))
+        argtypes = map(args) do arg
+            @capture(arg, x_::T_) ? T : :Any
+        end
+        primitive_sig = [:(::Type{<:$(esc(T))}) for T in argtypes]
+
+        return quote
+            BitSAD.is_simulatable_primitive(::Type{typeof($(esc(f)))}, $(primitive_sig...)) = true
+            BitSAD.getsimulator(::typeof($(esc(f))), $(esc.(args)...)) = nothing
+        end
+    else
+        error("Cannot parse @nosim $ex (expects @nosim f(arg1, arg2::T, ...).")
+    end
+end
