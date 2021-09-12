@@ -141,7 +141,7 @@ function _simtransform(ctx, call::Ghost.Call)
     # otherwise, transform this call while handling broadcasting
     # get the simulator for this call signature
     sim = getsimulator(call.fn, map(arg -> _gettapeval(arg), call.args)...)
-    return _handle_bcast_and_transform(ctx, call, sim)
+    return isnothing(sim) ? ([call], 1) : _handle_bcast_and_transform(ctx, call, sim)
 end
 
 getbit(x) = x
@@ -184,7 +184,7 @@ macro nosim(ex)
 
         return quote
             BitSAD.is_simulatable_primitive(::Type{typeof($(esc(f)))}, $(primitive_sig...)) = true
-            BitSAD.getsimulator(::typeof($(esc(f))), $(esc.(args)...)) = $(esc(f))
+            BitSAD.getsimulator(::typeof($(esc(f))), $(esc.(args)...)) = nothing
         end
     else
         error("Cannot parse @nosim $ex (expects @nosim f(arg1, arg2::T, ...).")
