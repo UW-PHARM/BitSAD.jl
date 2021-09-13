@@ -192,7 +192,7 @@ macro nosim(ex, kws...)
                                                 ::Type{typeof($(esc(f)))},
                                                 $(primitive_sig...)) = true
                 BitSAD.getsimulator(::Core.kwftype(typeof($(esc(f)))),
-                                    ::Any
+                                    ::Any,
                                     ::typeof($(esc(f))),
                                     $(esc.(args)...)) = nothing
             end

@@ -75,7 +75,7 @@ function _squash_binary_vararg(ctx, call::Ghost.Call)
 end
 
 struct TupleCtx
-    tuple_map::Dict{Ghost.Variable, Vector{Ghost.Variable}}
+    tuple_map::Dict{Ghost.Variable, Vector{Any}}
     indexed_itr_map::Dict{Ghost.Variable, Tuple{Ghost.Variable, Int64}}
 end
 TupleCtx() = TupleCtx(Dict(), Dict())
