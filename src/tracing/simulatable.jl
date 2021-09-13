@@ -187,11 +187,11 @@ macro nosim(ex, kws...)
 
         if kwargs
             return quote
-                BitSAD.is_simulatable_primitive(::Type{Core.kwftype($(esc(f)))},
+                BitSAD.is_simulatable_primitive(::Type{Core.kwftype(typeof($(esc(f))))},
                                                 kwargs,
                                                 ::Type{typeof($(esc(f)))},
                                                 $(primitive_sig...)) = true
-                BitSAD.getsimulator(::Core.kwftype($(esc(f))),
+                BitSAD.getsimulator(::Core.kwftype(typeof($(esc(f)))),
                                     ::typeof($(esc(f))),
                                     $(esc.(args)...)) = nothing
             end
