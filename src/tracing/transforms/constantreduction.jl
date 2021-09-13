@@ -1,4 +1,5 @@
-_isreducible(m::Module, v)= all(isconstant, getinputs(m.dfg, v))
+_isreducible(m::Module, v) = (getoperator(m.dfg, v).type != typeof(SBitstream)) &&
+                             all(isconstant, getinputs(m.dfg, v))
 
 function _reducenode!(m::Module, v)
     # determine constant

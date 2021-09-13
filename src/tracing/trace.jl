@@ -49,6 +49,7 @@ function transform!(f, fctx, tape::Ghost.Tape)
         end
 
         itr = iterate(tape, idx)
+        # @show tape
     end
 
     return tape
@@ -74,23 +75,65 @@ function _squash_binary_vararg(ctx, call::Ghost.Call)
     return new_calls, length(new_calls)
 end
 
+_unbroadcast(ctx, entry) = [entry], 1
+_unbroadcast(ctx, call::Ghost.Call{typeof(Base.broadcasted)}) =
+    ([call, Ghost.mkcall(Base.materialize, Ghost.Variable(call))], 2)
+
 struct TupleCtx
     tuple_map::Dict{Ghost.Variable, Vector{Any}}
     indexed_itr_map::Dict{Ghost.Variable, Tuple{Ghost.Variable, Int64}}
+    splat_map::Dict{Ghost.Variable, Tuple{Bool, Vector{Any}}}
 end
-TupleCtx() = TupleCtx(Dict(), Dict())
+TupleCtx() = TupleCtx(Dict(), Dict(), Dict())
+
+function Ghost.rebind_context!(tape::Ghost.Tape{TupleCtx}, subs::Dict)
+    replace!(tape.c.tuple_map) do kv
+        old_key, old_val = kv
+        new_key = get(subs, old_key, old_key)
+        new_val = [get(subs, v, v) for v in old_val]
+
+        return new_key => new_val
+    end
+    replace!(tape.c.indexed_itr_map) do kv
+        old_key, (old_val, i) = kv
+        new_key = get(subs, old_key, old_key)
+        new_val = get(subs, old_val, old_val)
+
+        return new_key => (new_val, i)
+    end
+    replace!(tape.c.splat_map) do kv
+        old_key, (expanded, old_val) = kv
+        new_key = get(subs, old_key, old_key)
+        new_val = [get(subs, v, v) for v in old_val]
+
+        return new_key => (expanded, new_val)
+    end
+end
+
+_record_tuples_and_splats(::TupleCtx, entry) = [entry], 1
+function _record_tuples_and_splats(ctx::TupleCtx, call::Ghost.Call)
+    if call.fn == tuple
+        ctx.tuple_map[Ghost.Variable(call)] = call.args
+    elseif call.fn == ntuple
+        ctx.tuple_map[Ghost.Variable(call)] = [_gettapeval(call)...]
+    elseif call.fn == Base.indexed_iterate && haskey(ctx.tuple_map, call.args[1])
+        ctx.indexed_itr_map[Ghost.Variable(call)] = (call.args[1], _gettapeval(call.args[2]))
+    elseif call.fn == Core._apply_iterate
+        for arg in call.args[3:end]
+            if (_gettapeop(arg).fn == tuple) || (_gettapeop(arg).fn == ntuple)
+                ctx.splat_map[arg] = (true, ctx.tuple_map[arg])
+            else
+                ctx.splat_map[arg] = (false, [_gettapeval(arg)...])
+            end
+        end
+    end
+
+    return [call], 1
+end
 
 _reroute_tuple_index(::TupleCtx, entry) = [entry], 1
 function _reroute_tuple_index(ctx::TupleCtx, call::Ghost.Call)
-    if call.fn == tuple
-        ctx.tuple_map[Ghost.Variable(call)] = call.args
-
-        return [call], 1
-    elseif call.fn == Base.indexed_iterate && haskey(ctx.tuple_map, call.args[1])
-        ctx.indexed_itr_map[Ghost.Variable(call)] = (call.args[1], _gettapeval(call.args[2]))
-
-        return [call], 1
-    elseif call.fn == Base.getfield && haskey(ctx.indexed_itr_map, call.args[1])
+    if call.fn == Base.getfield && haskey(ctx.indexed_itr_map, call.args[1])
         if _gettapeval(call.args[2]) == 1
             indexed_itr = ctx.indexed_itr_map[call.args[1]]
             tuple_args = ctx.tuple_map[indexed_itr[1]]
@@ -107,6 +150,32 @@ function _reroute_tuple_index(ctx::TupleCtx, call::Ghost.Call)
         return [call], 1
     end
 end
+
+_desplat(::TupleCtx, entry) = [entry], 1
+function _desplat(ctx::TupleCtx, call::Ghost.Call)
+    if call.fn == Core._apply_iterate
+        f = call.args[2]
+        args = call.args[3:end]
+        new_calls = Ghost.Call[]
+        new_args = mapreduce(vcat, args) do arg
+            expanded, tuple_args = ctx.splat_map[arg]
+            expanded && return tuple_args
+            new_tuple_args = map(1:length(tuple_args)) do i
+                index_call = Ghost.mkcall(getindex, arg, i)
+                push!(new_calls, index_call)
+                return Ghost.Variable(index_call)
+            end
+            return new_tuple_args
+        end
+
+        push!(new_calls, Ghost.mkcall(f, new_args...))
+
+        return new_calls, length(new_calls)
+    else
+        return [call], 1
+    end
+end
+
 _squash_tuple_index(::TupleCtx, entry) = [entry], 1
 function _squash_tuple_index(ctx::TupleCtx, call::Ghost.Call)
     if call.fn == tuple

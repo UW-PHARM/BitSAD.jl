@@ -6,6 +6,11 @@ function getfxpwidths(x::Real)
 
     return (integral = intwidth, fractional = fracwidth)
 end
+function getfxpwidths(x::AbstractArray{<:Real})
+    widths = getfxpwidths.(x)
+
+    return (integral = maximum(first.(widths)), fractional = maximum(last.(widths)))
+end
 
 function getfixedpoint(x::Real, width)
     xabs = abs(x)
@@ -15,6 +20,7 @@ function getfixedpoint(x::Real, width)
 
     return binstr
 end
+getfixedpoint(x::AbstractArray{<:Real}, width) = getfixedpoint.(x, Ref(width))
 
 function constantreplacement!(m::Module)
     maxintwidth = 1
@@ -24,7 +30,7 @@ function constantreplacement!(m::Module)
     for v in vertices(m.dfg)
         inputs = getinputs(m.dfg, v)
         for input in inputs
-            if isconstant(input)
+            if isconstant(input) && (jltypeof(input) <: Union{Real, AbstractArray{<:Real}})
                 width = getfxpwidths(value(input))
                 maxintwidth = max(maxintwidth, width.integral)
                 maxfracwidth = max(maxfracwidth, width.fractional)
@@ -38,7 +44,7 @@ function constantreplacement!(m::Module)
     for v in vertices(m.dfg)
         inputs = getinputs(m.dfg, v)
         for (i, input) in enumerate(inputs)
-            if isconstant(input)
+            if isconstant(input) && (jltypeof(input) <: Union{Real, AbstractArray{<:Real}})
                 conststr = getfixedpoint(value(input), width)
                 inputs[i] = setname(input, conststr)
             elseif isparameter(input)

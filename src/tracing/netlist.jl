@@ -8,7 +8,7 @@ _checkclass(class) = (class != :input &&
     error("Cannot create net with class $class (use :input, :output, :internal, :constant, or :parameter)")
 
 struct Net
-    name::String
+    name
     value
     type::Symbol
     class::Symbol
@@ -26,8 +26,16 @@ Net(; name = "", value = missing, type = :wire, class = :internal, signed = fals
     Net(name, value, type, class, signed, size)
 Net(x; kwargs...) = Net(; value = x, size = netsize(x), kwargs...)
 
-Base.show(io::IO, n::Net) =
-    print(io, "Net{$(n.class), $(n.type)}($(n.name)::$(jltypeof(n)))($(n.size[1])x$(n.size[2]))")
+function Base.show(io::IO, n::Net)
+    limitedshow(x) = sprint(show, x; context = IOContext(stdout, :compact => true, :limit => true))
+
+    if isconstant(n)
+        netname = limitedshow(n.value)
+        print(io, "Net{$(n.class), $(n.type)}($(netname)::$(jltypeof(n)))($(n.size[1])x$(n.size[2]))")
+    else
+        print(io, "Net{$(n.class), $(n.type)}($(n.name)::$(jltypeof(n)))($(n.size[1])x$(n.size[2]))")
+    end
+end
 
 name(x::Net) = x.name
 
@@ -56,8 +64,8 @@ const Netlist = Vector{Net}
 inputs(n::Netlist) = filter(isinput, n)
 outputs(n::Netlist) = filter(isoutput, n)
 
-find(n::Netlist, x::Net) = findall(λ -> λ.name == name(x), n)
-Base.in(n::Netlist, x::Net) = !isnothing(find(n, x))
+find(n::Netlist, x::Net) = findall(==(name(x)), name.(n))
+Base.in(x::Net, n::Netlist) = !isempty(find(n, x))
 
 # function getsize(n::Netlist, x::String)
 #     i = find(n, x)

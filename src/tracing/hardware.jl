@@ -24,14 +24,20 @@ function generatehw(f, args...;
                     isprimitive = is_hardware_primitive,
                     submodules = submodules)
     end
+    transform!(_unbroadcast, tape)
     transform!(_squash_binary_vararg, tape)
     tape = Ghost.Tape(tape.ops, tape.result, tape.parent, tape.meta, TupleCtx())
+    transform!(_record_tuples_and_splats, tape)
     transform!(_reroute_tuple_index, tape)
-    transform!(_squash_tuple_index, tape)
+    transform!(_desplat, tape)
+    # transform!(_squash_tuple_index, tape)
 
     # extract tape into module
     m = Module(fn = f, name = top)
     extracttrace!(m, tape)
+
+    # replace constant SBitstreams with calls to SBitstream constructor on floats
+    insertrng!(m)
 
     # apply transformations
     foreach(t! -> t!(m), transforms)
@@ -58,20 +64,34 @@ function _handle_getproperty!(m::Module, call, param_map, const_map)
     return m
 end
 
+function _get_materialize_origin(x)
+    origin = _gettapeop(x)
+
+    return (origin.fn == Base.materialize) ? _get_materialize_origin(origin.args[1]) : x
+end
+
 function extracttrace!(m::Module, tape::Ghost.Tape)
     param_map = Dict{Ghost.Variable, String}()
     const_map = Dict{Ghost.Variable, String}()
+    materialize_map = Dict{Ghost.Variable, Tuple{Ghost.Variable, Any}}()
     # skip first call which is the function being compiled
     for call in tape
         if call isa Ghost.Call
             # ignore materialize calls
-            (call.fn == Base.materialize) && continue
+            if call.fn == Base.materialize
+                origin = _get_materialize_origin(call.args[1])
+                materialize_map[Ghost.Variable(call)] = (origin, _gettapeval(call))
+                continue
+            end
 
             # handle calls to getproperty
             if call.fn == Base.getproperty
                 _handle_getproperty!(m, call, param_map, const_map)
                 continue
             end
+
+            is_hardware_primitive(Ghost.get_type_parameters(Ghost.call_signature(tape, call))...) ||
+                continue
 
             # create Operator for Ghost.Call (handling broadcast)
             # structs are renamed as Foo -> foo_$id
@@ -84,7 +104,7 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
             # map inputs and outputs of Ghost.Call to Nets
             # set args that are Ghost.Input to :input class
             inputs = map(call.args[(1 + isbroadcast):end]) do arg
-                val = _gettapeval(arg)
+                arg, val = get(materialize_map, arg, (arg, _gettapeval(arg)))
                 name = haskey(param_map, arg) ? param_map[arg] :
                        haskey(const_map, arg) ? const_map[arg] :
                        _isvariable(arg) ? "net_$(arg.id)" : string(val)
