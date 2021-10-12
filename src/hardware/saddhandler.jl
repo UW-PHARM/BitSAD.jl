@@ -5,7 +5,7 @@ end
 gethandler(::Bool, ::Type{typeof(+)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) =
     SAddHandler()
 
-function (handler::SAddHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
+function (handler::SAddHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs
     setsigned!(netlist, inputs[1], true)
     setsigned!(netlist, inputs[2], true)
@@ -18,7 +18,7 @@ function (handler::SAddHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::
     # update netlist with output
     setsigned!(netlist, outputs[1], true)
 
-    outstring = """
+    write(buffer, """
         $stdcomment
         // BEGIN add$(handler.id)
         stoch_add_mat #(
@@ -42,7 +42,7 @@ function (handler::SAddHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::
                 .Y($(name(outputs[1]))_m)
             );
         // END add$(handler.id)
-        \n"""
+        \n""")
 
     handler.id += 1
 

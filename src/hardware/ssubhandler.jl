@@ -4,7 +4,7 @@ end
 
 gethandler(::Type{typeof(-)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) = SSubHandler()
 
-function (handler::SSubHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
+function (handler::SSubHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs
     setsigned!(netlist, inputs[1], true)
     setsigned!(netlist, inputs[2], true)
@@ -23,7 +23,7 @@ function (handler::SSubHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::
     push!(netlist, Net(name = "sub$(handler.id)_mp", size = outsize))
     push!(netlist, Net(name = "sub$(handler.id)_mm", size = outsize))
 
-    outstring = """
+    write(buffer, """
         $stdcomment
         // BEGIN sub$(handler.id)
         stoch_sat_sub_mat #(
@@ -87,9 +87,9 @@ function (handler::SSubHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::
                 .Y($(name(outputs[1]))_m)
             );
         // END sub$(handler.id)
-        \n"""
+        \n""")
 
     handler.id += 1
 
-    return outstring
+    return buffer
 end

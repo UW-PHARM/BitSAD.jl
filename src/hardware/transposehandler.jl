@@ -4,7 +4,7 @@ end
 
 gethandler(::Type{typeof(permutedims)}, ::Type{<:SBitstreamLike}) = TransposeHandler()
 
-function (handler::TransposeHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
+function (handler::TransposeHandler)(buffer, netlist, inputs, outputs)
     # compute output size
     outsize = netsize(outputs[1])
 
@@ -12,7 +12,7 @@ function (handler::TransposeHandler)(netlist::Netlist, inputs::Vector{Net}, outp
     setsigned!(netlist, outputs[1], true)
     setreg!(netlist, outputs[1])
 
-    outstring = """
+    write(buffer, """
         $stdcomment
         // BEGIN transpose$(handler.id)
         $(handler.id > 0 ? "" : "integer i, j;")
@@ -25,9 +25,9 @@ function (handler::TransposeHandler)(netlist::Netlist, inputs::Vector{Net}, outp
             end
         end
         // END transpose$(handler.id)
-        \n"""
+        \n""")
 
     handler.id += 1
 
-    return outstring
+    return buffer
 end

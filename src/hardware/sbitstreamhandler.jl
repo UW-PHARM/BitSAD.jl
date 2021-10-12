@@ -9,7 +9,7 @@ BitSAD.is_hardware_primitive(::Type{typeof(Base.broadcasted)},
 gethandler(::Bool, ::Type{typeof(SBitstream)}, ::Type{<:Real}) = SBitstreamHandler()
 gethandler(::Bool, ::Type{typeof(SBitstream)}, ::Type{<:AbstractArray{<:Real}}) = SBitstreamHandler()
 
-function (handler::SBitstreamHandler)(netlist::Netlist, inputs::Netlist, outputs::Netlist)
+function (handler::SBitstreamHandler)(buffer, netlist, inputs, outputs)
     # set output as signed
     setsigned!(netlist, outputs[1], true)
 
@@ -24,28 +24,28 @@ function (handler::SBitstreamHandler)(netlist::Netlist, inputs::Netlist, outputs
         isneg = [value(inputs[1]) >= 0]
     end
 
-    outstring = """
+    write(buffer, """
         // BEGIN bitstream_rng$(handler.id)
-        """
+        """)
     for i in 1:num_elements
         idx_string = (num_elements > 1) ? "[$(i - 1)]" : ""
-        outstring *= """
-        bitstream_rng #(
-                .VALUE($(val[i])),
-                .IS_NEGATIVE($(isneg[i]))
-            ) bitstream_rng$(handler.id)_$i (
-                .CLK(CLK),
-                .nRST(nRST),
-                .out_p($(name(outputs[1]))_p$idx_string),
-                .out_m($(name(outputs[1]))_m$idx_string)
-            );
-        """
+        write(buffer, """
+            bitstream_rng #(
+                    .VALUE($(val[i])),
+                    .IS_NEGATIVE($(isneg[i]))
+                ) bitstream_rng$(handler.id)_$i (
+                    .CLK(CLK),
+                    .nRST(nRST),
+                    .out_p($(name(outputs[1]))_p$idx_string),
+                    .out_m($(name(outputs[1]))_m$idx_string)
+                );
+            """)
     end
-    outstring *= """
+    write(buffer, """
         // END bitstream_rng$(handler.id)
-        \n"""
+        \n""")
 
     handler.id += 1
 
-    return outstring
+    return buffer
 end

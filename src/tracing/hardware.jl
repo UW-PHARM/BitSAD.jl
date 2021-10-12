@@ -5,7 +5,7 @@ gethandler(::Bool, args...) = gethandler(args...)
 
 is_hardware_primitive(sig...) = is_trace_primitive(sig...)
 
-function generatehw(f, args...;
+function generatehw(io, f, args...;
                     top = _nameof(f),
                     submodules = [],
                     transforms = [constantreduction!])
@@ -46,7 +46,15 @@ function generatehw(f, args...;
     constantreplacement!(m)
 
     # generate verilog string
-    return generateverilog(m), m
+    generateverilog(io, m)
+
+    return io, m
+end
+function generatehw(f, args...; kwargs...)
+    buffer = IOBuffer()
+    buffer, m = generatehw(io, f, args...; kwargs...)
+
+    return String(take!(buffer)), m
 end
 
 _getstructname(::T) where T = lowercase(string(nameof(T)))

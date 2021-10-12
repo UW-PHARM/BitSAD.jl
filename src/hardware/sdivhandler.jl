@@ -5,7 +5,7 @@ end
 gethandler(::Bool, ::Type{typeof(/)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) =
     SDivHandler()
 
-function (handler::SDivHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
+function (handler::SDivHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs
     setsigned!(netlist, inputs[1], true)
     setsigned!(netlist, inputs[2], true)
@@ -22,7 +22,7 @@ function (handler::SDivHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::
     push!(netlist, Net(name = "div$(handler.id)_pp", size = outsize))
     push!(netlist, Net(name = "div$(handler.id)_mp", size = outsize))
 
-    outstring = """
+    write(buffer, """
         $stdcomment
         // BEGIN div$(handler.id)
         stoch_div_mat #(
@@ -68,9 +68,9 @@ function (handler::SDivHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::
                 .Y($(name(outputs[1]))_m)
             );
         // END div$(handler.id)
-        \n"""
+        \n""")
 
     handler.id += 1
 
-    return outstring
+    return buffer
 end

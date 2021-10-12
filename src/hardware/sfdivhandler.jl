@@ -5,7 +5,7 @@ end
 gethandler(::Bool, ::Type{typeof(÷)}, ::Type{<:SBitstreamLike}, ::Type{<:Real}) =
     SFixedGainDivHandler()
 
-function (handler::SFixedGainDivHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
+function (handler::SFixedGainDivHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs
     setsigned!(netlist, inputs[1], true)
 
@@ -15,7 +15,7 @@ function (handler::SFixedGainDivHandler)(netlist::Netlist, inputs::Vector{Net}, 
     # add output net to netlist
     setsigned!(netlist, outputs[1], true)
 
-    outstring = """
+    write(buffer, """
         $stdcomment
         // BEGIN fdiv$(handler.id)
         stoch_fixed_gain_div_mat #(
@@ -41,9 +41,9 @@ function (handler::SFixedGainDivHandler)(netlist::Netlist, inputs::Vector{Net}, 
                 .Y($(name(outputs[1]))_m)
             );
         // END fdiv$(handler.id)
-        \n"""
+        \n""")
 
     handler.id += 1
 
-    return outstring
+    return buffer
 end

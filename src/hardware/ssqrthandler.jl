@@ -4,14 +4,14 @@ end
 
 gethandler(::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) = SSqrtHandler()
 
-function (handler::SSqrtHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
+function (handler::SSqrtHandler)(buffer, netlist, inputs, outputs)
     # compute output size
     outsize = netsize(outputs[1])
 
     # add output net to netlist
     setsigned!(netlist, outputs[1], true)
 
-    outstring = """
+    write(buffer, """
         $stdcomment
         // BEGIN sqrt$(handler.id)
         stoch_square_root #(
@@ -25,9 +25,9 @@ function (handler::SSqrtHandler)(netlist::Netlist, inputs::Vector{Net}, outputs:
             );
         assign $(name(outputs[1]))_m = 1'b0;
         // END sqrt$(handler.id)
-        \n"""
+        \n""")
 
     handler.id += 1
 
-    return outstring
+    return buffer
 end

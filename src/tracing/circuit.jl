@@ -127,7 +127,7 @@ function _printnet(net::Net)
     return join([reg, bitstr, names], " ")
 end
 
-function _generatetopmatter(m::Module, netlist::Netlist)
+function _generatetopmatter(buffer, m::Module, netlist::Netlist)
     netlist = unique(netlist)
     inputs = filter(isinput, netlist)
     outputs = filter(isoutput, netlist)
@@ -136,38 +136,38 @@ function _generatetopmatter(m::Module, netlist::Netlist)
     wires = filter(iswire, internals)
     regs = filter(isreg, internals)
 
-    outstr = "module $(m.name)(CLK, nRST, "
+    write(buffer, "module $(m.name)(CLK, nRST, ")
 
-    outstr *= join(map(inputs) do input
+    write(buffer, join(map(inputs) do input
         issigned(input) ? "$(name(input))_p, $(name(input))_m" : name(input)
-    end, ", ")
-    outstr *= ", "
-    outstr *= join(map(outputs) do output
+    end, ", "))
+    write(buffer, ", ")
+    write(buffer, join(map(outputs) do output
         issigned(output) ? "$(name(output))_p, $(name(output))_m" : name(output)
-    end, ", ")
-    outstr *= ");\n"
+    end, ", "))
+    write(buffer, ");\n")
 
-    outstr *= join(map(parameters) do param
+    write(buffer, join(map(parameters) do param
         "parameter $(name(param)) = $(m.parameters[name(param)]);"
-    end, "\n")
-    outstr *= "\n"
+    end, "\n"))
+    write(buffer, "\n")
 
-    outstr *= "input ClK, nRST;\n"
+    write(buffer, "input ClK, nRST;\n")
 
-    outstr *= join(map(inputs) do input
+    write(buffer, join(map(inputs) do input
         "input $(_printnet(input));"
-    end, "\n")
-    outstr *= "\n"
-    outstr *= join(map(outputs) do output
+    end, "\n"))
+    write(buffer, "\n")
+    write(buffer, join(map(outputs) do output
         "output $(_printnet(output));"
-    end, "\n")
-    outstr *= "\n"
-    outstr *= join(map(_printnet, regs), "\n")
-    outstr *= "\n"
-    outstr *= join(map(wires) do wire
+    end, "\n"))
+    write(buffer, "\n")
+    write(buffer, join(map(_printnet, regs), "\n"))
+    write(buffer, "\n")
+    write(buffer, join(map(wires) do wire
         "wire $(_printnet(wire));"
-    end, "\n")
-    outstr *= "\n\n"
+    end, "\n"))
+    write(buffer, "\n\n")
 
     return outstr
 end
@@ -188,7 +188,7 @@ Users will most likely call the last method form above.
 - `dut`: an instance of the circuit struct
 - `args`: example arguments to circuit
 """
-function generateverilog(m::Module)
+function generateverilog(io::IO, m::Module)
     outstr = ""
     netlist = getnetlist(m)
 
@@ -196,6 +196,7 @@ function generateverilog(m::Module)
     nodes = getroots(m.dfg)
     visited = nodes
 
+    buffer = IOBuffer()
     while !isempty(nodes)
         # for each node, invoke the appropriate handler
         for node in nodes
@@ -211,7 +212,7 @@ function generateverilog(m::Module)
                 m.handlers[op] = handler
             end
 
-            outstr *= handler(netlist, inputs, outputs)
+            outstr *= handler(buffer, netlist, inputs, outputs)
         end
 
         # move one level up in the DFG
@@ -219,8 +220,13 @@ function generateverilog(m::Module)
     end
 
     # print top matter
-    outstr = _generatetopmatter(m, netlist) * outstr
-    outstr *= "\nendmodule"
+    _generatetopmatter(io, m, netlist)
+    # print main matter
+    foreach(readeach(buffer, Char)) do c
+        write(io, c)
+    end
+    write(io, "\nendmodule")
 
-    return outstr
+    return io
 end
+generateverilog(m::Module) = generateverilog(IOBuffer(), m)

@@ -14,7 +14,7 @@ gethandler(broadcasted::Bool,
            ::Type{<:AbstractArray{<:SBitstream}}) =
     broadcasted ? SMultHandler() : SMatMultHandler()
 
-function (handler::SMultHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
+function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs
     setsigned!(netlist, inputs[1], true)
     setsigned!(netlist, inputs[2], true)
@@ -37,7 +37,7 @@ function (handler::SMultHandler)(netlist::Netlist, inputs::Vector{Net}, outputs:
     # add output net to netlist
     setsigned!(netlist, outputs[1], true)
 
-    outstring = """
+    write(buffer, """
         $stdcomment
         // BEGIN mult$(handler.id)
         assign mult$(handler.id)_pp = $(lname("_p")) & $(rname("_p"))
@@ -105,14 +105,14 @@ function (handler::SMultHandler)(netlist::Netlist, inputs::Vector{Net}, outputs:
                 .Y($(name(outputs[1]))_m)
             );
         // END mult$(handler.id)
-        \n"""
+        \n""")
 
     handler.id += 1
 
-    return outstring
+    return buffer
 end
 
-function (handler::SMatMultHandler)(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{Net})
+function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs
     setsigned!(netlist, inputs[1], true)
     setsigned!(netlist, inputs[2], true)
@@ -135,7 +135,7 @@ function (handler::SMatMultHandler)(netlist::Netlist, inputs::Vector{Net}, outpu
     push!(netlist, Net(name = "mmult$(handler.id)_13", size = outsize))
     push!(netlist, Net(name = "mmult$(handler.id)_14", size = outsize))
 
-    outstring = """
+    write(buffer, """
         $stdcomment
         // BEGIN mmult$(handler.id)
         stoch_matrix_mult #(
@@ -243,9 +243,9 @@ function (handler::SMatMultHandler)(netlist::Netlist, inputs::Vector{Net}, outpu
                 .Y($(name(outputs[1]))_m)
             );
         // END mmult$(handler.id)
-        \n"""
+        \n""")
 
     handler.id += 1
 
-    return outstring
+    return buffer
 end
