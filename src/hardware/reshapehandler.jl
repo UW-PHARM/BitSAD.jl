@@ -6,12 +6,23 @@ function reshape_handler(netlist::Netlist, inputs::Vector{Net}, outputs::Vector{
         delete!(netlist, input)
     end
 
-    outstring = """
-        $stdcomment
-        // BEGIN reshape
-        assign $(name(outputs[1])) = $(name(inputs[1]))
-        // END reshape
-        \n"""
+    if issigned(inputs[1])
+        setsigned!(netlist, outputs[1], true)
+        outstring = """
+            $stdcomment
+            // BEGIN reshape
+            assign $(name(outputs[1]))_p = $(name(inputs[1]))_p;
+            assign $(name(outputs[1]))_m = $(name(inputs[1]))_m;
+            // END reshape
+            \n"""
+    else
+        outstring = """
+            $stdcomment
+            // BEGIN reshape
+            assign $(name(outputs[1])) = $(name(inputs[1]));
+            // END reshape
+            \n"""
+    end
 
     return outstring
 end

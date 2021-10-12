@@ -152,6 +152,8 @@ function _generatetopmatter(m::Module, netlist::Netlist)
     end, "\n")
     outstr *= "\n"
 
+    outstr *= "input ClK, nRST;\n"
+
     outstr *= join(map(inputs) do input
         "input $(_printnet(input));"
     end, "\n")
