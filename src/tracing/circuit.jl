@@ -169,7 +169,7 @@ function _generatetopmatter(buffer, m::Module, netlist::Netlist)
     end, "\n"))
     write(buffer, "\n\n")
 
-    return outstr
+    return buffer
 end
 
 """
@@ -212,7 +212,7 @@ function generateverilog(io::IO, m::Module)
                 m.handlers[op] = handler
             end
 
-            outstr *= handler(buffer, netlist, inputs, outputs)
+            handler(buffer, netlist, inputs, outputs)
         end
 
         # move one level up in the DFG
@@ -222,10 +222,8 @@ function generateverilog(io::IO, m::Module)
     # print top matter
     _generatetopmatter(io, m, netlist)
     # print main matter
-    foreach(readeach(buffer, Char)) do c
-        write(io, c)
-    end
-    write(io, "\nendmodule")
+    write(io, take!(buffer))
+    write(io, "\nendmodule\n")
 
     return io
 end
