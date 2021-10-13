@@ -130,18 +130,22 @@ _simtransform(ctx, input::Ghost.Input) =
         ([input, Ghost.mkcall(getbit, Ghost.Variable(input))], 1) :
         ([input], 1)
 function _simtransform(ctx, call::Ghost.Call)
-    # if call has already been transformed,
-    #  then delete this call and rebind to the transformed call
-    haskey(ctx.opmap, (call.fn, call.args...)) && return [], ctx.opmap[(call.fn, call.args...)].id
-
     # if the args don't contain SBitstreamLike, then skip
     sig = Ghost.get_type_parameters(Ghost.call_signature(call.fn, _gettapeval.(call.args)...))
     is_simulatable_primitive(sig...) || return [call], 1
 
-    # otherwise, transform this call while handling broadcasting
     # get the simulator for this call signature
     sim = getsimulator(call.fn, map(arg -> _gettapeval(arg), call.args)...)
-    return isnothing(sim) ? ([call], 1) : _handle_bcast_and_transform(ctx, call, sim)
+
+    # skip nosims
+    isnothing(sim) && return [call], 1
+
+    # if call has already been transformed,
+    #  then delete this call and rebind to the transformed call
+    haskey(ctx.opmap, (call.fn, call.args...)) && return [], ctx.opmap[(call.fn, call.args...)].id
+
+    # otherwise, transform this call while handling broadcasting
+    return _handle_bcast_and_transform(ctx, call, sim)
 end
 
 getbit(x) = x

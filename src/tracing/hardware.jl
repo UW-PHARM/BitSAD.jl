@@ -5,7 +5,7 @@ gethandler(::Bool, args...) = gethandler(args...)
 
 is_hardware_primitive(sig...) = is_trace_primitive(sig...)
 
-function generatehw(io, f, args...;
+function generatehw(io::IO, f, args...;
                     top = _nameof(f),
                     submodules = [],
                     transforms = [constantreduction!])
@@ -52,7 +52,7 @@ function generatehw(io, f, args...;
 end
 function generatehw(f, args...; kwargs...)
     buffer = IOBuffer()
-    buffer, m = generatehw(io, f, args...; kwargs...)
+    buffer, m = generatehw(buffer, f, args...; kwargs...)
 
     return String(take!(buffer)), m
 end
