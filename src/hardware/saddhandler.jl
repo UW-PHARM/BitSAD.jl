@@ -46,5 +46,5 @@ function (handler::SAddHandler)(buffer, netlist, inputs, outputs)
 
     handler.id += 1
 
-    return outstring
+    return buffer
 end
