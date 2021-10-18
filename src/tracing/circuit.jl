@@ -219,6 +219,13 @@ function generateverilog(io::IO, m::Module)
         nodes, visited = traverse(m.dfg, nodes, visited)
     end
 
+    # set outputs
+    for v in getbuds(m.dfg)
+        for output in getoutputs(m.dfg, v)
+            setclass!(netlist, output, :output)
+        end
+    end
+
     # print top matter
     _generatetopmatter(io, m, netlist)
     # print main matter
