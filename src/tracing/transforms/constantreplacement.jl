@@ -1,8 +1,9 @@
 function getfxpwidths(x::Real)
     xabs = abs(x)
     xint = floor(xabs)
-    intwidth = Int(max(ceil(log2(xint)), 0))
-    fracwidth = Int(min(ceil(-log2(xabs - xint)), 0))
+    xfrac = xabs - xint
+    intwidth = iszero(xint) ? 0 : Int(ceil(log2(xint)))
+    fracwidth = iszero(xfrac) ? 0 : Int(ceil(-log2(xfrac)))
 
     return (integral = intwidth, fractional = fracwidth)
 end
