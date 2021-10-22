@@ -9,9 +9,6 @@ function (handler::SL2NormHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs
     setsigned!(netlist, inputs[1], true)
 
-    # compute output size
-    outsize = netsize(outputs[1])
-
     # add output net to netlist
     setsigned!(netlist, outputs[1], true)
 

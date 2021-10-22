@@ -59,12 +59,25 @@ end
 
 _getstructname(::T) where T = lowercase(string(nameof(T)))
 
+_handle_parameter(parameter::Number, submodules) = parameter
+_handle_parameter(parameter::AbstractArray{<:Number}, submodules) = parameter
+_handle_parameter(parameter::Tuple, submodules) = map(parameter) do p
+    _handle_parameter(p, submodules)
+end
+function _handle_parameter(::T, submodules) where T
+    (T ∈ submodules) || @warn "Parameter of type $T will be ignored (cannot encode in Verilog)"
+
+    return nothing
+end
+
 function _handle_getproperty!(m::Module, call, param_map, const_map)
     if m.fn == _gettapeval(call.args[1])
-        val = _gettapeval(call)
+        val = _handle_parameter(_gettapeval(call), m.submodules)
         prop = string(_gettapeval(call.args[2]))
-        m.parameters[prop] = string(val)
-        param_map[Ghost.Variable(call)] = prop
+        if !isnothing(val)
+            m.parameters[prop] = val
+            param_map[Ghost.Variable(call)] = prop
+        end
     else
         const_map[Ghost.Variable(call)] = string(_gettapeval(call))
     end

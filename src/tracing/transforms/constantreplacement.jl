@@ -12,6 +12,11 @@ function getfxpwidths(x::AbstractArray{<:Real})
 
     return (integral = maximum(first.(widths)), fractional = maximum(last.(widths)))
 end
+function getfxpwidths(x::NTuple{N, <:Real}) where N
+    widths = map(getfxpwidths, x)
+
+    return (integral = maximum(first.(widths)), fractional = maximum(last.(widths)))
+end
 
 function getfixedpoint(x::Real, width)
     xabs = abs(x)
@@ -22,16 +27,20 @@ function getfixedpoint(x::Real, width)
     return binstr
 end
 getfixedpoint(x::AbstractArray{<:Real}, width) = getfixedpoint.(x, Ref(width))
+getfixedpoint(x::NTuple{<:Any, <:Real}, width) = map(x) do xi
+    getfixedpoint(xi, width)
+end
 
 function constantreplacement!(m::Module)
-    maxintwidth = 1
-    maxfracwidth = 0
+    maxintwidth = m.bitwidth.integral
+    maxfracwidth = m.bitwidth.fractional
 
     # find require widths
     for v in vertices(m.dfg)
         inputs = getinputs(m.dfg, v)
         for input in inputs
-            if isconstant(input) && (jltypeof(input) <: Union{Real, AbstractArray{<:Real}})
+            if (isconstant(input) || isparameter(input)) &&
+               (jltypeof(input) <: Union{Real, AbstractArray{<:Real}, NTuple{<:Any, <:Real}})
                 width = getfxpwidths(value(input))
                 maxintwidth = max(maxintwidth, width.integral)
                 maxfracwidth = max(maxfracwidth, width.fractional)
@@ -40,21 +49,24 @@ function constantreplacement!(m::Module)
     end
 
     # replace all constants
-    width = (integral = maxintwidth, fractional = maxfracwidth)
+    m.bitwidth = (integral = maxintwidth, fractional = maxfracwidth)
     # constreplacements = []
     for v in vertices(m.dfg)
         inputs = getinputs(m.dfg, v)
         for (i, input) in enumerate(inputs)
-            if isconstant(input) && (jltypeof(input) <: Union{Real, AbstractArray{<:Real}})
-                conststr = getfixedpoint(value(input), width)
-                inputs[i] = setname(input, conststr)
-            elseif isparameter(input)
-                conststr = getfixedpoint(value(input), width)
-                m.parameters[name(input)] = conststr
+            if jltypeof(input) <: Union{Real, AbstractArray{<:Real}, NTuple{<:Any, <:Real}}
+                if isconstant(input)
+                    conststr = getfixedpoint(value(input), m.bitwidth)
+                    inputs[i] = setwidth(setname(input, conststr), sum(m.bitwidth) + 1)
+                elseif isparameter(input)
+                    conststr = getfixedpoint(value(input), m.bitwidth)
+                    inputs[i] = setwidth(input, sum(m.bitwidth) + 1)
+                    m.parameters[name(input)] = conststr
+                end
             end
         end
         set_prop!(m.dfg, v, :inputs, inputs)
     end
 
-    return width
+    return m
 end

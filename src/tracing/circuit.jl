@@ -21,10 +21,11 @@ Hardware generation traverses `dfg` and uses `handlers` to generate Verilog stri
 
 See also: [HW.generate](@ref)
 """
-@kwdef struct Module{T}
+@kwdef mutable struct Module{T}
     fn::T
     name::Symbol = _nameof(fn)
-    parameters::Dict{String, String} = Dict{String, String}()
+    bitwidth::@NamedTuple{integral::Int, fractional::Int} = (integral = 1, fractional = 0)
+    parameters::Dict{String, Any} = Dict{String, Any}()
     submodules::Vector{Type} = Type[]
     dfg::MetaDiGraph{Int, Float64} = MetaDiGraph()
     handlers::Dict{Tuple{Bool, Vararg{Type}}, Any} = Dict{Tuple{Bool, Vararg{Type}}, Any}()
@@ -95,7 +96,7 @@ function getnetlist(m::Module)
         append!(netlist, outputs)
     end
 
-    return netlist
+    return netlist |> unique
 end
 
 function printdfg(m::Module)
@@ -120,18 +121,35 @@ end
 
 function _printnet(net::Net)
     reg = isreg(net) ? "reg" : ""
-    bitlength = prod(netsize(net)) - 1
+    bitlength = bitwidth(net) * prod(netsize(net)) - 1
     bitstr = (bitlength == 0) ? "" : "[$bitlength:0]"
     names = issigned(net) ? "$(name(net))_p, $(name(net))_m" : name(net)
 
     return join([reg, bitstr, names], " ")
 end
 
+_encodeparameter(buffer, name, value) =
+    write(buffer, "parameter $name = $value;")
+function _encodeparameter(buffer, name, value::AbstractArray)
+    for (i, sz) in enumerate(size(value))
+        write(buffer, "parameter $(name)_sz_$i = $sz;\n")
+    end
+    write(buffer, "parameter $name = {")
+    write(buffer, join(value, ", "))
+    write(buffer, "};")
+end
+function _encodeparameter(buffer, name, value::Tuple)
+    write(buffer, "parameter $(name)_sz_1 = $(length(value));\n")
+    write(buffer, "parameter $name = {")
+    write(buffer, join(value, ", "))
+    write(buffer, "};")
+end
+
 function _generatetopmatter(buffer, m::Module, netlist::Netlist)
     netlist = unique(netlist)
     inputs = filter(isinput, netlist)
     outputs = filter(isoutput, netlist)
-    parameters = filter(isparameter, netlist)
+    # parameters = filter(isparameter, netlist)
     internals = filter(isinternal, netlist)
     wires = filter(iswire, internals)
     regs = filter(isreg, internals)
@@ -147,9 +165,10 @@ function _generatetopmatter(buffer, m::Module, netlist::Netlist)
     end, ", "))
     write(buffer, ");\n")
 
-    write(buffer, join(map(parameters) do param
-        "parameter $(name(param)) = $(m.parameters[name(param)]);"
-    end, "\n"))
+    for (name, value) in m.parameters
+        _encodeparameter(buffer, name, value)
+        write(buffer, "\n")
+    end
     write(buffer, "\n")
 
     write(buffer, "input ClK, nRST;\n")
@@ -170,6 +189,17 @@ function _generatetopmatter(buffer, m::Module, netlist::Netlist)
     write(buffer, "\n\n")
 
     return buffer
+end
+
+function _sync_nodes!(nets, netlist)
+    for (i, net) in enumerate(nets)
+        j = find(netlist, net)
+        if !isempty(j)
+            nets[i] = only(netlist[j])
+        end
+    end
+
+    return nets
 end
 
 """
@@ -212,7 +242,9 @@ function generateverilog(io::IO, m::Module)
                 m.handlers[op] = handler
             end
 
+            set_prop!(m.dfg, node, :inputs, _sync_nodes!(inputs, netlist))
             handler(buffer, netlist, inputs, outputs)
+            set_prop!(m.dfg, node, :outputs, _sync_nodes!(outputs, netlist))
         end
 
         # move one level up in the DFG

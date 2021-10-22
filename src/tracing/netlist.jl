@@ -13,17 +13,23 @@ struct Net
     type::Symbol
     class::Symbol
     signed::Bool
+    bitwidth::Int
     size
 
-    function Net(name, value, type, class, signed, size)
+    function Net(name, value, type, class, signed, bitwidth, size)
         _checktype(type)
         _checkclass(class)
 
-        new(name, value, type, class, signed, size)
+        new(name, value, type, class, signed, bitwidth, size)
     end
 end
-Net(; name = "", value = missing, type = :wire, class = :internal, signed = false, size = (1, 1)) =
-    Net(name, value, type, class, signed, size)
+Net(; name = "",
+      value = missing,
+      type = :wire,
+      class = :internal,
+      signed = false,
+      bitwidth = 1,
+      size = (1, 1)) = Net(name, value, type, class, signed, bitwidth, size)
 Net(x; kwargs...) = Net(; value = x, size = netsize(x), kwargs...)
 
 function Base.show(io::IO, n::Net)
@@ -37,16 +43,27 @@ function Base.show(io::IO, n::Net)
     end
 end
 
+Base.:(==)(x::Net, y::Net) = name(x) == name(y)
+Base.isequal(x::Net, y::Net) = (x == y)
+Base.hash(x::Net, h::UInt) = hash(x.name, h)
+
 name(x::Net) = x.name
 
 value(x::Net) = x.value
 
 jltypeof(x::Net) = typeof(value(x))
 
+bitwidth(x::Net) = x.bitwidth
+
 netsize(x) = (1, 1)
 netsize(x::AbstractArray) = size(x)
 netsize(x::AbstractVector) = (length(x), 1)
-netsize(x::Net) = x.size
+function netsize(x::Net)
+    isparameter(x) || return x.size
+
+    actual_size = netsize(value(x))
+    return ntuple(i -> "$(name(x))_sz_$i", length(actual_size))
+end
 
 isreg(x::Net) = (x.type == :reg)
 iswire(x::Net) = !isreg(x)
@@ -163,6 +180,21 @@ function setsigned!(n::Netlist, x::Net, signed)
     isempty(is) && error("Cannot set net $x as signed = $signed because it does not exist in netlist.")
     for i in is
         n[i] = setsigned(n[i], signed)
+    end
+
+    return n
+end
+
+function setwidth(x::Net, width)
+    @set! x.bitwidth = width
+
+    return x
+end
+function setwidth!(n::Netlist, x::Net, width)
+    is = find(n, x)
+    isempty(is) && error("Cannot set net $x bitwidth = $width because it does not exist in netlist.")
+    for i in is
+        n[i] = setwidth(n[i], width)
     end
 
     return n

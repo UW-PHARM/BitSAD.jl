@@ -5,9 +5,6 @@ end
 gethandler(::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) = SSqrtHandler()
 
 function (handler::SSqrtHandler)(buffer, netlist, inputs, outputs)
-    # compute output size
-    outsize = netsize(outputs[1])
-
     # add output net to netlist
     setsigned!(netlist, outputs[1], true)
 
