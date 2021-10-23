@@ -37,9 +37,9 @@ function Base.show(io::IO, n::Net)
 
     if isconstant(n)
         netname = limitedshow(n.value)
-        print(io, "Net{$(n.class), $(n.type)}($(netname)::$(jltypeof(n)))($(n.size[1])x$(n.size[2]))")
+        print(io, "Net{$(n.class), $(n.type)}($(netname)::$(jltypeof(n)))($(join(n.size, "x")))")
     else
-        print(io, "Net{$(n.class), $(n.type)}($(n.name)::$(jltypeof(n)))($(n.size[1])x$(n.size[2]))")
+        print(io, "Net{$(n.class), $(n.type)}($(n.name)::$(jltypeof(n)))($(join(n.size, "x")))")
     end
 end
 

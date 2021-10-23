@@ -74,12 +74,13 @@ function _handle_getproperty!(m::Module, call, param_map, const_map)
     if m.fn == _gettapeval(call.args[1])
         val = _handle_parameter(_gettapeval(call), m.submodules)
         prop = string(_gettapeval(call.args[2]))
-        if !isnothing(val)
+        encodable = (val isa Union{AbstractArray, Tuple}) ? !all(isnothing, val) : !isnothing(val)
+        if encodable
             m.parameters[prop] = val
-            param_map[Ghost.Variable(call)] = prop
+            param_map[_getid(call)] = prop
         end
     else
-        const_map[Ghost.Variable(call)] = string(_gettapeval(call))
+        const_map[_getid(call)] = string(_gettapeval(call))
     end
 
     return m
@@ -92,16 +93,19 @@ function _get_materialize_origin(x)
 end
 
 function extracttrace!(m::Module, tape::Ghost.Tape)
-    param_map = Dict{Ghost.Variable, String}()
-    const_map = Dict{Ghost.Variable, String}()
-    materialize_map = Dict{Ghost.Variable, Tuple{Ghost.Variable, Any}}()
+    # we use ids instead of Ghost.Variables as keys b/c
+    # there are hashing issues with Ghost.Variable
+    # see https://github.com/dfdx/Ghost.jl/issues/20
+    param_map = Dict{Int, String}()
+    const_map = Dict{Int, String}()
+    materialize_map = Dict{Int, Tuple{Ghost.Variable, Any}}()
     # skip first call which is the function being compiled
     for call in tape
         if call isa Ghost.Call
             # ignore materialize calls
             if call.fn == Base.materialize
                 origin = _get_materialize_origin(call.args[1])
-                materialize_map[Ghost.Variable(call)] = (origin, _gettapeval(call))
+                materialize_map[_getid(call)] = (origin, _gettapeval(call))
                 continue
             end
 
@@ -117,7 +121,7 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
             # create Operator for Ghost.Call (handling broadcast)
             # structs are renamed as Foo -> foo_$id
             # plain functions are name ""
-            name = _isstruct(call.fn) ? _getstructname(call.fn) * "_$(call.fn.id)" : ""
+            name = _isstruct(call.fn) ? _getstructname(call.fn) * "_$(_getid(call.fn))" : ""
             isbroadcast = _isbcast(call.fn)
             fn = isbroadcast ? _gettapeval(call.args[1]) : call.fn
             op = (name = Symbol(name), type = typeof(fn), broadcasted = isbroadcast)
@@ -125,18 +129,18 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
             # map inputs and outputs of Ghost.Call to Nets
             # set args that are Ghost.Input to :input class
             inputs = map(call.args[(1 + isbroadcast):end]) do arg
-                arg, val = get(materialize_map, arg, (arg, _gettapeval(arg)))
-                name = haskey(param_map, arg) ? param_map[arg] :
-                       haskey(const_map, arg) ? const_map[arg] :
-                       _isvariable(arg) ? "net_$(arg.id)" : string(val)
+                arg, val = get(materialize_map, _getid(arg), (arg, _gettapeval(arg)))
+                name = haskey(param_map, _getid(arg)) ? param_map[_getid(arg)] :
+                       haskey(const_map, _getid(arg)) ? const_map[_getid(arg)] :
+                       _isvariable(arg) ? "net_$(_getid(arg))" : string(val)
                 net = Net(val; name = name)
 
                 if _isvariable(arg)
                     if _isinput(arg)
                         net = setclass(net, :input)
-                    elseif haskey(param_map, arg)
+                    elseif haskey(param_map, _getid(arg))
                         net = setclass(net, :parameter)
-                    elseif haskey(const_map, arg)
+                    elseif haskey(const_map, _getid(arg))
                         net = setclass(net, :constant)
                     end
                 else # treat all non-variables as constants
@@ -146,7 +150,7 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
                 return net
             end
             outval = isbroadcast ? Base.materialize(_gettapeval(call)) : _gettapeval(call)
-            output = Net(outval; name = "net_$(call.id)")
+            output = Net(outval; name = "net_$(_getid(call))")
 
             if tape.result == Ghost.Variable(call)
                 output = setclass(output, :output)

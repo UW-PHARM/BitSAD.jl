@@ -1,5 +1,9 @@
 _isbound(var) = !isnothing(var._op)
 
+_getid(var::Ghost.Variable) = var.id
+_getid(call::Ghost.Call) = call.id
+_getid(x) = x
+
 _gettapeop(var::Ghost.Variable) =
     _isbound(var) ? var._op :
                     error("Cannot get operation on tape for unbound variable.")

@@ -138,14 +138,14 @@ function _reroute_tuple_index(ctx::TupleCtx, call::Ghost.Call)
             indexed_itr = ctx.indexed_itr_map[call.args[1]]
             tuple_args = ctx.tuple_map[indexed_itr[1]]
 
-            return [], tuple_args[indexed_itr[2]].id
+            return [], _getid(tuple_args[indexed_itr[2]])
         else
             return [], nothing
         end
     elseif call.fn == Base.getindex && haskey(ctx.tuple_map, call.args[1])
         tuple_args = ctx.tuple_map[call.args[1]]
 
-        return [], tuple_args[_gettapeval(call.args[2])].id
+        return [], _getid(tuple_args[_gettapeval(call.args[2])])
     else
         return [call], 1
     end
