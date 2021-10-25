@@ -102,15 +102,18 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
     # skip first call which is the function being compiled
     for call in tape
         if call isa Ghost.Call
+            # remap constants on tape
+            fn = (_gettapeval(call.fn) isa Ghost.Constant) ? _gettapeval(call.fn).val : call.fn
+
             # ignore materialize calls
-            if call.fn == Base.materialize
+            if fn == Base.materialize
                 origin = _get_materialize_origin(call.args[1])
                 materialize_map[_getid(call)] = (origin, _gettapeval(call))
                 continue
             end
 
             # handle calls to getproperty
-            if call.fn == Base.getproperty
+            if fn == Base.getproperty
                 _handle_getproperty!(m, call, param_map, const_map)
                 continue
             end
@@ -121,9 +124,9 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
             # create Operator for Ghost.Call (handling broadcast)
             # structs are renamed as Foo -> foo_$id
             # plain functions are name ""
-            name = _isstruct(call.fn) ? _getstructname(call.fn) * "_$(_getid(call.fn))" : ""
-            isbroadcast = _isbcast(call.fn)
-            fn = isbroadcast ? _gettapeval(call.args[1]) : call.fn
+            name = _isstruct(fn) ? _getstructname(fn) * "_$(_getid(fn))" : ""
+            isbroadcast = _isbcast(fn)
+            fn = isbroadcast ? _gettapeval(call.args[1]) : fn
             op = (name = Symbol(name), type = typeof(fn), broadcasted = isbroadcast)
 
             # map inputs and outputs of Ghost.Call to Nets

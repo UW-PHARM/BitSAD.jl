@@ -112,6 +112,7 @@ function printdfg(m::Module)
             println("$(padding)inputs: $inputs")
             println("$(padding)outputs: $outputs")
             println("$(padding)op: $op")
+            println("")
         end
 
         nodes, visited = traverse(m.dfg, nodes, visited)
