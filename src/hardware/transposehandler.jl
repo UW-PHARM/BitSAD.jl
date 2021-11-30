@@ -1,5 +1,5 @@
 @kwdef mutable struct TransposeHandler
-    id = 0
+    id::Int = 0
 end
 
 gethandler(broadcasted, ::Type{typeof(permutedims)}, ::Type{<:SBitstreamLike}) =

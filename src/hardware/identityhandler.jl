@@ -1,4 +1,5 @@
 is_hardware_primitive(::Type{typeof(identity)}, x) = true
+is_hardware_primitive(::Type{typeof(Base.broadcasted)}, ::Type{typeof(identity)}, x) = true
 gethandler(::Bool, ::Type{typeof(identity)}, x) = identity_handler
 
 function identity_handler(buffer, netlist, inputs, outputs)
