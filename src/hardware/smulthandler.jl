@@ -1,18 +1,20 @@
 @kwdef mutable struct SMultHandler
-    id = 0
+    id::Int = 0
+    broadcasted::Bool
 end
 
 @kwdef mutable struct SMatMultHandler
-    id = 0
+    id::Int = 0
 end
 
-gethandler(::Type{typeof(*)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}) = SMultHandler()
+gethandler(::Bool, ::Type{typeof(*)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}) =
+    SMultHandler(broadcasted = false)
 
 gethandler(broadcasted::Bool,
            ::Type{typeof(*)},
            ::Type{<:AbstractArray{<:SBitstream}},
            ::Type{<:AbstractArray{<:SBitstream}}) =
-    broadcasted ? SMultHandler() : SMatMultHandler()
+    broadcasted ? SMultHandler(broadcasted = true) : SMatMultHandler()
 
 function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs
@@ -24,87 +26,89 @@ function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
                                          netsize(inputs[1]), netsize(inputs[2]))
     outsize = netsize(outputs[1])
 
+    broadcast = handler.broadcasted ? "_bcast" : ""
+
     # add internal nets to netlist
-    push!(netlist, Net(name = "mult$(handler.id)_pp", size = outsize))
-    push!(netlist, Net(name = "mult$(handler.id)_pm", size = outsize))
-    push!(netlist, Net(name = "mult$(handler.id)_mp", size = outsize))
-    push!(netlist, Net(name = "mult$(handler.id)_mm", size = outsize))
-    push!(netlist, Net(name = "mult$(handler.id)_11", size = outsize))
-    push!(netlist, Net(name = "mult$(handler.id)_12", size = outsize))
-    push!(netlist, Net(name = "mult$(handler.id)_13", size = outsize))
-    push!(netlist, Net(name = "mult$(handler.id)_14", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_pp", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_pm", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_mp", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_mm", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_11", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_12", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_13", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_14", size = outsize))
 
     # add output net to netlist
     setsigned!(netlist, outputs[1], true)
 
     write(buffer, """
         $stdcomment
-        // BEGIN mult$(handler.id)
-        assign mult$(handler.id)_pp = $(lname("_p")) & $(rname("_p"))
-        assign mult$(handler.id)_pm = $(lname("_p")) & $(rname("_m"))
-        assign mult$(handler.id)_mp = $(lname("_m")) & $(rname("_p"))
-        assign mult$(handler.id)_mm = $(lname("_m")) & $(rname("_m"))
+        // BEGIN mult$(broadcast)$(handler.id)
+        assign mult$(broadcast)$(handler.id)_pp = $(lname("_p")) & $(rname("_p"))
+        assign mult$(broadcast)$(handler.id)_pm = $(lname("_p")) & $(rname("_m"))
+        assign mult$(broadcast)$(handler.id)_mp = $(lname("_m")) & $(rname("_p"))
+        assign mult$(broadcast)$(handler.id)_mm = $(lname("_m")) & $(rname("_m"))
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) mult$(handler.id)_11 (
+            ) mult$(broadcast)$(handler.id)_11 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(handler.id)_pp),
-                .B(mult$(handler.id)_pm),
-                .Y(mult$(handler.id)_11)
+                .A(mult$(broadcast)$(handler.id)_pp),
+                .B(mult$(broadcast)$(handler.id)_pm),
+                .Y(mult$(broadcast)$(handler.id)_11)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) mult$(handler.id)_12 (
+            ) mult$(broadcast)$(handler.id)_12 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(handler.id)_pm),
-                .B(mult$(handler.id)_pp),
-                .Y(mult$(handler.id)_12)
+                .A(mult$(broadcast)$(handler.id)_pm),
+                .B(mult$(broadcast)$(handler.id)_pp),
+                .Y(mult$(broadcast)$(handler.id)_12)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) mult$(handler.id)_13 (
+            ) mult$(broadcast)$(handler.id)_13 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(handler.id)_mp),
-                .B(mult$(handler.id)_mm),
-                .Y(mult$(handler.id)_13)
+                .A(mult$(broadcast)$(handler.id)_mp),
+                .B(mult$(broadcast)$(handler.id)_mm),
+                .Y(mult$(broadcast)$(handler.id)_13)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) mult$(handler.id)_14 (
+            ) mult$(broadcast)$(handler.id)_14 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(handler.id)_mm),
-                .B(mult$(handler.id)_mp),
-                .Y(mult$(handler.id)_14)
+                .A(mult$(broadcast)$(handler.id)_mm),
+                .B(mult$(broadcast)$(handler.id)_mp),
+                .Y(mult$(broadcast)$(handler.id)_14)
             );
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) mult$(handler.id)_p (
+            ) mult$(broadcast)$(handler.id)_p (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(handler.id)_11),
-                .B(mult$(handler.id)_14),
+                .A(mult$(broadcast)$(handler.id)_11),
+                .B(mult$(broadcast)$(handler.id)_14),
                 .Y($(name(outputs[1]))_p)
             );
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) mult$(handler.id)_m (
+            ) mult$(broadcast)$(handler.id)_m (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(handler.id)_12),
-                .B(mult$(handler.id)_13),
+                .A(mult$(broadcast)$(handler.id)_12),
+                .B(mult$(broadcast)$(handler.id)_13),
                 .Y($(name(outputs[1]))_m)
             );
-        // END mult$(handler.id)
+        // END mult$(broadcast)$(handler.id)
         \n""")
 
     handler.id += 1

@@ -1,9 +1,10 @@
 @kwdef mutable struct SL2NormHandler
-    id = 0
+    id::Int = 0
 end
 
-gethandler(::Type{typeof(LinearAlgebra.norm)}, ::Type{<:AbstractVector{<:SBitstream}}) =
-    SL2NormHandler()
+gethandler(broadcasted, ::Type{typeof(LinearAlgebra.norm)}, ::Type{<:AbstractVector{<:SBitstream}}) =
+    !broadcasted ? SL2NormHandler() :
+                   error("Cannot generate hardware for broadcasted L2 norm.")
 
 function (handler::SL2NormHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs

@@ -227,7 +227,7 @@ function generateverilog(io::IO, m::Module)
     nodes = getroots(m.dfg)
     visited = nodes
 
-    buffer = IOBuffer()
+    buffer = (io isa IOBuffer) ? IOBuffer() : mktemp()[2]
     while !isempty(nodes)
         # for each node, invoke the appropriate handler
         for node in nodes
@@ -262,7 +262,11 @@ function generateverilog(io::IO, m::Module)
     # print top matter
     _generatetopmatter(io, m, netlist)
     # print main matter
-    write(io, take!(buffer))
+    seekstart(buffer)
+    for line in eachline(buffer)
+        write(io, line)
+        write(io, "\n")
+    end
     write(io, "\nendmodule\n")
 
     return io

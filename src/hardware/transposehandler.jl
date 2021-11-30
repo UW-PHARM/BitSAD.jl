@@ -2,7 +2,9 @@
     id = 0
 end
 
-gethandler(::Type{typeof(permutedims)}, ::Type{<:SBitstreamLike}) = TransposeHandler()
+gethandler(broadcasted, ::Type{typeof(permutedims)}, ::Type{<:SBitstreamLike}) =
+    !broadcasted ? TransposeHandler() :
+                   error("Cannot generate hardware for broadcasted transpose (permutedims).")
 
 function (handler::TransposeHandler)(buffer, netlist, inputs, outputs)
     # compute output size

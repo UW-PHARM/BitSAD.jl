@@ -1,5 +1,6 @@
 is_hardware_primitive(::Type{typeof(reshape)}, args...) = true
-gethandler(::Type{typeof(reshape)}, args...) = reshape_handler
+gethandler(broadcasted, ::Type{typeof(reshape)}, args...) =
+    !broadcasted ? reshape_handler : error("Cannot generate hardware for broadcasted reshape.")
 
 function reshape_handler(buffer, netlist, inputs, outputs)
     for input in inputs[2:end]

@@ -1,9 +1,10 @@
 @kwdef mutable struct SDivHandler
-    id = 0
+    id::Int = 0
+    broadcasted::Bool
 end
 
-gethandler(::Bool, ::Type{typeof(/)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) =
-    SDivHandler()
+gethandler(broadcasted, ::Type{typeof(/)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) =
+    SDivHandler(broadcasted = broadcasted)
 
 function (handler::SDivHandler)(buffer, netlist, inputs, outputs)
     # update netlist with inputs
@@ -18,56 +19,58 @@ function (handler::SDivHandler)(buffer, netlist, inputs, outputs)
     # update netlist with output
     setsigned!(netlist, outputs[1], true)
 
+    broadcast = handler.broadcasted ? "_bcast" : ""
+
     # add internal nets to netlist
-    push!(netlist, Net(name = "div$(handler.id)_pp", size = outsize))
-    push!(netlist, Net(name = "div$(handler.id)_mp", size = outsize))
+    push!(netlist, Net(name = "div$(broadcast)$(handler.id)_pp", size = outsize))
+    push!(netlist, Net(name = "div$(broadcast)$(handler.id)_mp", size = outsize))
 
     write(buffer, """
         $stdcomment
-        // BEGIN div$(handler.id)
+        // BEGIN div$(broadcast)$(handler.id)
         stoch_div_mat #(
                 .COUNTER_SIZE(8),
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) div$(handler.id)_pp (
+            ) div$(broadcast)$(handler.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
                 .A($(lname("_p"))),
                 .B($(rname("_p"))),
-                .Y(div$(handler.id)_pp)
+                .Y(div$(broadcast)$(handler.id)_pp)
             );
         stoch_div_mat #(
                 .COUNTER_SIZE(8),
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) div$(handler.id)_mp (
+            ) div$(broadcast)$(handler.id)_mp (
                 .CLK(CLK),
                 .nRST(nRST),
                 .A($(lname("_m"))),
                 .B($(rname("_p"))),
-                .Y(div$(handler.id)_mp)
+                .Y(div$(broadcast)$(handler.id)_mp)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) div$(handler.id)_p (
+            ) div$(broadcast)$(handler.id)_p (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(div$(handler.id)_pp),
-                .B(div$(handler.id)_mp),
+                .A(div$(broadcast)$(handler.id)_pp),
+                .B(div$(broadcast)$(handler.id)_mp),
                 .Y($(name(outputs[1]))_p)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) div$(handler.id)_m (
+            ) div$(broadcast)$(handler.id)_m (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(div$(handler.id)_mp),
-                .B(div$(handler.id)_pp),
+                .A(div$(broadcast)$(handler.id)_mp),
+                .B(div$(broadcast)$(handler.id)_pp),
                 .Y($(name(outputs[1]))_m)
             );
-        // END div$(handler.id)
+        // END div$(broadcast)$(handler.id)
         \n""")
 
     handler.id += 1

@@ -1,8 +1,9 @@
 @kwdef mutable struct SSqrtHandler
-    id = 0
+    id::Int = 0
 end
 
-gethandler(::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) = SSqrtHandler()
+gethandler(broadcasted, ::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) =
+    !broadcasted ? SSqrtHandler() : error("Cannot generate hardware for broadcasted sqrt.")
 
 function (handler::SSqrtHandler)(buffer, netlist, inputs, outputs)
     # add output net to netlist
