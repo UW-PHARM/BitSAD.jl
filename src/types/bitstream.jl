@@ -2,9 +2,6 @@
     AbstractBitstream
 
 Inherit from this type to create a custom bitstream type.
-
-Expected fields:
-- `bits::Queue{AbstractBit}`: the underlying bitstream
 """
 abstract type AbstractBitstream <: Number end
 
@@ -17,7 +14,6 @@ Fields:
 - `s::AbstractBitstream`: the bitstream object
 - `b`: the bit(s) to push onto the stream
 """
-Base.push!(s::AbstractBitstream, b) = enqueue!(s.bits, b)
 function Base.push!(s::AbstractBitstream, bs::Vector)
     for b in bs
         push!(s, b)
@@ -33,7 +29,6 @@ Pop a bit from bitstream `s`.
 Fields:
 - `s::AbstractBitstream`: the bitstream object
 """
-Base.pop!(s::AbstractBitstream) = dequeue!(s.bits)
 Base.pop!(s::VecOrMat{<:AbstractBitstream}) = pop!.(s)
 
 """
@@ -44,7 +39,6 @@ Examine the most recent bit added to the stream without removing it.
 Fields:
 - `s::AbstractBitstream`: the bitstream object
 """
-observe(s::AbstractBitstream) = last(s.bits)
 observe(s::VecOrMat{<:AbstractBitstream}) = observe.(s)
 
 """
@@ -52,12 +46,12 @@ observe(s::VecOrMat{<:AbstractBitstream}) = observe.(s)
 
 Return the number of bits in `s`.
 """
-Base.length(s::AbstractBitstream) = length(s.bits)
+Base.length(s::AbstractBitstream) = length(bits(s))
 
-Base.iterate(s::AbstractBitstream, state...) = iterate(s.bits, state...)
+Base.iterate(s::AbstractBitstream, state...) = iterate(bits(s), state...)
 
-Base.eltype(s::AbstractBitstream) = eltype(s.bits)
+Base.eltype(s::AbstractBitstream) = eltype(bits(s))
 
-Base.getindex(s::AbstractBitstream, i::Integer) = Iterators.take(s.bits, i) |> collect |> last
+Base.getindex(s::AbstractBitstream, i::Integer) = Iterators.take(bits(s), i) |> collect |> last
 Base.firstindex(s::AbstractBitstream) = 1
 Base.lastindex(s::AbstractBitstream) = length(s)

@@ -15,14 +15,14 @@ A stochastic bitstream that represents a real (floating-point) number
 between [-1, 1].
 
 Fields:
-- `bits::Queue{SBit}`: the underlying bitstream
+- `bits::Vector{SBit}`: the underlying bitstream
 - `value::Float64`: the underlying floating-point number being represented
 """
 struct SBitstream{T<:Real} <: AbstractBitstream
-    bits::Queue{SBit}
+    bits::Vector{SBit}
     value::T
 
-    function SBitstream{T}(bits::Queue{SBit}, value::T) where {T<:Real}
+    function SBitstream{T}(bits::Vector{SBit}, value::T) where {T<:Real}
         if value > 1 || value < -1
             @warn "SBitstream can only be ∈ [-1, 1] (saturation occurring)."
         end
@@ -30,7 +30,7 @@ struct SBitstream{T<:Real} <: AbstractBitstream
         new{T}(bits, min(max(value, -1), 1))
     end
 end
-SBitstream(value::T) where {T<:Real} = SBitstream{T}(Queue{SBit}(), value)
+SBitstream(value::T) where {T<:Real} = SBitstream{T}(Vector{SBit}(), value)
 SBitstream{T}(value::Real) where {T<:Real} = SBitstream(convert(T, value))
 Base.convert(::Type{SBitstream{T}}, s::SBitstream) where {T<:Real} =
     SBitstream{T}(s.bits, convert(T, s.value))
@@ -43,7 +43,7 @@ Base.one(::SBitstream{T}) where T = SBitstream(one(T))
 
 Base.show(io::IO, s::SBitstream) = print(io, "SBitstream($(s.value))")
 Base.show(io::IO, ::MIME"text/plain", s::SBitstream{T}) where T =
-    print(io, "SBitstream{$T}(value = $(s.value))\n    with $(length(s)) bits enqueue.")
+    print(io, "SBitstream{$T}(value = $(s.value))\n    with $(length(s)) bits.")
 
 include("./soperators.jl")
 
@@ -124,6 +124,8 @@ LinearAlgebra.norm(x::AbstractVector{<:SBitstream}) = SBitstream(norm(float.(x))
 is_trace_primitive(::Type{typeof(LinearAlgebra.norm)}, ::Type{<:AbstractVector{<:SBitstream}}) = true
 getsimulator(::typeof(LinearAlgebra.norm), x::AbstractVector{<:SBitstream}) = SL2Normer()
 
+bits(s::SBitstream) = s.bits
+
 """
     generate(s::SBitstream, T::Integer = 1)
     generate!(s::SBitstream, T::Integer = 1)
@@ -139,7 +141,9 @@ function generate(s::SBitstream, T::Integer = 1)
 end
 generate!(s::SBitstream, T::Integer = 1) = push!(s, generate(s, T))
 
-Base.pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : dequeue!(s.bits)
+Base.push!(s::SBitstream, b) = push!(s.bits, b)
+Base.pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : popfirst!(s.bits)
+observe(s::SBitstream) = last(s.bits)
 
 """
     estimate(buffer::AbstractVector)
