@@ -19,7 +19,7 @@ function (handler::SBitstreamHandler)(buffer, netlist, inputs, outputs)
     num_elements = join(netsize(outputs[1]), "*")
 
     # value
-    if length(value(inputs[1])) > 1
+    if value(inputs[1]) isa AbstractArray
         val = lstrip.(name(inputs[1]), '-')
         isneg = Int.(value(inputs[1]) .< 0)
     else
