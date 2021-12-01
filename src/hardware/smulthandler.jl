@@ -29,14 +29,14 @@ function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
     broadcast = handler.broadcasted ? "_bcast" : ""
 
     # add internal nets to netlist
-    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_pp", size = outsize))
-    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_pm", size = outsize))
-    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_mp", size = outsize))
-    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_mm", size = outsize))
-    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_11", size = outsize))
-    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_12", size = outsize))
-    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_13", size = outsize))
-    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_14", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_out_pp", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_out_pm", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_out_mp", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_out_mm", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_out_11", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_out_12", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_out_13", size = outsize))
+    push!(netlist, Net(name = "mult$(broadcast)$(handler.id)_out_14", size = outsize))
 
     # add output net to netlist
     setsigned!(netlist, outputs[1], true)
@@ -44,19 +44,19 @@ function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
     write(buffer, """
         $stdcomment
         // BEGIN mult$(broadcast)$(handler.id)
-        assign mult$(broadcast)$(handler.id)_pp = $(lname("_p")) & $(rname("_p"))
-        assign mult$(broadcast)$(handler.id)_pm = $(lname("_p")) & $(rname("_m"))
-        assign mult$(broadcast)$(handler.id)_mp = $(lname("_m")) & $(rname("_p"))
-        assign mult$(broadcast)$(handler.id)_mm = $(lname("_m")) & $(rname("_m"))
+        assign mult$(broadcast)$(handler.id)_out_pp = $(lname("_p")) & $(rname("_p"))
+        assign mult$(broadcast)$(handler.id)_out_pm = $(lname("_p")) & $(rname("_m"))
+        assign mult$(broadcast)$(handler.id)_out_mp = $(lname("_m")) & $(rname("_p"))
+        assign mult$(broadcast)$(handler.id)_out_mm = $(lname("_m")) & $(rname("_m"))
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
             ) mult$(broadcast)$(handler.id)_11 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(broadcast)$(handler.id)_pp),
-                .B(mult$(broadcast)$(handler.id)_pm),
-                .Y(mult$(broadcast)$(handler.id)_11)
+                .A(mult$(broadcast)$(handler.id)_out_pp),
+                .B(mult$(broadcast)$(handler.id)_out_pm),
+                .Y(mult$(broadcast)$(handler.id)_out_11)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -64,9 +64,9 @@ function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
             ) mult$(broadcast)$(handler.id)_12 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(broadcast)$(handler.id)_pm),
-                .B(mult$(broadcast)$(handler.id)_pp),
-                .Y(mult$(broadcast)$(handler.id)_12)
+                .A(mult$(broadcast)$(handler.id)_out_pm),
+                .B(mult$(broadcast)$(handler.id)_out_pp),
+                .Y(mult$(broadcast)$(handler.id)_out_12)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -74,9 +74,9 @@ function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
             ) mult$(broadcast)$(handler.id)_13 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(broadcast)$(handler.id)_mp),
-                .B(mult$(broadcast)$(handler.id)_mm),
-                .Y(mult$(broadcast)$(handler.id)_13)
+                .A(mult$(broadcast)$(handler.id)_out_mp),
+                .B(mult$(broadcast)$(handler.id)_out_mm),
+                .Y(mult$(broadcast)$(handler.id)_out_13)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -84,9 +84,9 @@ function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
             ) mult$(broadcast)$(handler.id)_14 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(broadcast)$(handler.id)_mm),
-                .B(mult$(broadcast)$(handler.id)_mp),
-                .Y(mult$(broadcast)$(handler.id)_14)
+                .A(mult$(broadcast)$(handler.id)_out_mm),
+                .B(mult$(broadcast)$(handler.id)_out_mp),
+                .Y(mult$(broadcast)$(handler.id)_out_14)
             );
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -94,8 +94,8 @@ function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
             ) mult$(broadcast)$(handler.id)_p (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(broadcast)$(handler.id)_11),
-                .B(mult$(broadcast)$(handler.id)_14),
+                .A(mult$(broadcast)$(handler.id)_out_11),
+                .B(mult$(broadcast)$(handler.id)_out_14),
                 .Y($(name(outputs[1]))_p)
             );
         stoch_add_mat #(
@@ -104,8 +104,8 @@ function (handler::SMultHandler)(buffer, netlist, inputs, outputs)
             ) mult$(broadcast)$(handler.id)_m (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mult$(broadcast)$(handler.id)_12),
-                .B(mult$(broadcast)$(handler.id)_13),
+                .A(mult$(broadcast)$(handler.id)_out_12),
+                .B(mult$(broadcast)$(handler.id)_out_13),
                 .Y($(name(outputs[1]))_m)
             );
         // END mult$(broadcast)$(handler.id)
@@ -130,14 +130,14 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
     setsigned!(netlist, outputs[1], true)
 
     # add internal nets to netlist
-    push!(netlist, Net(name = "mmult$(handler.id)_pp", size = outsize))
-    push!(netlist, Net(name = "mmult$(handler.id)_pm", size = outsize))
-    push!(netlist, Net(name = "mmult$(handler.id)_mp", size = outsize))
-    push!(netlist, Net(name = "mmult$(handler.id)_mm", size = outsize))
-    push!(netlist, Net(name = "mmult$(handler.id)_11", size = outsize))
-    push!(netlist, Net(name = "mmult$(handler.id)_12", size = outsize))
-    push!(netlist, Net(name = "mmult$(handler.id)_13", size = outsize))
-    push!(netlist, Net(name = "mmult$(handler.id)_14", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_out_pp", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_out_pm", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_out_mp", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_out_mm", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_out_11", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_out_12", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_out_13", size = outsize))
+    push!(netlist, Net(name = "mmult$(handler.id)_out_14", size = outsize))
 
     write(buffer, """
         $stdcomment
@@ -151,7 +151,7 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(name(inputs[1]))_p),
                 .B($(name(inputs[2]))_p),
-                .Y(mmult$(handler.id)_pp)
+                .Y(mmult$(handler.id)_out_pp)
             );
         stoch_matrix_mult #(
                 .NUM_ROWS($m),
@@ -162,7 +162,7 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(name(inputs[1]))_p),
                 .B($(name(inputs[2]))_m),
-                .Y(mmult$(handler.id)_pm)
+                .Y(mmult$(handler.id)_out_pm)
             );
         stoch_matrix_mult #(
                 .NUM_ROWS($m),
@@ -173,7 +173,7 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(name(inputs[1]))_m),
                 .B($(name(inputs[2]))_p),
-                .Y(mmult$(handler.id)_mp)
+                .Y(mmult$(handler.id)_out_mp)
             );
         stoch_matrix_mult #(
                 .NUM_ROWS($m),
@@ -184,7 +184,7 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(name(inputs[1]))_m),
                 .B($(name(inputs[2]))_m),
-                .Y(mmult$(handler.id)_mm)
+                .Y(mmult$(handler.id)_out_mm)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -192,9 +192,9 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
             ) mmult$(handler.id)_11 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mmult$(handler.id)_pp),
-                .B(mmult$(handler.id)_pm),
-                .Y(mmult$(handler.id)_11)
+                .A(mmult$(handler.id)_out_pp),
+                .B(mmult$(handler.id)_out_pm),
+                .Y(mmult$(handler.id)_out_11)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -202,9 +202,9 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
             ) mmult$(handler.id)_12 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mmult$(handler.id)_pm),
-                .B(mmult$(handler.id)_pp),
-                .Y(mmult$(handler.id)_12)
+                .A(mmult$(handler.id)_out_pm),
+                .B(mmult$(handler.id)_out_pp),
+                .Y(mmult$(handler.id)_out_12)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -212,9 +212,9 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
             ) mmult$(handler.id)_13 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mmult$(handler.id)_mp),
-                .B(mmult$(handler.id)_mm),
-                .Y(mmult$(handler.id)_13)
+                .A(mmult$(handler.id)_out_mp),
+                .B(mmult$(handler.id)_out_mm),
+                .Y(mmult$(handler.id)_out_13)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -222,9 +222,9 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
             ) mmult$(handler.id)_14 (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mmult$(handler.id)_mm),
-                .B(mmult$(handler.id)_mp),
-                .Y(mmult$(handler.id)_14)
+                .A(mmult$(handler.id)_out_mm),
+                .B(mmult$(handler.id)_out_mp),
+                .Y(mmult$(handler.id)_out_14)
             );
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -232,8 +232,8 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
             ) mmult$(handler.id)_p (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mmult$(handler.id)_11),
-                .B(mmult$(handler.id)_14),
+                .A(mmult$(handler.id)_out_11),
+                .B(mmult$(handler.id)_out_14),
                 .Y($(name(outputs[1]))_p)
             );
         stoch_add_mat #(
@@ -242,8 +242,8 @@ function (handler::SMatMultHandler)(buffer, netlist, inputs, outputs)
             ) mmult$(handler.id)_m (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(mmult$(handler.id)_12),
-                .B(mmult$(handler.id)_13),
+                .A(mmult$(handler.id)_out_12),
+                .B(mmult$(handler.id)_out_13),
                 .Y($(name(outputs[1]))_m)
             );
         // END mmult$(handler.id)

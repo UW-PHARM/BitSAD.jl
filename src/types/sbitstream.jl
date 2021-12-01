@@ -41,6 +41,11 @@ Base.float(s::SBitstream) = s.value
 Base.zero(::SBitstream{T}) where T = SBitstream(zero(T))
 Base.one(::SBitstream{T}) where T = SBitstream(one(T))
 
+Base.typemin(::Type{T}) where {T<:SBitstream} = zero(T)
+Base.typemax(::Type{T}) where {T<:SBitstream} = one(T)
+
+Base.isless(x::SBitstream, y::SBitstream) = Base.isless(float(x), float(y))
+
 Base.show(io::IO, s::SBitstream) = print(io, "SBitstream($(s.value))")
 Base.show(io::IO, ::MIME"text/plain", s::SBitstream{T}) where T =
     print(io, "SBitstream{$T}(value = $(s.value))\n    with $(length(s)) bits.")

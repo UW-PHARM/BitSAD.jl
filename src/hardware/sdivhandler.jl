@@ -22,8 +22,8 @@ function (handler::SDivHandler)(buffer, netlist, inputs, outputs)
     broadcast = handler.broadcasted ? "_bcast" : ""
 
     # add internal nets to netlist
-    push!(netlist, Net(name = "div$(broadcast)$(handler.id)_pp", size = outsize))
-    push!(netlist, Net(name = "div$(broadcast)$(handler.id)_mp", size = outsize))
+    push!(netlist, Net(name = "div$(broadcast)$(handler.id)_out_pp", size = outsize))
+    push!(netlist, Net(name = "div$(broadcast)$(handler.id)_out_mp", size = outsize))
 
     write(buffer, """
         $stdcomment
@@ -37,7 +37,7 @@ function (handler::SDivHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(lname("_p"))),
                 .B($(rname("_p"))),
-                .Y(div$(broadcast)$(handler.id)_pp)
+                .Y(div$(broadcast)$(handler.id)_out_pp)
             );
         stoch_div_mat #(
                 .COUNTER_SIZE(8),
@@ -48,7 +48,7 @@ function (handler::SDivHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(lname("_m"))),
                 .B($(rname("_p"))),
-                .Y(div$(broadcast)$(handler.id)_mp)
+                .Y(div$(broadcast)$(handler.id)_out_mp)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -56,8 +56,8 @@ function (handler::SDivHandler)(buffer, netlist, inputs, outputs)
             ) div$(broadcast)$(handler.id)_p (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(div$(broadcast)$(handler.id)_pp),
-                .B(div$(broadcast)$(handler.id)_mp),
+                .A(div$(broadcast)$(handler.id)_out_pp),
+                .B(div$(broadcast)$(handler.id)_out_mp),
                 .Y($(name(outputs[1]))_p)
             );
         stoch_sat_sub_mat #(
@@ -66,8 +66,8 @@ function (handler::SDivHandler)(buffer, netlist, inputs, outputs)
             ) div$(broadcast)$(handler.id)_m (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(div$(broadcast)$(handler.id)_mp),
-                .B(div$(broadcast)$(handler.id)_pp),
+                .A(div$(broadcast)$(handler.id)_out_mp),
+                .B(div$(broadcast)$(handler.id)_out_pp),
                 .Y($(name(outputs[1]))_m)
             );
         // END div$(broadcast)$(handler.id)

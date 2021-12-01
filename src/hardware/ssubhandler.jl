@@ -22,10 +22,10 @@ function (handler::SSubHandler)(buffer, netlist, inputs, outputs)
     broadcast = handler.broadcasted ? "_bcast" : ""
 
     # add internal nets to netlist
-    push!(netlist, Net(name = "sub$(broadcast)$(handler.id)_pp", size = outsize))
-    push!(netlist, Net(name = "sub$(broadcast)$(handler.id)_pm", size = outsize))
-    push!(netlist, Net(name = "sub$(broadcast)$(handler.id)_mp", size = outsize))
-    push!(netlist, Net(name = "sub$(broadcast)$(handler.id)_mm", size = outsize))
+    push!(netlist, Net(name = "sub$(broadcast)$(handler.id)_out_pp", size = outsize))
+    push!(netlist, Net(name = "sub$(broadcast)$(handler.id)_out_pm", size = outsize))
+    push!(netlist, Net(name = "sub$(broadcast)$(handler.id)_out_mp", size = outsize))
+    push!(netlist, Net(name = "sub$(broadcast)$(handler.id)_out_mm", size = outsize))
 
     write(buffer, """
         $stdcomment
@@ -38,7 +38,7 @@ function (handler::SSubHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(lname("_p"))),
                 .B($(rname("_m"))),
-                .Y(sub$(broadcast)$(handler.id)_pp)
+                .Y(sub$(broadcast)$(handler.id)_out_pp)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -48,7 +48,7 @@ function (handler::SSubHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(rname("_p"))),
                 .B($(lname("_m"))),
-                .Y(sub$(broadcast)$(handler.id)_pm)
+                .Y(sub$(broadcast)$(handler.id)_out_pm)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -58,7 +58,7 @@ function (handler::SSubHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(rname("_m"))),
                 .B($(lname("_m"))),
-                .Y(sub$(broadcast)$(handler.id)_mp)
+                .Y(sub$(broadcast)$(handler.id)_out_mp)
             );
         stoch_sat_sub_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -68,7 +68,7 @@ function (handler::SSubHandler)(buffer, netlist, inputs, outputs)
                 .nRST(nRST),
                 .A($(lname("_m"))),
                 .B($(rname("_m"))),
-                .Y(sub$(broadcast)$(handler.id)_mm)
+                .Y(sub$(broadcast)$(handler.id)_out_mm)
             );
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -76,8 +76,8 @@ function (handler::SSubHandler)(buffer, netlist, inputs, outputs)
             ) sub$(broadcast)$(handler.id)_p (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(sub$(broadcast)$(handler.id)_pp),
-                .B(sub$(broadcast)$(handler.id)_mp),
+                .A(sub$(broadcast)$(handler.id)_out_pp),
+                .B(sub$(broadcast)$(handler.id)_out_mp),
                 .Y($(name(outputs[1]))_p)
             );
         stoch_add_mat #(
@@ -86,8 +86,8 @@ function (handler::SSubHandler)(buffer, netlist, inputs, outputs)
             ) sub$(broadcast)$(handler.id)_m (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A(sub$(broadcast)$(handler.id)_pm),
-                .B(sub$(broadcast)$(handler.id)_mm),
+                .A(sub$(broadcast)$(handler.id)_out_pm),
+                .B(sub$(broadcast)$(handler.id)_out_mm),
                 .Y($(name(outputs[1]))_m)
             );
         // END sub$(broadcast)$(handler.id)

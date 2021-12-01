@@ -53,7 +53,7 @@ function (handler::SBitstreamHandler)(buffer, netlist, inputs, outputs)
         genvar bitstream_rng$(broadcast)$(handler.id)_i;
 
         generate
-        for (bitstream_rng$(broadcast)$(handler.id)_i; bitstream_rng$(broadcast)$(handler.id)_i < $num_elements; bitstream_rng$(broadcast)$(handler.id)_i = bitstream_rng$(broadcast)$(handler.id)_i + 1) begin : bitstream_rng$(broadcast)$(handler.id)_gen
+        for (bitstream_rng$(broadcast)$(handler.id)_i = 0; bitstream_rng$(broadcast)$(handler.id)_i < $num_elements; bitstream_rng$(broadcast)$(handler.id)_i = bitstream_rng$(broadcast)$(handler.id)_i + 1) begin : bitstream_rng$(broadcast)$(handler.id)_gen
             bitstream_rng #(
                     .VALUE($input_string[bitstream_rng$(broadcast)$(handler.id)_i*$input_size +: $input_size]),
                     .IS_NEGATIVE($(input_string)_isneg[bitstream_rng$(broadcast)$(handler.id)_i])
