@@ -59,7 +59,7 @@ include("hardware/sbitstreamhandler.jl")
 
 function download_lib(dir = pwd())
     lib = artifact"verilog-stdlib"
-    cp(lib, dir)
+    cp(lib, joinpath(dir, "verilog-stdlib"))
 end
 
 end # module
