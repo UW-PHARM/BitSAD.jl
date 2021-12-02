@@ -32,7 +32,7 @@
     end
 
     @testset "Bit-Level Simulation" begin
-        T = 30000
+        T = 50000
         @testset for op in (+, -, *, max)
             sim = simulatable(op, x, y)
             @test begin
@@ -136,7 +136,7 @@
         @testset "op = * (matrix, vector)" begin
             sim = simulatable(*, X, v)
             @test begin
-                T = 50000
+                T = 100000
                 Z = zeros(2)
                 for t in 1:T
                     bit = pop!.(sim(*, X, v))
@@ -160,7 +160,7 @@
         @testset "op = norm" begin
             sim = simulatable(norm, v)
             @test begin
-                T = 50000
+                T = 100000
                 z = 0
                 for t in 1:T
                     bit = pop!(sim(norm, v))
