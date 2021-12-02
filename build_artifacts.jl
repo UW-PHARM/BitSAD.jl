@@ -21,4 +21,5 @@ dev_url = "$base_url/master/verilog-stdlib.tar.gz"
 release_url = "$base_url/v$version/verilog-stdlib.tar.gz"
 bind_artifact!(artifact_toml, "verilog-stdlib", dir_hash;
                download_info = [(release_url, tar_hash), (dev_url, tar_hash)],
+               force = true,
                lazy = true)
