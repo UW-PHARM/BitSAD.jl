@@ -7,13 +7,9 @@
     <meta name="keywords" content="" />
     <title>BitSAD.jl</title>
     <link rel="stylesheet" href="..&#x2F;..&#x2F;normalize.css" />
-    <link rel="stylesheet" href="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.css" />
     <link rel="stylesheet" href="..&#x2F;..&#x2F;tabulator_simple.min.css" />
     <link rel="stylesheet" href="..&#x2F;..&#x2F;publish.css" />
     <link rel="stylesheet" href="..&#x2F;..&#x2F;default.min.css" />
-    <link rel="stylesheet" href="..&#x2F;..&#x2F;custom.css" />
-    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.js"></script>
-    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;contrib&#x2F;auto-render.min.js"></script>
     <script src="..&#x2F;..&#x2F;versions.js"></script>
     <script src="..&#x2F;..&#x2F;lunr.js"></script>
     <script src="..&#x2F;..&#x2F;highlight.min.js"></script>
@@ -24,45 +20,23 @@
     
 </head>
 <body>
-    <main id="page">
-        <div class="menu">
-            <div id="projectname">BitSAD.jl</div>
-            <input id="search-input" placeholder="Search">
-            <select id="version-selector"></select>
-            <svg id="menu-toggler" title="Contents" onclick="toggleIndexPage();" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6C2 5.44772 2.44772 5 3 5H21C21.5523 5 22 5.44772 22 6C22 6.55228 21.5523 7 21 7H3C2.44772 7 2 6.55228 2 6Z" fill="currentColor" /><path d="M2 12.0322C2 11.4799 2.44772 11.0322 3 11.0322H21C21.5523 11.0322 22 11.4799 22 12.0322C22 12.5845 21.5523 13.0322 21 13.0322H3C2.44772 13.0322 2 12.5845 2 12.0322Z" fill="currentColor" /><path d="M3 17.0645C2.44772 17.0645 2 17.5122 2 18.0645C2 18.6167 2.44772 19.0645 3 19.0645H21C21.5523 19.0645 22 18.6167 22 18.0645C22 17.5122 21.5523 17.0645 21 17.0645H3Z" fill="currentColor" /></svg>
-        </div>
-        <div id="toc"><p><a href="../../README.html">Introduction</a></p>
-<h1 id="tutorials"><a href="../../#tutorials" class="anchor"></a>Tutorials</h1>
-<ul>
-<li><a href="../../docs/tutorials/getting-started.html">Quickstart</a></li>
-<li><a href="../../docs/tutorials/sbitstream.html">Stochastic bitstreams 101</a></li>
-<li><a href="../../docs/tutorials/simulation-and-hardware.html">Simulation and hardware</a></li>
-<li><a href="../../docs/tutorials/iterative-svd.html">Complex functions of bitstreams</a></li>
-</ul>
-<h1 id="how-to-"><a href="../../#how-to-" class="anchor"></a>How To …</h1>
-<ul>
-<li><a href="../../docs/how-tos/custom-sbitstream.html">Create a custom <code>SBitstream</code> operator</a></li>
-<li><a href="../../docs/how-tos/nosim.html">Create a simulation nop</a></li>
-</ul>
-<h1 id="developer-guide"><a href="../../#developer-guide" class="anchor"></a>Developer Guide</h1>
-<!-- * [Archicture overview](dev-guide/architecture.md) -->
-<!-- * [Understanding simulation](dev-guide/simulation.md) -->
-<!-- * [Understanding hardware generation](dev-guide/hardware.md) -->
-<hr />
-<p><a href="../../docstrings.html">API Reference</a></p>
-</div>
-        <article id="content"><h1 id="complex-functions-of-bitstreams"><a href="#complex-functions-of-bitstreams" class="anchor"></a>Complex functions of bitstreams</h1>
+    <div class="menu">
+        <svg id="menu-toggler" title="Contents" onclick="toggleIndexPage();" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6C2 5.44772 2.44772 5 3 5H21C21.5523 5 22 5.44772 22 6C22 6.55228 21.5523 7 21 7H3C2.44772 7 2 6.55228 2 6Z" fill="currentColor" /><path d="M2 12.0322C2 11.4799 2.44772 11.0322 3 11.0322H21C21.5523 11.0322 22 11.4799 22 12.0322C22 12.5845 21.5523 13.0322 21 13.0322H3C2.44772 13.0322 2 12.5845 2 12.0322Z" fill="currentColor" /><path d="M3 17.0645C2.44772 17.0645 2 17.5122 2 18.0645C2 18.6167 2.44772 19.0645 3 19.0645H21C21.5523 19.0645 22 18.6167 22 18.0645C22 17.5122 21.5523 17.0645 21 17.0645H3Z" fill="currentColor" /></svg>
+        <input id="search-input" placeholder="Search">
+        <select id="version-selector"></select>
+    </div>
+    <main id="page"><article><h1 id="complex-functions-of-bitstreams"><a href="#complex-functions-of-bitstreams" class="anchor"></a>Complex functions of bitstreams</h1>
 <p>So far, we worked with relatively simple functions of <code>SBitstream</code>s that could be simulated and mapped to hardware manually. In this tutorial, we will look at a more complex example, the power iteration singular value decomposition algorithm of a matrix.</p>
 <h2 id="power-iteration-for-svd"><a href="#power-iteration-for-svd" class="anchor"></a>Power iteration for SVD</h2>
 <p>The <a href="https://en.wikipedia.org/wiki/Singular_value_decomposition">singular value decomposition</a> (SVD) is a fundamental decomposition in linear algebra. Solutions to many problems can be expressed using the SVD and its components. We won’t go into too much detail about this algorithm or its applications (you could read <a href="https://dl.acm.org/doi/10.1145/3316482.3326355">our paper</a>). Instead, we will focus on how to implement the algorithm in BitSAD. First, let’s take a look at the power iteration itself.</p>
-<div class="display-math">\[\begin{aligned}
+<div class="display-math tex">\[\begin{aligned}
 \text{Step 1:} \qquad w_k & \gets A v_{k - 1} \\
 \text{Step 2:} \qquad u_k & \gets w_k / \|w_k\|_2 \\
 \text{Step 3:} \qquad z_k & \gets A^\top v_{k - 1} \\
 \text{Step 4:} \qquad \sigma_k & \gets \|z_k\|_2 \\
 \text{Step 5:} \qquad v_k & \gets z_k / \sigma_k
 \end{aligned}\]</div>
-<p>The algorithm above is repeated for <span class="math">\(T\)</span> iterations. <span class="math">\(A\)</span>, <span class="math">\(v_k\)</span>, and <span class="math">\(u_k\)</span> are all matrices or vectors, and <span class="math">\(\| \cdot \|_2\)</span> denotes the L2-norm of a vector. While this might seem very complex compared to our examples in the previous tutorials, BitSAD will make implementing these five steps easy.</p>
+<p>The algorithm above is repeated for <span class="math tex">\(T\)</span> iterations. <span class="math tex">\(A\)</span>, <span class="math tex">\(v_k\)</span>, and <span class="math tex">\(u_k\)</span> are all matrices or vectors, and <span class="math tex">\(\| \cdot \|_2\)</span> denotes the L2-norm of a vector. While this might seem very complex compared to our examples in the previous tutorials, BitSAD will make implementing these five steps easy.</p>
 <h2 id="define-the-power-iteration-function"><a href="#define-the-power-iteration-function" class="anchor"></a>Define the power iteration function</h2>
 <p>We begin by defining the five steps as a plain function in Julia:</p>
 <pre><code cell="iterative-svd" class="language-julia">using BitSAD
@@ -113,27 +87,9 @@ println(&quot;u error: $(float.(u) - svddecomp.U[1, :])&quot;)
 println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
 println(&quot;σ error: $(float(σ) * sqrt(n) - svddecomp.S[1])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-u error: [-1.5088625492238794, -1.3127281527012937]
-v error: [-0.6570802279927899, -0.004789987919455285]
-σ error: -0.0280715504824276
+<pre><code class="plaintext cell-output cell-stream">u error: [2.4056532255123386e-6, 2.4850697859707394e-5]
+v error: [1.1669651868051467e-5, 7.138885918078763e-6]
+σ error: -2.0894597163589879e-10
 </code></pre>
 <p>Unfortunately, our result is incorrect, but we can see that BitSAD reported saturation occuring several times. Let’s try this again, but now, we’ll pre-scale <code>A</code> so that none of the operations in the algorithm saturate (more details on the choice of scaling are in <a href="https://www.frontiersin.org/articles/10.3389/fnins.2018.00115/full">our paper</a>). Note that this is also the reason why we scaled <code>w</code> and <code>z</code> in the original function (so that <code>norm(w)</code> did not saturate).</p>
 <pre><code cell="iterative-svd" class="language-julia">α = 2 * max(norm(A_float, Inf), norm(A_float, 1))
@@ -147,9 +103,9 @@ println(&quot;u error: $(float.(u) - svddecomp.U[1, :])&quot;)
 println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
 println(&quot;σ error: $(float(σ) * α * sqrt(n) - svddecomp.S[1])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">u error: [-1.5029398101105376, -1.3195347295998707]
-v error: [-0.6432194599969008, 3.0867358380426424e-5]
-σ error: -8.364052339615569e-9
+<pre><code class="plaintext cell-output cell-stream">u error: [2.405653225623361e-6, 2.4850697859679638e-5]
+v error: [1.166965186816249e-5, 7.138885918078763e-6]
+σ error: -2.089461936805037e-10
 </code></pre>
 <p>Without saturation, our results are more accurate.</p>
 <h2 id="simulating-the-power-iteration"><a href="#simulating-the-power-iteration" class="anchor"></a>Simulating the power iteration</h2>
@@ -196,10 +152,9 @@ v = estimate(vbuffer)
 
 println(&quot;final error: $(ϵ[end])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">final error: 0.3012685152873887
-</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 17, MethodError(push!, (SBitstream(0.13019543893560115), NamedTuple{(:pos, :neg), Tuple{Bool, Bool}}[(true, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false)  …  (false, false), (true, false), (false, false), (true, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false)]), 0x0000000000008139))</code></pre>
 <p>Since we are simulating bits, we need to store the bits in order to compute an estimate of the current simulation output. We use a <code>CircularBuffer</code> from DataStructures.jl to do this. Additionally, in the previous section, we directly fed back the output, <code>v</code>, as an input in the subsequent iteration. Now, <code>v</code> is unstable during the first few iterations, so we initiate the simulation with 1,000 pre-computed samples of <code>v₀</code>. Finally, we measure the output error using the formula</p>
-<div class="display-math">\[Av = \sigma u\]</div>
+<div class="display-math tex">\[Av = \sigma u\]</div>
 <p>Any valid SVD will satisfy this property. Our error is how closely this property holds for our current estimates. We chose to use this error to illustrate how <a href="../../docstrings/BitSAD.estimate!.html"><code>estimate!</code></a> can be used to mix floating point and bitstream computation.</p>
 <h2 id="generating-hardware-for-the-power-iteration"><a href="#generating-hardware-for-the-power-iteration" class="anchor"></a>Generating hardware for the power iteration</h2>
 <p>Since our function is working at the bit-level, the next step is to generate Verilog for it. Unfortunately, using <a href="../../docstrings/BitSAD.generatehw.html"><code>generatehw</code></a> directly results in an error.</p>
@@ -209,7 +164,7 @@ catch e
     println(e)
 end
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">(&quot;module power_iteration(CLK, nRST, net_2_p, net_2_m, net_3_p, net_3_m, );\n\ninput  [3:0] net_2_p, net_2_m;\ninput  [1:0] net_3_p, net_3_m;\n\n\nwire  [1:0] net_4_p, net_4_m;\nwire   net_6;\nwire  [1:0] net_7_p, net_7_m;\nwire  [1:0] net_7_p, net_7_m;\nwire   net_10_p, net_10_m;\nwire  [1:0] net_11_p, net_11_m;\nwire  [3:0] net_14_p, net_14_m;\nwire  [1:0] net_11_p, net_11_m;\nwire  [1:0] net_15_p, net_15_m;\nwire   net_17;\nwire  [1:0] net_18_p, net_18_m;\nwire  [1:0] net_18_p, net_18_m;\nwire   net_21_p, net_21_m;\nwire  [1:0] net_22_p, net_22_m;\nwire  [1:0] mmult0_pp;\nwire  [1:0] mmult0_pm;\nwire  [1:0] mmult0_mp;\nwire  [1:0] mmult0_mm;\nwire  [1:0] mmult0_11;\nwire  [1:0] mmult0_12;\nwire  [1:0] mmult0_13;\nwire  [1:0] mmult0_14;\nwire  [1:0] div0_pp;\nwire  [1:0] div0_mp;\nwire  [1:0] mmult1_pp;\nwire  [1:0] mmult1_pm;\nwire  [1:0] mmult1_mp;\nwire  [1:0] mmult1_mm;\nwire  [1:0] mmult1_11;\nwire  [1:0] mmult1_12;\nwire  [1:0] mmult1_13;\nwire  [1:0] mmult1_14;\nwire  [1:0] div1_pp;\nwire  [1:0] div1_mp;\n\n// Autogenerated by BitSAD\n// BEGIN mmult0\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult0_pp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_2_p),\n        .B(net_3_p),\n        .Y(mmult0_pp)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult0_pm (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_2_p),\n        .B(net_3_m),\n        .Y(mmult0_pm)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult0_mp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_2_m),\n        .B(net_3_p),\n        .Y(mmult0_mp)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult0_mm (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_2_m),\n        .B(net_3_m),\n        .Y(mmult0_mm)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_11 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_pp),\n        .B(mmult0_pm),\n        .Y(mmult0_11)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_12 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_pm),\n        .B(mmult0_pp),\n        .Y(mmult0_12)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_13 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_mp),\n        .B(mmult0_mm),\n        .Y(mmult0_13)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_14 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_mm),\n        .B(mmult0_mp),\n        .Y(mmult0_14)\n    );\nstoch_add_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_11),\n        .B(mmult0_14),\n        .Y(net_4_p)\n    );\nstoch_add_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_12),\n        .B(mmult0_13),\n        .Y(net_4_m)\n    );\n// END mmult0\n\n// Autogenerated by BitSAD\n// BEGIN fdiv0\nstoch_fixed_gain_div_mat #(\n        .COUNTER_SIZE(8),\n        .GAIN(net_6),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) fdiv0_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_4_p),\n        .Y(net_7_p)\n    );\nstoch_fixed_gain_div_mat #(\n        .COUNTER_SIZE(8),\n        .GAIN(net_6),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) fdiv0_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_4_m),\n        .Y(net_7_m)\n    );\n// END fdiv0\n\n// Autogenerated by BitSAD\n// BEGIN l2norm0\nstoch_l2_norm #(\n        .COUNTER_SIZE(8),\n        .VEC_LEN(2)\n    ) l2norm0 (\n        .CLK  (CLK),\n        .nRST (nRST),\n        .up   (net_7_p),\n        .un   (net_7_m),\n        .y    (net_10_p)\n    );\nassign net_10_m = 1'b0;\n// END l2norm0\n\n// Autogenerated by BitSAD\n// BEGIN div0\nstoch_div_mat #(\n        .COUNTER_SIZE(8),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div0_pp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_7_p),\n        .B({2{net_10_p}}),\n        .Y(div0_pp)\n    );\nstoch_div_mat #(\n        .COUNTER_SIZE(8),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div0_mp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_7_m),\n        .B({2{net_10_p}}),\n        .Y(div0_mp)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div0_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(div0_pp),\n        .B(div0_mp),\n        .Y(net_11_p)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div0_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(div0_mp),\n        .B(div0_pp),\n        .Y(net_11_m)\n    );\n// END div0\n\n// Autogenerated by BitSAD\n// BEGIN mmult1\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult1_pp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_14_p),\n        .B(net_11_p),\n        .Y(mmult1_pp)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult1_pm (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_14_p),\n        .B(net_11_m),\n        .Y(mmult1_pm)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult1_mp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_14_m),\n        .B(net_11_p),\n        .Y(mmult1_mp)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult1_mm (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_14_m),\n        .B(net_11_m),\n        .Y(mmult1_mm)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_11 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_pp),\n        .B(mmult1_pm),\n        .Y(mmult1_11)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_12 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_pm),\n        .B(mmult1_pp),\n        .Y(mmult1_12)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_13 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_mp),\n        .B(mmult1_mm),\n        .Y(mmult1_13)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_14 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_mm),\n        .B(mmult1_mp),\n        .Y(mmult1_14)\n    );\nstoch_add_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_11),\n        .B(mmult1_14),\n        .Y(net_15_p)\n    );\nstoch_add_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_12),\n        .B(mmult1_13),\n        .Y(net_15_m)\n    );\n// END mmult1\n\n// Autogenerated by BitSAD\n// BEGIN fdiv1\nstoch_fixed_gain_div_mat #(\n        .COUNTER_SIZE(8),\n        .GAIN(net_17),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) fdiv1_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_15_p),\n        .Y(net_18_p)\n    );\nstoch_fixed_gain_div_mat #(\n        .COUNTER_SIZE(8),\n        .GAIN(net_17),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) fdiv1_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_15_m),\n        .Y(net_18_m)\n    );\n// END fdiv1\n\n// Autogenerated by BitSAD\n// BEGIN l2norm1\nstoch_l2_norm #(\n        .COUNTER_SIZE(8),\n        .VEC_LEN(2)\n    ) l2norm1 (\n        .CLK  (CLK),\n        .nRST (nRST),\n        .up   (net_18_p),\n        .un   (net_18_m),\n        .y    (net_21_p)\n    );\nassign net_21_m = 1'b0;\n// END l2norm1\n\n// Autogenerated by BitSAD\n// BEGIN div1\nstoch_div_mat #(\n        .COUNTER_SIZE(8),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div1_pp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_18_p),\n        .B({2{net_21_p}}),\n        .Y(div1_pp)\n    );\nstoch_div_mat #(\n        .COUNTER_SIZE(8),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div1_mp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_18_m),\n        .B({2{net_21_p}}),\n        .Y(div1_mp)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div1_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(div1_pp),\n        .B(div1_mp),\n        .Y(net_22_p)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div1_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(div1_mp),\n        .B(div1_pp),\n        .Y(net_22_m)\n    );\n// END div1\n\n\nendmodule&quot;, Module power_iteration with 0 parameters and 0 submodules.)</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">(&quot;module power_iteration(CLK, nRST, net_2_p, net_2_m, net_3_p, net_3_m, net_22_p, net_22_m);\n\ninput ClK, nRST;\ninput  [3:0] net_2_p, net_2_m;\ninput  [1:0] net_3_p, net_3_m;\noutput  [1:0] net_22_p, net_22_m;\n\nwire  [1:0] net_4_p, net_4_m;\nwire   net_6;\nwire  [1:0] net_7_p, net_7_m;\nwire   net_10_p, net_10_m;\nwire  [1:0] net_11_p, net_11_m;\nwire  [3:0] net_14_p, net_14_m;\nwire  [1:0] net_15_p, net_15_m;\nwire   net_17;\nwire  [1:0] net_18_p, net_18_m;\nwire   net_21_p, net_21_m;\nwire  [1:0] mmult0_out_pp;\nwire  [1:0] mmult0_out_pm;\nwire  [1:0] mmult0_out_mp;\nwire  [1:0] mmult0_out_mm;\nwire  [1:0] mmult0_out_11;\nwire  [1:0] mmult0_out_12;\nwire  [1:0] mmult0_out_13;\nwire  [1:0] mmult0_out_14;\nwire  [1:0] div_bcast0_out_pp;\nwire  [1:0] div_bcast0_out_mp;\nwire  [1:0] mmult1_out_pp;\nwire  [1:0] mmult1_out_pm;\nwire  [1:0] mmult1_out_mp;\nwire  [1:0] mmult1_out_mm;\nwire  [1:0] mmult1_out_11;\nwire  [1:0] mmult1_out_12;\nwire  [1:0] mmult1_out_13;\nwire  [1:0] mmult1_out_14;\nwire  [1:0] div_bcast1_out_pp;\nwire  [1:0] div_bcast1_out_mp;\n\n// Autogenerated by BitSAD\n// BEGIN mmult0\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult0_pp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_2_p),\n        .B(net_3_p),\n        .Y(mmult0_out_pp)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult0_pm (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_2_p),\n        .B(net_3_m),\n        .Y(mmult0_out_pm)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult0_mp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_2_m),\n        .B(net_3_p),\n        .Y(mmult0_out_mp)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult0_mm (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_2_m),\n        .B(net_3_m),\n        .Y(mmult0_out_mm)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_11 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_out_pp),\n        .B(mmult0_out_pm),\n        .Y(mmult0_out_11)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_12 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_out_pm),\n        .B(mmult0_out_pp),\n        .Y(mmult0_out_12)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_13 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_out_mp),\n        .B(mmult0_out_mm),\n        .Y(mmult0_out_13)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_14 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_out_mm),\n        .B(mmult0_out_mp),\n        .Y(mmult0_out_14)\n    );\nstoch_add_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_out_11),\n        .B(mmult0_out_14),\n        .Y(net_4_p)\n    );\nstoch_add_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult0_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult0_out_12),\n        .B(mmult0_out_13),\n        .Y(net_4_m)\n    );\n// END mmult0\n\n// Autogenerated by BitSAD\n// BEGIN fdiv_bcast0\nstoch_fixed_gain_div_mat #(\n        .COUNTER_SIZE(8),\n        .GAIN(net_6),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) fdiv_bcast0_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_4_p),\n        .Y(net_7_p)\n    );\nstoch_fixed_gain_div_mat #(\n        .COUNTER_SIZE(8),\n        .GAIN(net_6),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) fdiv_bcast0_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_4_m),\n        .Y(net_7_m)\n    );\n// END fdiv_bcast0\n\n// Autogenerated by BitSAD\n// BEGIN l2norm0\nstoch_l2_norm #(\n        .COUNTER_SIZE(8),\n        .VEC_LEN(2)\n    ) l2norm0 (\n        .CLK  (CLK),\n        .nRST (nRST),\n        .up   (net_7_p),\n        .un   (net_7_m),\n        .y    (net_10_p)\n    );\nassign net_10_m = 1'b0;\n// END l2norm0\n\n// Autogenerated by BitSAD\n// BEGIN div_bcast0\nstoch_div_mat #(\n        .COUNTER_SIZE(8),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div_bcast0_pp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_7_p),\n        .B({2{net_10_p}}),\n        .Y(div_bcast0_out_pp)\n    );\nstoch_div_mat #(\n        .COUNTER_SIZE(8),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div_bcast0_mp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_7_m),\n        .B({2{net_10_p}}),\n        .Y(div_bcast0_out_mp)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div_bcast0_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(div_bcast0_out_pp),\n        .B(div_bcast0_out_mp),\n        .Y(net_11_p)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div_bcast0_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(div_bcast0_out_mp),\n        .B(div_bcast0_out_pp),\n        .Y(net_11_m)\n    );\n// END div_bcast0\n\n// Autogenerated by BitSAD\n// BEGIN mmult1\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult1_pp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_14_p),\n        .B(net_11_p),\n        .Y(mmult1_out_pp)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult1_pm (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_14_p),\n        .B(net_11_m),\n        .Y(mmult1_out_pm)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult1_mp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_14_m),\n        .B(net_11_p),\n        .Y(mmult1_out_mp)\n    );\nstoch_matrix_mult #(\n        .NUM_ROWS(2),\n        .NUM_MID(2),\n        .NUM_COLS(1)\n    ) mmult1_mm (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_14_m),\n        .B(net_11_m),\n        .Y(mmult1_out_mm)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_11 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_out_pp),\n        .B(mmult1_out_pm),\n        .Y(mmult1_out_11)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_12 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_out_pm),\n        .B(mmult1_out_pp),\n        .Y(mmult1_out_12)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_13 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_out_mp),\n        .B(mmult1_out_mm),\n        .Y(mmult1_out_13)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_14 (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_out_mm),\n        .B(mmult1_out_mp),\n        .Y(mmult1_out_14)\n    );\nstoch_add_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_out_11),\n        .B(mmult1_out_14),\n        .Y(net_15_p)\n    );\nstoch_add_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) mmult1_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(mmult1_out_12),\n        .B(mmult1_out_13),\n        .Y(net_15_m)\n    );\n// END mmult1\n\n// Autogenerated by BitSAD\n// BEGIN fdiv_bcast1\nstoch_fixed_gain_div_mat #(\n        .COUNTER_SIZE(8),\n        .GAIN(net_17),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) fdiv_bcast1_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_15_p),\n        .Y(net_18_p)\n    );\nstoch_fixed_gain_div_mat #(\n        .COUNTER_SIZE(8),\n        .GAIN(net_17),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) fdiv_bcast1_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_15_m),\n        .Y(net_18_m)\n    );\n// END fdiv_bcast1\n\n// Autogenerated by BitSAD\n// BEGIN l2norm1\nstoch_l2_norm #(\n        .COUNTER_SIZE(8),\n        .VEC_LEN(2)\n    ) l2norm1 (\n        .CLK  (CLK),\n        .nRST (nRST),\n        .up   (net_18_p),\n        .un   (net_18_m),\n        .y    (net_21_p)\n    );\nassign net_21_m = 1'b0;\n// END l2norm1\n\n// Autogenerated by BitSAD\n// BEGIN div_bcast1\nstoch_div_mat #(\n        .COUNTER_SIZE(8),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div_bcast1_pp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_18_p),\n        .B({2{net_21_p}}),\n        .Y(div_bcast1_out_pp)\n    );\nstoch_div_mat #(\n        .COUNTER_SIZE(8),\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div_bcast1_mp (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(net_18_m),\n        .B({2{net_21_p}}),\n        .Y(div_bcast1_out_mp)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div_bcast1_p (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(div_bcast1_out_pp),\n        .B(div_bcast1_out_mp),\n        .Y(net_22_p)\n    );\nstoch_sat_sub_mat #(\n        .NUM_ROWS(2),\n        .NUM_COLS(1)\n    ) div_bcast1_m (\n        .CLK(CLK),\n        .nRST(nRST),\n        .A(div_bcast1_out_mp),\n        .B(div_bcast1_out_pp),\n        .Y(net_22_m)\n    );\n// END div_bcast1\n\n\nendmodule\n&quot;, Module power_iteration with 0 parameters and 0 submodules.)</code></pre>
 <p>BitSAD does not know how to interpret <code>size(A, 1)</code> in our function. In hardware, we would not compute the array size on the fly. Instead, it would be a parameter of the circuit. To replicate this behavior in BitSAD, we need to use a struct.</p>
 <pre><code cell="iterative-svd" class="language-julia">struct PowerIteration
     scalew::Float64
@@ -237,26 +192,26 @@ power_iteration_verilog, _ = generatehw(circuit, A, v₀)
 # print only the first 20 lines
 println(join(split(power_iteration_verilog, &quot;\n&quot;)[1:20], &quot;\n&quot;))
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">module PowerIteration(CLK, nRST, net_2_p, net_2_m, net_3_p, net_3_m, );
-parameter scalew = 2'b01;
-parameter scalez = 2'b01;
+<pre><code class="plaintext cell-output cell-stream">module PowerIteration(CLK, nRST, net_2_p, net_2_m, net_3_p, net_3_m, net_20_p, net_20_m);
+parameter scalez = 4'b0101;
+parameter scalew = 4'b0101;
+
+input ClK, nRST;
 input  [3:0] net_2_p, net_2_m;
 input  [1:0] net_3_p, net_3_m;
-
+output  [1:0] net_20_p, net_20_m;
 
 wire  [1:0] net_4_p, net_4_m;
-wire  [1:0] net_6_p, net_6_m;
 wire  [1:0] net_6_p, net_6_m;
 wire   net_9_p, net_9_m;
 wire  [1:0] net_10_p, net_10_m;
 wire  [3:0] net_13_p, net_13_m;
-wire  [1:0] net_10_p, net_10_m;
 wire  [1:0] net_14_p, net_14_m;
 wire  [1:0] net_16_p, net_16_m;
-wire  [1:0] net_16_p, net_16_m;
 wire   net_19_p, net_19_m;
-wire  [1:0] net_20_p, net_20_m;
-wire  [1:0] mmult0_pp;
+wire  [1:0] mmult0_out_pp;
+wire  [1:0] mmult0_out_pm;
+wire  [1:0] mmult0_out_mp;
 </code></pre>
 <p>We can see that the generated Verilog contains <code>scalew</code> and <code>scalez</code> as parameters, and BitSAD automatically determined the fixed point binary values for them.</p>
 </article>
@@ -264,22 +219,30 @@ wire  [1:0] mmult0_pp;
             <a id="previous-page" title="Previous" href="simulation-and-hardware.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
             <a id="next-page" title="Next" href="..&#x2F;how-tos&#x2F;custom-sbitstream.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
         </div>
-        <footer>
-            Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language</a>.
-        </footer>
     </main>
+    <nav id="toc"><p><a href="../../README.html">Introduction</a></p>
+<h1 id="tutorials"><a href="../../#tutorials" class="anchor"></a>Tutorials</h1>
+<ul>
+<li><a href="../../docs/tutorials/getting-started.html">Quickstart</a></li>
+<li><a href="../../docs/tutorials/sbitstream.html">Stochastic bitstreams 101</a></li>
+<li><a href="../../docs/tutorials/simulation-and-hardware.html">Simulation and hardware</a></li>
+<li><a href="../../docs/tutorials/iterative-svd.html">Complex functions of bitstreams</a></li>
+</ul>
+<h1 id="how-to-"><a href="../../#how-to-" class="anchor"></a>How To …</h1>
+<ul>
+<li><a href="../../docs/how-tos/custom-sbitstream.html">Create a custom <code>SBitstream</code> operator</a></li>
+<li><a href="../../docs/how-tos/nosim.html">Create a simulation nop</a></li>
+</ul>
+<h1 id="developer-guide"><a href="../../#developer-guide" class="anchor"></a>Developer Guide</h1>
+<!-- * [Archicture overview](dev-guide/architecture.md) -->
+<!-- * [Understanding simulation](dev-guide/simulation.md) -->
+<!-- * [Understanding hardware generation](dev-guide/hardware.md) -->
+<hr />
+<p><a href="../../docstrings.html">API Reference</a></p>
+</nav>
+    <footer>
+        Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language.</a>
+    </footer>
     <script>hljs.initHighlightingOnLoad();</script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            renderMathInElement(document.body, {
-                delimiters: [
-                    {left: "$$", right: "$$", display: true},
-                    {left: "$", right: "$", display: false},
-                    {left: "\\(", right: "\\)", display: false},
-                    {left: "\\[", right: "\\]", display: true}
-                ]
-            });
-        });
-    </script>
 </body>
 </html>
