@@ -28,7 +28,7 @@
 
     @testset "Sample Generation" begin
         xbits = generate(x, 100000)
-        @test mean(map(xbit -> pos(xbit) - neg(xbit), xbits)) ≈ x.value atol = 0.01
+        @test mean(map(xbit -> pos(xbit) - neg(xbit), xbits)) ≈ x.value rtol = 0.1
     end
 
     @testset "Bit-Level Simulation" begin
@@ -43,7 +43,7 @@
                 end
 
                 z / T
-            end ≈ float(op(x, y)) atol = 0.01
+            end ≈ float(op(x, y)) rtol = 0.1
             sim = simulatable(op, y, x)
             @test begin
                 z = 0
@@ -53,7 +53,7 @@
                 end
 
                 z / T
-            end ≈ float(op(y, x)) atol = 0.01
+            end ≈ float(op(y, x)) rtol = 0.1
             sim = simulatable(op, x, w)
             @test begin
                 z = 0
@@ -63,7 +63,7 @@
                 end
 
                 z / T
-            end ≈ float(op(x, w)) atol = 0.01
+            end ≈ float(op(x, w)) rtol = 0.1
         end
         @testset "op = ÷" begin
             sim = simulatable(÷, x, 2)
@@ -75,7 +75,7 @@
                 end
 
                 z / T
-            end ≈ float(x ÷ 2) atol = 0.01
+            end ≈ float(x ÷ 2) rtol = 0.1
             sim = simulatable(÷, w, 2)
             @test begin
                 z = 0
@@ -85,7 +85,7 @@
                 end
 
                 z / T
-            end ≈ float(w ÷ 2) atol = 0.01
+            end ≈ float(w ÷ 2) rtol = 0.1
         end
         @testset "op = /" begin
             sim = simulatable(/, y, x)
@@ -97,7 +97,7 @@
                 end
 
                 z / T
-            end ≈ float(y / x) atol = 0.01
+            end ≈ float(y / x) rtol = 0.1
         end
         @testset for op in (sqrt, decorrelate)
             sim = simulatable(op, x)
@@ -109,7 +109,7 @@
                 end
 
                 z / T
-            end ≈ float(op(x)) atol = 0.01
+            end ≈ float(op(x)) rtol = 0.1
         end
         @testset "op = * (matrix, matrix)" begin
             sim = simulatable(*, X, Y)
@@ -121,7 +121,7 @@
                 end
 
                 Z ./ T
-            end ≈ float.(X * Y) atol = 0.05
+            end ≈ float.(X * Y) rtol = 0.1
             sim = simulatable(*, Y, X)
             @test begin
                 Z = zeros(2, 2)
@@ -131,7 +131,7 @@
                 end
 
                 Z ./ T
-            end ≈ float.(Y * X) atol = 0.05
+            end ≈ float.(Y * X) rtol = 0.1
         end
         @testset "op = * (matrix, vector)" begin
             sim = simulatable(*, X, v)
@@ -144,7 +144,7 @@
                 end
 
                 Z ./ T
-            end ≈ float.(X * v) atol = 0.05
+            end ≈ float.(X * v) rtol = 0.1
             sim = simulatable(*, transpose(v), X)
             @test begin
                 T = 100000
@@ -155,7 +155,7 @@
                 end
 
                 Z ./ T
-            end ≈ float.(transpose(v) * X) atol = 0.05
+            end ≈ float.(transpose(v) * X) rtol = 0.1
         end
         @testset "op = norm" begin
             sim = simulatable(norm, v)
@@ -168,7 +168,7 @@
                 end
 
                 z / T
-            end ≈ float(norm(v)) atol = 0.01
+            end ≈ float(norm(v)) rtol = 0.1
         end
     end
 end
