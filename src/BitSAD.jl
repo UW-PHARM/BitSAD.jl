@@ -8,6 +8,7 @@ using Ghost
 using MacroTools: @capture
 using LightGraphs, MetaGraphs
 using Base: @kwdef
+using Artifacts
 
 export AbstractBitstream
 export SBit, SBitstream
