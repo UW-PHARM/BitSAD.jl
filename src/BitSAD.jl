@@ -56,4 +56,9 @@ include("hardware/sbitstreamhandler.jl")
 # include("hardware/sdmhandler.jl")
 # include("hardware/delaybufferhandler.jl")
 
+function download_lib(dir = pwd())
+    lib = artifact"verilog-stdlib"
+    cp(lib, dir)
+end
+
 end # module
