@@ -1,0 +1,31 @@
+name: Artifacts
+
+on:
+  push:
+    branches: ['master']
+
+jobs:
+  artifacts:
+    name: "Create artifacts"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: '1'
+      - uses: technote-space/get-diff-action@v5
+        with:
+          PATTERNS: |
+            verilog-stdlib/**/*.v
+      - name: Install dependencies
+        run: |
+          julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Build artifact
+        if: env.GIT_DIFF
+        run: |
+          julia --color=yes --project=. -e 'include("build_artifacts.jl")'
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add verilog-stdlib.tar.gz Artifacts.toml
+          git commit -m "Updated artifacts"
+          git push
