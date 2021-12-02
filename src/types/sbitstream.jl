@@ -119,6 +119,8 @@ getsimulator(::typeof(Base.broadcasted), ::typeof(decorrelate), x::SBitstreamLik
 
 Base.:(*)(x::AbstractVecOrMat{<:SBitstream}, y::AbstractVecOrMat{<:SBitstream}) =
     SBitstream.(float.(x) * float.(y))
+Base.:(*)(x::LinearAlgebra.Transpose{<:SBitstream, <:AbstractVector}, y::AbstractMatrix{<:SBitstream}) =
+    SBitstream.(float.(x) * float.(y))
 is_trace_primitive(::Type{typeof(*)},
                    ::Type{<:AbstractVecOrMat{<:SBitstream}},
                    ::Type{<:AbstractVecOrMat{<:SBitstream}}) = true
@@ -128,6 +130,10 @@ getsimulator(::typeof(*), x::AbstractVecOrMat{<:SBitstream}, y::AbstractVecOrMat
 LinearAlgebra.norm(x::AbstractVector{<:SBitstream}) = SBitstream(norm(float.(x)))
 is_trace_primitive(::Type{typeof(LinearAlgebra.norm)}, ::Type{<:AbstractVector{<:SBitstream}}) = true
 getsimulator(::typeof(LinearAlgebra.norm), x::AbstractVector{<:SBitstream}) = SL2Normer()
+
+Base.max(x::SBitstream, y::SBitstream) = SBitstream(max(float(x), float(y)))
+is_trace_primitive(::Type{typeof(max)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}) = true
+getsimulator(::typeof(max), ::SBitstream, ::SBitstream) = SSignedMaxer()
 
 bits(s::SBitstream) = s.bits
 

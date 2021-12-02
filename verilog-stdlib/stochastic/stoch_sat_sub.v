@@ -12,6 +12,7 @@ module stoch_sat_sub(CLK, nRST, a, b, y);
 
 // parameters
 parameter COUNTER_SIZE = 8;
+localparam COUNTER_ONE = {{(COUNTER_SIZE - 1){1'b0}}, 1'b1};
 
 // I/O
 input CLK, nRST;
@@ -22,25 +23,22 @@ output y;
 wire c;
 wire inc, dec;
 wire count_up;
-wire thresh;
-reg [COUNTER_SIZE-1:0] counter, next_counter;
+reg [(COUNTER_SIZE - 1):0] counter;
+wire [(COUNTER_SIZE - 1):0] next_counter;
 
 assign c = a ^ b;
-assign inc = c & b;
-assign dec = c & a;
-assign count_up = counter + inc;
-assign thresh = (counter == {COUNTER_SIZE{1'b0}}) ? 1'b1 : 1'b0;
+assign inc = c & a;
+assign dec = c & b;
+assign count_up = inc ? counter + COUNTER_ONE :
+                  dec ? (|counter ? {COUNTER_SIZE{1'b0}} : counter - COUNTER_ONE) :
+                  counter;
 
-assign y = thresh & a & ~b;
+assign y = (count_up >= COUNTER_ONE) ? 1'b1 : 1'b0;
+assign next_counter = |count_up ? count_up : count_up - y;
 
 always @(posedge CLK) begin
     if (!nRST) counter <= {COUNTER_SIZE{1'b0}};
     else counter <= next_counter;
-end
-
-always @(inc, dec) begin
-    if (~|counter & ~inc & dec) next_counter <= {COUNTER_SIZE{1'b0}};
-    else next_counter <= counter + inc - dec;
 end
 
 endmodule

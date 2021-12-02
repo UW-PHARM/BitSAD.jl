@@ -481,3 +481,23 @@ function Base.show(io::IO, ::MIME"text/plain", x::SL2Normer)
     end, ", ")
     print(io, ")")
 end
+
+@kwdef mutable struct SSignedMaxer
+    sub::SSignedSubtractor = SSignedSubtractor()
+    counter::Int = 0
+end
+function (op::SSignedMaxer)(x::SBit, y::SBit)
+    z = op.sub(x, y)
+    op.counter += pos(z)
+    op.counter -= neg(z)
+
+    return (op.counter >= 0) ? x : y
+end
+Base.show(io::IO, ::SSignedMaxer) = print(io, "SSignedMaxer(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedMaxer)
+    print(io, "SSignedMaxer(")
+    join(io, map(fieldnames(SSignedMaxer)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end
