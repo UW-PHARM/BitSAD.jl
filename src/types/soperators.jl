@@ -501,3 +501,29 @@ function Base.show(io::IO, ::MIME"text/plain", x::SSignedMaxer)
     end, ", ")
     print(io, ")")
 end
+
+struct SSignedNMaxer{N}
+    maxers::Vector{SSignedMaxer}
+
+    function SSignedNMaxer{N}(maxers::Vector{SSignedMaxer}) where N
+        @assert length(maxers) == N - 1 "Incorrect number of `SSignedMaxer`s ($(length(maxers))) for `SSignedNMaxer{$N}`"
+
+        new{N}(maxers)
+    end
+end
+SSignedNMaxer(N) = SSignedNMaxer{N}([SSignedMaxer() for _ in 1:(N - 1)])
+function (op::SSignedNMaxer{N})(xs::Vararg{SBit, N}) where N
+    z = foldl(zip(op.maxers, Base.tail(xs)); init = first(xs)) do prev, (maxer, curr)
+        maxer(prev, curr)
+    end
+
+    return z
+end
+Base.show(io::IO, ::SSignedNMaxer) = print(io, "SSignedNMaxer(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedNMaxer)
+    print(io, "SSignedNMaxer(")
+    join(io, map(fieldnames(SSignedNMaxer)) do field
+        repr(getproperty(x, field))
+    end, ", ")
+    print(io, ")")
+end

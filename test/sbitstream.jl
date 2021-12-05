@@ -111,6 +111,18 @@
                 z / T
             end ≈ float(op(x)) rtol = 0.1
         end
+        @testset "op = max(x, y, z)" begin
+            sim = simulatable(max, x, y, w)
+            @test begin
+                z = 0
+                for t in 1:T
+                    bit = pop!(sim(max, x, y, w))
+                    z += pos(bit) - neg(bit)
+                end
+
+                z / T
+            end ≈ float(max(x, y, w)) rtol = 0.1
+        end
         @testset "op = * (matrix, matrix)" begin
             sim = simulatable(*, X, Y)
             @test begin
