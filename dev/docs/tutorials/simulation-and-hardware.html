@@ -57,7 +57,7 @@ end
 
 abs(estimate(z) - float(z))
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.012999999999999984</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.0040000000000000036</code></pre>
 <p>What’s actually happening inside <code>fsim</code>? We can take a peek under the hood with <a href="../../docstrings/BitSAD.show_simulatable.html"><code>show_simulatable</code></a> which will print out the Julia function being compiled by BitSAD.</p>
 <pre><code cell="sim-and-hw" class="language-julia">BitSAD.show_simulatable(f, x, y)
 </code></pre>
@@ -65,8 +65,10 @@ abs(estimate(z) - float(z))
       x3 = (BitSAD.getbit)(x2)
       x5 = (BitSAD.getbit)(x4)
       x6 = (*)(x2, x4)
-      x7 = (SSignedMultiplier(...))(x3, x5)
-      x8 = (BitSAD.setbit!)(x6, x7)
+      x7 = (BitSAD.getbit)(x2)
+      x8 = (BitSAD.getbit)(x4)
+      x9 = (SSignedMultiplier(...))(x7, x8)
+      x10 = (BitSAD.setbit!)(x6, x9)
       return x6
   end)</code></pre>
 <p>Here, we see that <code>fsim</code> is a function that accepts two <code>SBitstream{Float64}</code>s as input. Walking through each step, we see:</p>
@@ -114,7 +116,7 @@ end
 
 abs(estimate(z) - float(z))
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.010999999999999899</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.03600000000000014</code></pre>
 <p>Note that the algorithmic-level of <code>h</code> had no issues (<code>float(z) == 0.64</code>), but the bit-level output has measurable error. BitSAD was designed to make spotting issues that appear at the hardware-level easier. How can we fix this? In stochastic computing circuits, we can <a href="../../docstrings/BitSAD.decorrelate.html"><code>decorrelate</code></a> bitstreams to make them independent.</p>
 <pre><code cell="sim-and-hw" class="language-julia">hfixed(x, y) = g(x, y) * decorrelate(g(x, y))
 z = hfixed(x, y)
@@ -146,7 +148,7 @@ abs(estimate(z) - float(z))
       return x15
   end)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.030000000000000138</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.028999999999999915</code></pre>
 <h2 id="generating-hardware"><a href="#generating-hardware" class="anchor"></a>Generating hardware</h2>
 <p>With BitSAD, we’ve been able to create functions on stochastic bitstreams, and we verified that they should work at the bit-level. The next step is to generate hardware for these functions! BitSAD can take any Julia function and generate synthesizable Verilog code.</p>
 <p>Let’s start by creating hardware for <code>f</code>.</p>
