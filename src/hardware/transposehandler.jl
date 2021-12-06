@@ -1,12 +1,11 @@
-@kwdef mutable struct TransposeHandler
-    id::Int = 0
-end
+struct TransposeHandler end
 
 gethandler(broadcasted, ::Type{typeof(permutedims)}, ::Type{<:SBitstreamLike}) =
     !broadcasted ? TransposeHandler() :
                    error("Cannot generate hardware for broadcasted transpose (permutedims).")
+init_state(::TransposeHandler) = (id = 0,)
 
-function (handler::TransposeHandler)(buffer, netlist, inputs, outputs)
+function (handler::TransposeHandler)(buffer, netlist, state, inputs, outputs)
     # compute output size
     outsize = netsize(outputs[1])
 
@@ -16,8 +15,8 @@ function (handler::TransposeHandler)(buffer, netlist, inputs, outputs)
 
     write(buffer, """
         $stdcomment
-        // BEGIN transpose$(handler.id)
-        $(handler.id > 0 ? "" : "integer i, j;")
+        // BEGIN transpose$(state.id)
+        $(state.id > 0 ? "" : "integer i, j;")
         always @(*) begin
             for (i = 0; i < $(outsize[2]); i = i + 1) begin
                 for (j = 0; j < $(outsize[1]); j = j + 1) begin
@@ -26,10 +25,8 @@ function (handler::TransposeHandler)(buffer, netlist, inputs, outputs)
                 end
             end
         end
-        // END transpose$(handler.id)
+        // END transpose$(state.id)
         \n""")
 
-    handler.id += 1
-
-    return buffer
+    return buffer, (id = state.id + 1,)
 end

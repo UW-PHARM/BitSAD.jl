@@ -1,18 +1,11 @@
-@kwdef mutable struct SBitstreamHandler
-    id::Int = 0
-    broadcasted::Bool
-end
+struct SBitstreamHandler end
 
-BitSAD.is_hardware_primitive(::Type{typeof(SBitstream)}, ::Type{<:SBitstream}) = true
-BitSAD.is_hardware_primitive(::Type{typeof(Base.broadcasted)},
-                             ::Type{typeof(SBitstream)},
-                             ::Type{<:SBitstreamLike}) = true
-gethandler(broadcasted, ::Type{typeof(SBitstream)}, ::Type{<:Real}) =
-    SBitstreamHandler(broadcasted = broadcasted)
-gethandler(broadcasted, ::Type{typeof(SBitstream)}, ::Type{<:AbstractArray{<:Real}}) =
-    SBitstreamHandler(broadcasted = broadcasted)
+is_hardware_primitive(::Type{typeof(SBitstream)}, ::Type{<:SBitstream}) = true
+is_hardware_primitive(::Type{typeof(Base.broadcasted)}, ::Type{typeof(SBitstream)}, ::Type{<:SBitstreamLike}) = true
+gethandler(::Bool, ::Type{typeof(SBitstream)}, ::Type{<:SBitstreamLike}) = SBitstreamHandler()
+init_state(::SBitstreamHandler) = (id = 0,)
 
-function (handler::SBitstreamHandler)(buffer, netlist, inputs, outputs)
+function (handler::SBitstreamHandler)(buffer, netlist, state, inputs, outputs)
     # set output as signed
     setsigned!(netlist, outputs[1], true)
 
@@ -27,9 +20,8 @@ function (handler::SBitstreamHandler)(buffer, netlist, inputs, outputs)
         isneg = [Int(value(inputs[1]) < 0)]
     end
 
-    broadcast = handler.broadcasted ? "_bcast" : ""
     write(buffer, """
-        // BEGIN bitstream_rng$(broadcast)$(handler.id)
+        // BEGIN bitstream_rng$(state.id)
         """)
 
     # create parameter if necessary
@@ -37,7 +29,7 @@ function (handler::SBitstreamHandler)(buffer, netlist, inputs, outputs)
         input_string = name(inputs[1])
         input_size = bitwidth(inputs[1])
     else
-        input_string = "bitstream_rng$(broadcast)$(handler.id)_value"
+        input_string = "bitstream_rng$(state.id)_value"
         input_size = bitwidth(inputs[1])
 
         write(buffer, "localparam $input_string = {")
@@ -50,26 +42,24 @@ function (handler::SBitstreamHandler)(buffer, netlist, inputs, outputs)
     write(buffer, ";\n")
 
     write(buffer, """
-        genvar bitstream_rng$(broadcast)$(handler.id)_i;
+        genvar bitstream_rng$(state.id)_i;
 
         generate
-        for (bitstream_rng$(broadcast)$(handler.id)_i = 0; bitstream_rng$(broadcast)$(handler.id)_i < $num_elements; bitstream_rng$(broadcast)$(handler.id)_i = bitstream_rng$(broadcast)$(handler.id)_i + 1) begin : bitstream_rng$(broadcast)$(handler.id)_gen
+        for (bitstream_rng$(state.id)_i = 0; bitstream_rng$(state.id)_i < $num_elements; bitstream_rng$(state.id)_i = bitstream_rng$(state.id)_i + 1) begin : bitstream_rng$(state.id)_gen
             bitstream_rng #(
                     .BITWIDTH($input_size),
-                    .VALUE($input_string[bitstream_rng$(broadcast)$(handler.id)_i*$input_size +: $input_size]),
-                    .IS_NEGATIVE($(input_string)_isneg[bitstream_rng$(broadcast)$(handler.id)_i])
-                ) bitstream_rng$(broadcast)$(handler.id) (
+                    .VALUE($input_string[bitstream_rng$(state.id)_i*$input_size +: $input_size]),
+                    .IS_NEGATIVE($(input_string)_isneg[bitstream_rng$(state.id)_i])
+                ) bitstream_rng$(state.id) (
                     .CLK(CLK),
                     .nRST(nRST),
-                    .out_p($(name(outputs[1]))_p[bitstream_rng$(broadcast)$(handler.id)_i]),
-                    .out_m($(name(outputs[1]))_m[bitstream_rng$(broadcast)$(handler.id)_i])
+                    .out_p($(name(outputs[1]))_p[bitstream_rng$(state.id)_i]),
+                    .out_m($(name(outputs[1]))_m[bitstream_rng$(state.id)_i])
                 );
         end
         endgenerate
-        // END bitstream_rng$(broadcast)$(handler.id)
+        // END bitstream_rng$(state.id)
         \n""")
 
-    handler.id += 1
-
-    return buffer
+    return buffer, (id = state.id + 1,)
 end

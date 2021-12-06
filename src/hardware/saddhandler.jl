@@ -1,12 +1,9 @@
-@kwdef mutable struct SAddHandler
-    id::Int = 0
-    broadcasted::Bool
-end
+struct SAddHandler end
 
-gethandler(broadcasted, ::Type{typeof(+)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) =
-    SAddHandler(broadcasted = broadcasted)
+gethandler(::Bool, ::Type{typeof(+)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstreamLike}) = SAddHandler()
+init_state(::SAddHandler) = (id = 0,)
 
-function (handler::SAddHandler)(buffer, netlist, inputs, outputs)
+function (handler::SAddHandler)(buffer, netlist, state, inputs, outputs)
     # update netlist with inputs
     setsigned!(netlist, inputs[1], true)
     setsigned!(netlist, inputs[2], true)
@@ -19,14 +16,13 @@ function (handler::SAddHandler)(buffer, netlist, inputs, outputs)
     # update netlist with output
     setsigned!(netlist, outputs[1], true)
 
-    broadcast = handler.broadcasted ? "_bcast" : ""
     write(buffer, """
         $stdcomment
-        // BEGIN add$(broadcast)$(handler.id)
+        // BEGIN add$(state.id)
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) add$(broadcast)$(handler.id)_pp (
+            ) add$(state.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
                 .A($(lname("_p"))),
@@ -36,17 +32,16 @@ function (handler::SAddHandler)(buffer, netlist, inputs, outputs)
         stoch_add_mat #(
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
-            ) add$(broadcast)$(handler.id)_mm (
+            ) add$(state.id)_mm (
                 .CLK(CLK),
                 .nRST(nRST),
                 .A($(lname("_m"))),
                 .B($(rname("_m"))),
                 .Y($(name(outputs[1]))_m)
             );
-        // END add$(broadcast)$(handler.id)
+        // END add$(state.id)
         \n""")
 
-    handler.id += 1
 
-    return buffer
+    return buffer, (id = state.id + 1,)
 end

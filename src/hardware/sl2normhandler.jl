@@ -1,12 +1,11 @@
-@kwdef mutable struct SL2NormHandler
-    id::Int = 0
-end
+struct SL2NormHandler end
 
 gethandler(broadcasted, ::Type{typeof(LinearAlgebra.norm)}, ::Type{<:AbstractVector{<:SBitstream}}) =
     !broadcasted ? SL2NormHandler() :
                    error("Cannot generate hardware for broadcasted L2 norm.")
+init_state(::SL2NormHandler) = (id = 0,)
 
-function (handler::SL2NormHandler)(buffer, netlist, inputs, outputs)
+function (handler::SL2NormHandler)(buffer, netlist, state, inputs, outputs)
     # update netlist with inputs
     setsigned!(netlist, inputs[1], true)
 
@@ -15,11 +14,11 @@ function (handler::SL2NormHandler)(buffer, netlist, inputs, outputs)
 
     write(buffer, """
         $stdcomment
-        // BEGIN l2norm$(handler.id)
+        // BEGIN l2norm$(state.id)
         stoch_l2_norm #(
                 .COUNTER_SIZE(8),
                 .VEC_LEN($(netsize(inputs[1])[1]))
-            ) l2norm$(handler.id) (
+            ) l2norm$(state.id) (
                 .CLK  (CLK),
                 .nRST (nRST),
                 .up   ($(name(inputs[1]))_p),
@@ -27,10 +26,8 @@ function (handler::SL2NormHandler)(buffer, netlist, inputs, outputs)
                 .y    ($(name(outputs[1]))_p)
             );
         assign $(name(outputs[1]))_m = 1'b0;
-        // END l2norm$(handler.id)
+        // END l2norm$(state.id)
         \n""")
 
-    handler.id += 1
-
-    return buffer
+    return buffer, (id = state.id + 1,)
 end

@@ -28,7 +28,7 @@ See also: [HW.generate](@ref)
     parameters::Dict{String, Any} = Dict{String, Any}()
     submodules::Vector{Type} = Type[]
     dfg::MetaDiGraph{Int, Float64} = MetaDiGraph()
-    handlers::Dict{Tuple{Bool, Vararg{Type}}, Any} = Dict{Tuple{Bool, Vararg{Type}}, Any}()
+    handlers::Dict{Any, Tuple{Any, Any}} = Dict{Any, Tuple{Any, Any}}()
 end
 
 Base.show(io::IO, m::Module) =
@@ -234,17 +234,13 @@ function generateverilog(io::IO, m::Module)
             inputs = getinputs(m.dfg, node)
             outputs = getoutputs(m.dfg, node)
             operator = getoperator(m.dfg, node)
-            op = (operator.broadcasted, operator.type, jltypeof.(inputs)...)
 
-            if haskey(m.handlers, op)
-                handler = m.handlers[op]
-            else
-                handler = gethandler(op...)
-                m.handlers[op] = handler
-            end
+            handler = gethandler(operator.broadcasted, operator.type, jltypeof.(inputs)...)
+            handler, state = get!(m.handlers, typeof(handler), (handler, init_state(handler)))
 
             set_prop!(m.dfg, node, :inputs, _sync_nodes!(inputs, netlist))
-            handler(buffer, netlist, inputs, outputs)
+            _, state = handler(buffer, netlist, state, inputs, outputs)
+            m.handlers[handler] = (handler, state)
             set_prop!(m.dfg, node, :outputs, _sync_nodes!(outputs, netlist))
         end
 

@@ -1,20 +1,19 @@
-@kwdef mutable struct SSqrtHandler
-    id::Int = 0
-end
+struct SSqrtHandler end
 
 gethandler(broadcasted, ::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) =
     !broadcasted ? SSqrtHandler() : error("Cannot generate hardware for broadcasted sqrt.")
+init_state(::SSqrtHandler) = (id = 0,)
 
-function (handler::SSqrtHandler)(buffer, netlist, inputs, outputs)
+function (handler::SSqrtHandler)(buffer, netlist, state, inputs, outputs)
     # add output net to netlist
     setsigned!(netlist, outputs[1], true)
 
     write(buffer, """
         $stdcomment
-        // BEGIN sqrt$(handler.id)
+        // BEGIN sqrt$(state.id)
         stoch_square_root #(
                 .COUNTER_SIZE(10)
-            ) sqrt$(handler.id) (
+            ) sqrt$(state.id) (
                 .CLK  (CLK),
                 .nRST (nRST),
                 .up   ($(name(inputs[1]))_p),
@@ -22,10 +21,8 @@ function (handler::SSqrtHandler)(buffer, netlist, inputs, outputs)
                 .y    ($(name(outputs[1]))_p)
             );
         assign $(name(outputs[1]))_m = 1'b0;
-        // END sqrt$(handler.id)
+        // END sqrt$(state.id)
         \n""")
 
-    handler.id += 1
-
-    return buffer
+    return buffer, (id = state.id + 1,)
 end
