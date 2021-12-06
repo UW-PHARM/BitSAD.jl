@@ -1,10 +1,10 @@
 [verilog-stdlib]
-git-tree-sha1 = "9e61722e65844bf89a8e48474bbcdcbe2b3d7c19"
+git-tree-sha1 = "6392e72fdf7c694e99f50c34eeb4f71f5b3943e4"
 lazy = true
 
     [[verilog-stdlib.download]]
-    sha256 = "bd36c6bfc9280de22cba2ab66a30f526aea6d3ca2578401f9b1d5f4f791c4db5"
+    sha256 = "6b026d252d4d3a3b4ed8d4679d78fb1b49ff2ab33d18de89547bc950046a0cb5"
     url = "https://github.com/UW-PHARM/BitSAD.jl/raw/v0.1.0/verilog-stdlib.tar.gz"
     [[verilog-stdlib.download]]
-    sha256 = "bd36c6bfc9280de22cba2ab66a30f526aea6d3ca2578401f9b1d5f4f791c4db5"
+    sha256 = "6b026d252d4d3a3b4ed8d4679d78fb1b49ff2ab33d18de89547bc950046a0cb5"
     url = "https://github.com/UW-PHARM/BitSAD.jl/raw/master/verilog-stdlib.tar.gz"
