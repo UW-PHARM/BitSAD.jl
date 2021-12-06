@@ -9,39 +9,48 @@ function (handler::SAddHandler)(buffer, netlist, state, inputs, outputs)
     setsigned!(netlist, inputs[2], true)
 
     # compute output naming
-    lname, rname = handle_broadcast_name(name(inputs[1]), name(inputs[2]),
-                                         netsize(inputs[1]), netsize(inputs[2]))
-    outsize = netsize(outputs[1])
+    lname, rname = handle_broadcast_name(name.(inputs), netsize.(inputs), netsize(outputs[1]))
+
+    # add broadcast signals
+    push!(netlist, Net(name = "add$(state.id)_$(name(inputs[1]))_bcast", size = netsize(outputs[1]), signed = true))
+    push!(netlist, Net(name = "add$(state.id)_$(name(inputs[2]))_bcast", size = netsize(outputs[1]), signed = true))
 
     # update netlist with output
     setsigned!(netlist, outputs[1], true)
 
+    outsize = netsize(outputs[1])
     write(buffer, """
         $stdcomment
         // BEGIN add$(state.id)
-        stoch_add_mat #(
-                .NUM_ROWS($(outsize[1])),
-                .NUM_COLS($(outsize[2]))
+        """)
+    write(buffer, """
+        assign add$(state.id)_$(name(inputs[1]))_bcast_p = $(lname("_p"));
+        assign add$(state.id)_$(name(inputs[1]))_bcast_m = $(lname("_m"));
+        assign add$(state.id)_$(name(inputs[2]))_bcast_p = $(rname("_p"));
+        assign add$(state.id)_$(name(inputs[2]))_bcast_m = $(rname("_m"));
+        """)
+    write_bcast_instantiation(buffer, "add$(state.id)", outsize, """
+        stoch_add #(
+                .COUNTER_SIZE(8)
             ) add$(state.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(lname("_p"))),
-                .B($(rname("_p"))),
-                .Y($(name(outputs[1]))_p)
+                .a(add$(state.id)_$(name(inputs[1]))_bcast_p[add$(state.id)_i]),
+                .b(add$(state.id)_$(name(inputs[2]))_bcast_p[add$(state.id)_i]),
+                .y($(name(outputs[1]))_p[add$(state.id)_i])
             );
-        stoch_add_mat #(
-                .NUM_ROWS($(outsize[1])),
-                .NUM_COLS($(outsize[2]))
+        stoch_add #(
+                .COUNTER_SIZE(8)
             ) add$(state.id)_mm (
                 .CLK(CLK),
                 .nRST(nRST),
-                .A($(lname("_m"))),
-                .B($(rname("_m"))),
-                .Y($(name(outputs[1]))_m)
-            );
-        // END add$(state.id)
-        \n""")
-
+                .a(add$(state.id)_$(name(inputs[1]))_bcast_m[add$(state.id)_i]),
+                .b(add$(state.id)_$(name(inputs[2]))_bcast_m[add$(state.id)_i]),
+                .y($(name(outputs[1]))_m[add$(state.id)_i])
+            );""")
+    write(buffer, """
+            // END add$(state.id)
+            \n""")
 
     return buffer, (id = state.id + 1,)
 end

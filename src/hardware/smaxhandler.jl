@@ -28,14 +28,12 @@ function (handler::SMaxHandler{N})(buffer, netlist, state, inputs, outputs) wher
         write(buffer, """
             $stdcomment
             // BEGIN max_$(N)_$(state.id)
-            genvar max_$(N)_$(state.id)_i;
+            """)
+        write_bcast_instantiation(buffer, "max_$(N)_$(state.id)", netsize(outputs[1]), """
+            assign max_$(N)_$(state.id)_inputs_p[((max_$(N)_$(state.id)_i + 1)*$N - 1) -: $N] = {$(join(map(fname -> fname("_p"), names), "[max_$(N)_$(state.id)_i], "))[max_$(N)_$(state.id)_i]};
+            assign max_$(N)_$(state.id)_inputs_m[((max_$(N)_$(state.id)_i + 1)*$N - 1) -: $N] = {$(join(map(fname -> fname("_m"), names), "[max_$(N)_$(state.id)_i], "))[max_$(N)_$(state.id)_i]};
 
-            generate
-            for (max_$(N)_$(state.id)_i = 0; max_$(N)_$(state.id) < $num_elements; max_$(N)_$(state.id)_i = max_$(N)_$(state.id)_i + 1) begin : max_$(N)_$(state.id)_gen
-                assign max_$(N)_$(state.id)_inputs_p[((max_$(N)_$(state.id)_i + 1)*$N - 1) -: $N] = {$(join(map(fname -> fname("_p"), names), "[max_$(N)_$(state.id)_i], "))[max_$(N)_$(state.id)_i]};
-                assign max_$(N)_$(state.id)_inputs_m[((max_$(N)_$(state.id)_i + 1)*$N - 1) -: $N] = {$(join(map(fname -> fname("_m"), names), "[max_$(N)_$(state.id)_i], "))[max_$(N)_$(state.id)_i]};
-
-                stoch_signed_nmax #(
+            stoch_signed_nmax #(
                     .COUNTER_SIZE(8),
                     .NUM_INPUTS($N)
                 ) max_$(N)_$(state.id) (
@@ -45,9 +43,8 @@ function (handler::SMaxHandler{N})(buffer, netlist, state, inputs, outputs) wher
                     .as_m(max_$(N)_$(state.id)_inputs_m[((max_$(N)_$(state.id)_i + 1)*$N - 1) -: $N]),
                     .y_p($(name(outputs[1]))_p[max_$(N)_$(state.id)_i]),
                     .y_m($(name(outputs[1]))_m[max_$(N)_$(state.id)_i])
-                );
-            end
-            endgenerate
+                );""")
+        write(buffer, """
             // END max_$(N)_$(state.id)
             \n""")
     else

@@ -164,7 +164,7 @@ function _generatetopmatter(buffer, m::Module, netlist::Netlist)
     write(buffer, join(map(outputs) do output
         issigned(output) ? "$(name(output))_p, $(name(output))_m" : name(output)
     end, ", "))
-    write(buffer, ");\n")
+    write(buffer, ");\n\n")
 
     for (name, value) in m.parameters
         _encodeparameter(buffer, name, value)
@@ -172,7 +172,7 @@ function _generatetopmatter(buffer, m::Module, netlist::Netlist)
     end
     write(buffer, "\n")
 
-    write(buffer, "input ClK, nRST;\n")
+    write(buffer, "input CLK, nRST;\n")
 
     write(buffer, join(map(inputs) do input
         "input $(_printnet(input));"
