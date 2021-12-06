@@ -1,9 +1,11 @@
-is_hardware_primitive(::Type{typeof(reshape)}, ::Type{<:AbstractArray{<:SBitstream}}, args...) = true
-gethandler(broadcasted, ::Type{typeof(reshape)}, ::Type{<:AbstractArray{<:SBitstream}}, args...) =
-    !broadcasted ? reshape_handler : error("Cannot generate hardware for broadcasted reshape.")
-init_state(::typeof(reshape_handler)) = nothing
+struct ReshapeHandler end
 
-function reshape_handler(buffer, netlist, state, inputs, outputs)
+is_hardware_primitive(::Type{typeof(reshape)}, args...) = true
+gethandler(broadcasted, ::Type{typeof(reshape)}, args...) =
+    !broadcasted ? ReshapeHandler() : error("Cannot generate hardware for broadcasted reshape.")
+init_state(::ReshapeHandler) = nothing
+
+function (handler::ReshapeHandler)(buffer, netlist, state, inputs, outputs)
     for input in inputs[2:end]
         delete!(netlist, input)
     end

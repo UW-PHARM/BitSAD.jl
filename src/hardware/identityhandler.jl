@@ -1,9 +1,11 @@
+struct IdentityHandler end
+
 is_hardware_primitive(::Type{typeof(identity)}, x) = true
 is_hardware_primitive(::Type{typeof(Base.broadcasted)}, ::Type{typeof(identity)}, x) = true
-gethandler(::Bool, ::Type{typeof(identity)}, x) = identity_handler
-init_state(::typeof(identity_handler)) = nothing
+gethandler(::Bool, ::Type{typeof(identity)}, x) = IdentityHandler
+init_state(::IdentityHandler) = nothing
 
-function identity_handler(buffer, netlist, state, inputs, outputs)
+function (handler::IdentityHandler)(buffer, netlist, state, inputs, outputs)
     if issigned(inputs[1])
         setsigned!(netlist, outputs[1], true)
         write(buffer, """
