@@ -2,7 +2,7 @@ struct IdentityHandler end
 
 is_hardware_primitive(::Type{typeof(identity)}, x) = true
 is_hardware_primitive(::Type{typeof(Base.broadcasted)}, ::Type{typeof(identity)}, x) = true
-gethandler(::Bool, ::Type{typeof(identity)}, x) = IdentityHandler
+gethandler(::Bool, ::Type{typeof(identity)}, x) = IdentityHandler()
 init_state(::IdentityHandler) = nothing
 
 function (handler::IdentityHandler)(buffer, netlist, state, inputs, outputs)

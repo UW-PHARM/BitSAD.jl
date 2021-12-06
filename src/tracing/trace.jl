@@ -120,7 +120,8 @@ function _record_tuples_and_splats(ctx::TupleCtx, call::Ghost.Call)
         ctx.indexed_itr_map[Ghost.Variable(call)] = (call.args[1], _gettapeval(call.args[2]))
     elseif call.fn == Core._apply_iterate
         for arg in call.args[3:end]
-            if (arg isa Ghost.Call) && ((_gettapeop(arg).fn == tuple) || (_gettapeop(arg).fn == ntuple))
+            op = _gettapeop(arg)
+            if (op isa Ghost.Call) && ((op.fn == tuple) || (op.fn == ntuple))
                 ctx.splat_map[arg] = (true, ctx.tuple_map[arg])
             else
                 ctx.splat_map[arg] = (false, [_gettapeval(arg)...])

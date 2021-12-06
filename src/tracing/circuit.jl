@@ -240,7 +240,7 @@ function generateverilog(io::IO, m::Module)
 
             set_prop!(m.dfg, node, :inputs, _sync_nodes!(inputs, netlist))
             _, state = handler(buffer, netlist, state, inputs, outputs)
-            m.handlers[handler] = (handler, state)
+            m.handlers[typeof(handler)] = (handler, state)
             set_prop!(m.dfg, node, :outputs, _sync_nodes!(outputs, netlist))
         end
 

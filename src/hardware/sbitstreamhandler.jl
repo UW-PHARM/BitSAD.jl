@@ -1,8 +1,10 @@
 struct SBitstreamHandler end
 
-is_hardware_primitive(::Type{typeof(SBitstream)}, ::Type{<:SBitstream}) = true
-is_hardware_primitive(::Type{typeof(Base.broadcasted)}, ::Type{typeof(SBitstream)}, ::Type{<:SBitstreamLike}) = true
-gethandler(::Bool, ::Type{typeof(SBitstream)}, ::Type{<:SBitstreamLike}) = SBitstreamHandler()
+is_hardware_primitive(::Type{typeof(SBitstream)}, ::Type{<:Real}) = true
+is_hardware_primitive(::Type{typeof(Base.broadcasted)},
+                      ::Type{typeof(SBitstream)},
+                      ::Type{<:Union{Real, AbstractArray{<:Real}}}) = true
+gethandler(::Bool, ::Type{typeof(SBitstream)}, ::Type{<:Union{Real, AbstractArray{<:Real}}}) = SBitstreamHandler()
 init_state(::SBitstreamHandler) = (id = 0,)
 
 function (handler::SBitstreamHandler)(buffer, netlist, state, inputs, outputs)
