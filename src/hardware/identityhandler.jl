@@ -1,8 +1,9 @@
 is_hardware_primitive(::Type{typeof(identity)}, x) = true
 is_hardware_primitive(::Type{typeof(Base.broadcasted)}, ::Type{typeof(identity)}, x) = true
 gethandler(::Bool, ::Type{typeof(identity)}, x) = identity_handler
+init_state(::typeof(identity_handler)) = nothing
 
-function identity_handler(buffer, netlist, inputs, outputs)
+function identity_handler(buffer, netlist, state, inputs, outputs)
     if issigned(inputs[1])
         setsigned!(netlist, outputs[1], true)
         write(buffer, """
@@ -21,5 +22,5 @@ function identity_handler(buffer, netlist, inputs, outputs)
             \n""")
     end
 
-    return buffer
+    return buffer, state
 end
