@@ -16,6 +16,7 @@ parameter NUM_INPUTS = 1;
 
 input CLK, nRST;
 input [(NUM_INPUTS - 1):0] as_p, as_m;
+output y_p, y_m;
 
 wire [(NUM_INPUTS - 1):0] max_outs_p, max_outs_m;
 

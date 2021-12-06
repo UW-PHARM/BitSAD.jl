@@ -18,6 +18,7 @@ input a_p, a_m, b_p, b_m;
 output y_p, y_m;
 
 wire a_sub_b_p, a_sub_b_m;
+wire inc, dec;
 reg [(COUNTER_SIZE - 1):0] counter;
 wire [(COUNTER_SIZE - 1):0] next_counter;
 
@@ -34,6 +35,8 @@ stoch_signed_sub #(
         .y_m(a_sub_b_m)
     );
 
+assign inc = a_sub_b_p & ~a_sub_b_m;
+assign dec = a_sub_b_m & ~a_sub_b_p;
 assign next_counter = inc ? counter + COUNTER_ONE :
                       dec ? counter - COUNTER_ONE :
                       counter;
