@@ -5,6 +5,12 @@ Base.promote_rule(::Type{SBit}, ::Type{Tuple{Bool, Bool}}) = SBit
 pos(b::SBit) = b.pos
 neg(b::SBit) = b.neg
 
+Base.zero(::Type{SBit}) = SBit((false, false))
+Base.one(::Type{SBit}) = SBit((true, false))
+SBit(value::Number) = isone(value) ? one(SBit) :
+                       iszero(value) ? zero(SBit) :
+                       error("Cannot create an SBit($value). Use pop!(SBitstream($value)) instead.")
+
 Base.show(io::IO, b::SBit) = print(io, "($(b.pos), $(b.neg))")
 Base.show(io::IO, ::MIME"text/plain", b::SBit) = print(io, "SBit(pos = $(b.pos), neg = $(b.neg))")
 
