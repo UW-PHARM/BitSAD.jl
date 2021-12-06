@@ -16,13 +16,14 @@ output out_p, out_m;
 wire [(_BITWIDTH - 1):0] lfsr_r;
 
 generate
-    if _BITWIDTH == 20 begin
+    if (_BITWIDTH == 20) begin
         fibonacci_lfsr_20 d_lfsr (
                 .CLK(CLK),
                 .nRST(nRST),
                 .r(lfsr_r)
             );
-    end else begin
+    end
+    else begin
         fibonacci_lfsr_64 d_lfsr (
                 .CLK(CLK),
                 .nRST(nRST),
@@ -31,7 +32,7 @@ generate
     end
 endgenerate
 
-assign out_p = (lfsr_r < VALUE) && !IS_NEGATIVE ? 1'b1 : 1'b0;
-assign out_m = (lfsr_r < VALUE) && IS_NEGATIVE ? 1'b1 : 1'b0;
+assign out_p = ((lfsr_r < VALUE) && !IS_NEGATIVE) ? 1'b1 : 1'b0;
+assign out_m = ((lfsr_r < VALUE) && IS_NEGATIVE) ? 1'b1 : 1'b0;
 
 endmodule

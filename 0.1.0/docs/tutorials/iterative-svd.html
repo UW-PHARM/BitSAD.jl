@@ -87,9 +87,9 @@ println(&quot;u error: $(float.(u) - svddecomp.U[1, :])&quot;)
 println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
 println(&quot;σ error: $(float(σ) * sqrt(n) - svddecomp.S[1])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">u error: [2.6744745633688893e-5, 5.04413844752416e-5]
-v error: [4.4413604751714075e-6, -0.2568295593063888]
-σ error: -9.3750107676982e-10
+<pre><code class="plaintext cell-output cell-stream">u error: [0.0009093545342547804, 0.00429352528000404]
+v error: [-0.002135580419712624, 1.2145572794516069]
+σ error: -2.5953884242868597e-6
 </code></pre>
 <p>Unfortunately, our result is incorrect, but we can see that BitSAD reported saturation occuring several times. Let’s try this again, but now, we’ll pre-scale <code>A</code> so that none of the operations in the algorithm saturate (more details on the choice of scaling are in <a href="https://www.frontiersin.org/articles/10.3389/fnins.2018.00115/full">our paper</a>). Note that this is also the reason why we scaled <code>w</code> and <code>z</code> in the original function (so that <code>norm(w)</code> did not saturate).</p>
 <pre><code cell="iterative-svd" class="language-julia">α = 2 * max(norm(A_float, Inf), norm(A_float, 1))
@@ -103,9 +103,9 @@ println(&quot;u error: $(float.(u) - svddecomp.U[1, :])&quot;)
 println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
 println(&quot;σ error: $(float(σ) * α * sqrt(n) - svddecomp.S[1])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">u error: [2.6744745633910938e-5, 5.04413844752416e-5]
-v error: [4.44136047528243e-6, -0.25682955930638873]
-σ error: -9.37501298814425e-10
+<pre><code class="plaintext cell-output cell-stream">u error: [0.0009093545342546694, 0.004293525280004068]
+v error: [-0.002135580419712735, 1.2145572794516069]
+σ error: -2.5953884241758374e-6
 </code></pre>
 <p>Without saturation, our results are more accurate.</p>
 <h2 id="simulating-the-power-iteration"><a href="#simulating-the-power-iteration" class="anchor"></a>Simulating the power iteration</h2>
@@ -152,7 +152,7 @@ v = estimate(vbuffer)
 
 println(&quot;final error: $(ϵ[end])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 17, MethodError(push!, (SBitstream(-0.18756703696472027), NamedTuple{(:pos, :neg), Tuple{Bool, Bool}}[(false, false), (false, false), (false, true), (false, true), (false, true), (false, false), (false, false), (false, false), (false, true), (false, false)  …  (false, false), (false, false), (false, true), (false, true), (false, true), (false, false), (false, false), (false, false), (false, false), (false, true)]), 0x0000000000007b9f))</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 17, MethodError(push!, (SBitstream(-0.18290638016210037), NamedTuple{(:pos, :neg), Tuple{Bool, Bool}}[(false, false), (false, false), (false, true), (false, false), (false, false), (false, false), (false, false), (false, false), (false, true), (false, true)  …  (false, false), (false, false), (false, false), (false, false), (false, false), (false, true), (false, false), (false, false), (false, true), (false, false)]), 0x0000000000007b9f))</code></pre>
 <p>Since we are simulating bits, we need to store the bits in order to compute an estimate of the current simulation output. We use a <code>CircularBuffer</code> from DataStructures.jl to do this. Additionally, in the previous section, we directly fed back the output, <code>v</code>, as an input in the subsequent iteration. Now, <code>v</code> is unstable during the first few iterations, so we initiate the simulation with 1,000 pre-computed samples of <code>v₀</code>. Finally, we measure the output error using the formula</p>
 <div class="display-math tex">\[Av = \sigma u\]</div>
 <p>Any valid SVD will satisfy this property. Our error is how closely this property holds for our current estimates. We chose to use this error to illustrate how <a href="../../docstrings/BitSAD.estimate!.html"><code>estimate!</code></a> can be used to mix floating point and bitstream computation.</p>
