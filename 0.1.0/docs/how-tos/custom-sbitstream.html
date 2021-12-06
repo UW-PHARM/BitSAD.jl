@@ -166,7 +166,7 @@ end
 <pre><code cell="custom-soperator" class="language-julia">verilog_string, _ = generatehw(addtimes, x, y)
 print(verilog_string)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 1, MethodError(Main.anonymous.SAddTimesHandler(0), (IOBuffer(data=UInt8[...], readable=true, writable=true, seekable=true, append=false, size=0, maxsize=Inf, ptr=1, mark=-1), BitSAD.Net[Net{input, wire}(net_2::SBitstream{Float64})(1x1), Net{input, wire}(net_3::SBitstream{Float64})(1x1), Net{output, wire}(net_4::SBitstream{Float64})(1x1)], BitSAD.Net[Net{input, wire}(net_2::SBitstream{Float64})(1x1), Net{input, wire}(net_3::SBitstream{Float64})(1x1)], BitSAD.Net[Net{output, wire}(net_4::SBitstream{Float64})(1x1)]), 0x0000000000007ad2))</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 1, MethodError(BitSAD.init_state, (Main.anonymous.SAddTimesHandler(0),), 0x0000000000007ad2))</code></pre>
 <p>And that’s all there is to creating custom operators in BitSAD for <code>SBitstream</code>s.</p>
 </article>
         <div id="page-navigation">
