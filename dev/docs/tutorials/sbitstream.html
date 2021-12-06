@@ -67,7 +67,7 @@ x
 generate!(x, 1000)
 x
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 1, MethodError(push!, (SBitstream(0.3), NamedTuple{(:pos, :neg), Tuple{Bool, Bool}}[(true, false)]), 0x000000000000817e))</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 1, MethodError(push!, (SBitstream(0.3), NamedTuple{(:pos, :neg), Tuple{Bool, Bool}}[(false, false)]), 0x000000000000817e))</code></pre>
 <p>Finally, we can see that the empirical average over the <code>SBit</code>s in queue matches to encoded value quite closely.</p>
 <pre><code cell="sbitstream-101" class="language-julia">abs(estimate(x) - float(x))
 </code></pre>
@@ -99,7 +99,7 @@ end
 
 abs(estimate(z) - float(z))
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.008000000000000007</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.0010000000000000009</code></pre>
 <p>We used a helper function, <code>multiply_sbit</code> to multiply the positive and negative channel of each <code>SBit</code> separately. This resulted in a new <code>SBit</code>, <code>zbit</code>, which we pushed onto <code>z</code>. When we take the empirical average of all these <code>zbit</code>s, we see that it is close to the true mean of <code>z</code>.</p>
 <p>Hopefully, you can now see why stochastic computing can be so resource efficient. Each channel of <code>multiply_sbit</code> only needed to multiply two 1-bit numbers. This can be done with a single AND gate.</p>
 <p>In the next tutorial, you’ll see how to automate the <code>SBit</code>-level simulation we did above, and how to generate synthesizable hardware from a Julia function.</p>

@@ -87,47 +87,9 @@ println(&quot;u error: $(float.(u) - svddecomp.U[1, :])&quot;)
 println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
 println(&quot;σ error: $(float(σ) * sqrt(n) - svddecomp.S[1])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:27
-u error: [0.00526135362189406, -0.009839570548905163]
-v error: [-0.005142664543837272, -0.025063795816977597]
-σ error: -0.14792955798103802
+<pre><code class="plaintext cell-output cell-stream">u error: [1.3866441927119355, 1.4411642241371982]
+v error: [1.9628041771479443, 0.3837386784721486]
+σ error: -5.712975472893511e-5
 </code></pre>
 <p>Unfortunately, our result is incorrect, but we can see that BitSAD reported saturation occuring several times. Let’s try this again, but now, we’ll pre-scale <code>A</code> so that none of the operations in the algorithm saturate (more details on the choice of scaling are in <a href="https://www.frontiersin.org/articles/10.3389/fnins.2018.00115/full">our paper</a>). Note that this is also the reason why we scaled <code>w</code> and <code>z</code> in the original function (so that <code>norm(w)</code> did not saturate).</p>
 <pre><code cell="iterative-svd" class="language-julia">α = 2 * max(norm(A_float, Inf), norm(A_float, 1))
@@ -141,9 +103,9 @@ println(&quot;u error: $(float.(u) - svddecomp.U[1, :])&quot;)
 println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
 println(&quot;σ error: $(float(σ) * α * sqrt(n) - svddecomp.S[1])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">u error: [7.771561172376096e-16, -7.216449660063518e-16]
-v error: [0.0, 2.7755575615628914e-16]
-σ error: 2.220446049250313e-16
+<pre><code class="plaintext cell-output cell-stream">u error: [1.3866441927119357, 1.4411642241371982]
+v error: [1.9628041771479445, 0.38373867847214843]
+σ error: -5.712975472893511e-5
 </code></pre>
 <p>Without saturation, our results are more accurate.</p>
 <h2 id="simulating-the-power-iteration"><a href="#simulating-the-power-iteration" class="anchor"></a>Simulating the power iteration</h2>
@@ -190,7 +152,7 @@ v = estimate(vbuffer)
 
 println(&quot;final error: $(ϵ[end])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 17, MethodError(push!, (SBitstream(-0.2590513969611002), NamedTuple{(:pos, :neg), Tuple{Bool, Bool}}[(false, true), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false)  …  (false, false), (false, false), (false, false), (false, true), (false, true), (false, false), (false, false), (false, false), (false, false), (false, false)]), 0x0000000000008139))</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 17, MethodError(push!, (SBitstream(0.16207255289952935), NamedTuple{(:pos, :neg), Tuple{Bool, Bool}}[(false, false), (false, false), (false, false), (true, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false)  …  (false, false), (false, false), (true, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false), (false, false)]), 0x0000000000008139))</code></pre>
 <p>Since we are simulating bits, we need to store the bits in order to compute an estimate of the current simulation output. We use a <code>CircularBuffer</code> from DataStructures.jl to do this. Additionally, in the previous section, we directly fed back the output, <code>v</code>, as an input in the subsequent iteration. Now, <code>v</code> is unstable during the first few iterations, so we initiate the simulation with 1,000 pre-computed samples of <code>v₀</code>. Finally, we measure the output error using the formula</p>
 <div class="display-math tex">\[Av = \sigma u\]</div>
 <p>Any valid SVD will satisfy this property. Our error is how closely this property holds for our current estimates. We chose to use this error to illustrate how <a href="../../docstrings/BitSAD.estimate!.html"><code>estimate!</code></a> can be used to mix floating point and bitstream computation.</p>
