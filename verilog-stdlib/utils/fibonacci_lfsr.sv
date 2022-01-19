@@ -10,8 +10,8 @@
 //  Set BITWIDTH to choose the LFSR width (20 or 64).
 //////////////////////////////////////////////////////////////////////////////////
 module fibonacci_lfsr #(
-    parameter SEED = 64'hFEEDBABEDEADBEEF;
-    parameter BITWIDTH = 64;
+    parameter SEED = 64'hFEEDBABEDEADBEEF,
+    parameter BITWIDTH = 64
 ) (
     input logic CLK,
     input logic nRST,

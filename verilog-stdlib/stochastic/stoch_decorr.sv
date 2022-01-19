@@ -10,7 +10,7 @@
 //  Set LFSR_WIDTH to 20 or 64 to choose the LFSR size.
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_decorr #(
-    parameter LFSR_WIDTH = 64;
+    parameter LFSR_WIDTH = 64
 ) (
     input logic CLK,
     input logic nRST,

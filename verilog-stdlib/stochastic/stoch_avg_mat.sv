@@ -10,9 +10,9 @@
 //  "A" should be a NUM_ROWS x NUM_COLS x NUM_POPS packed array port.
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_avg_mat #(
-    parameter NUM_POPS = 2;
-    parameter NUM_ROWS = 3;
-    parameter NUM_COLS = 3;
+    parameter NUM_POPS = 2,
+    parameter NUM_ROWS = 3,
+    parameter NUM_COLS = 3
 ) (
     input logic CLK,
     input logic nRST,

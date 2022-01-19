@@ -10,7 +10,7 @@
 ///  where as[i] are signed channel stochastic bitstreams.
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_signed_nmax #(
-    parameter NUM_INPUTS = 2;
+    parameter NUM_INPUTS = 2
 ) (
     input logic CLK,
     input logic nRST,

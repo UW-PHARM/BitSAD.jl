@@ -9,9 +9,9 @@
 //  Computes the element-wise stochastic quotient Y = A ./ B
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_div_mat #(
-    parameter NUM_ROWS = 2;
-    parameter NUM_COLS = 2;
-    parameter LFSR_WIDTH = 64;
+    parameter NUM_ROWS = 2,
+    parameter NUM_COLS = 2,
+    parameter LFSR_WIDTH = 64
 ) (
     input logic CLK,
     input logic nRST,

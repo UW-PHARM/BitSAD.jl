@@ -9,8 +9,8 @@
 //  Computers the L2 norm of (up - un).
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_l2_norm #(
-    parameter STEP_VAL = 16;
-    parameter VEC_LEN = 2;
+    parameter STEP_VAL = 16,
+    parameter VEC_LEN = 2
 ) (
     input logic CLK,
     input logic nRST,

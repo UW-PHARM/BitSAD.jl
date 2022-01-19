@@ -7,7 +7,7 @@
 //		Delay buffer unit
 /////////////////////////////////////////////////////////////////////////////////////
 module delay_buffer #(
-    parameter DELAY = 1;
+    parameter DELAY = 1
 ) (
     input logic CLK,
     input logic nRST,
