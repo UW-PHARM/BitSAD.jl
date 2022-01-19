@@ -22,7 +22,7 @@ localparam COUNTER_SIZE = $clog2(2*VEC_LEN + 1);
 
 // internal wires
 logic [(VEC_LEN-1):0] c;
-logic signed [(COUNTER_SIZE-1):0] sum [VEC_LEN-2];
+logic signed [(COUNTER_SIZE-1):0] sum [0:(VEC_LEN-2)];
 logic signed [(COUNTER_SIZE-1):0] new_counter;
 logic signed [(COUNTER_SIZE-1):0] counter, next_counter;
 
