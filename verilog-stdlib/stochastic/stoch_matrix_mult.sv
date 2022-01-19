@@ -33,8 +33,8 @@ end
 
 genvar i, j;
 generate
-    for (i = 0; i < NUM_ROWS; i = i + 1) begin : row
-        for (j = 0; j < NUM_COLS; j = j + 1) begin : col
+    for (i = 0; i < NUM_ROWS; i = i + 1) begin : row_gen
+        for (j = 0; j < NUM_COLS; j = j + 1) begin : col_gen
             stoch_dot_prod #(
                 .VEC_LEN(NUM_MID)
             ) dot_prod(
