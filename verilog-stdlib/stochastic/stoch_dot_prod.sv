@@ -8,7 +8,7 @@
 // Description:
 //  Computes the dot product of two vectors of stochastic bitstreams
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_dot_prod #
+module stoch_dot_prod #(
     parameter VEC_LEN = 2
 ) (
     input logic CLK,
