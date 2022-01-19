@@ -10,7 +10,7 @@
 //  https://www.xilinx.com/support/documentation/application_notes/xapp052.pdf 
 //////////////////////////////////////////////////////////////////////////////////
 module fibonacci_lfsr_64 #(
-    parameter SEED = 64'hFEEDBABEDEADBEEF;
+    parameter SEED = 64'hFEEDBABEDEADBEEF
 ) (
     input logic CLK,
     input logic nRST,

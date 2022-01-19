@@ -9,7 +9,7 @@
 //  Computes stochastic square root.
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_square_root #(
-    parameter LFSR_WIDTH = 64;
+    parameter LFSR_WIDTH = 64
 ) (
     input logic CLK,
     input logic nRST,

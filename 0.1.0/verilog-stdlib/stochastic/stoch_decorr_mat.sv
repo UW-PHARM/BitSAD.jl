@@ -9,9 +9,9 @@
 //  Instantiates matrix of stochastic decorrelators.
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_decorr_mat #(
-    parameter NUM_ROWS = 2;
-    parameter NUM_COLS = 2;
-    parameter LFSR_WIDTH = 64;
+    parameter NUM_ROWS = 2,
+    parameter NUM_COLS = 2,
+    parameter LFSR_WIDTH = 64
 ) (
     input logic CLK,
     input logic nRST,

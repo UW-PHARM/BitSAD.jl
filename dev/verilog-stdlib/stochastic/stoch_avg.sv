@@ -11,7 +11,7 @@
 //  Input "a" should be vector of bitstreams.
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_avg #(
-    parameter NUM_POPS = 2;
+    parameter NUM_POPS = 2
 ) (
     input logic CLK,
     input logic nRST,

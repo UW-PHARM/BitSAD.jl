@@ -7,8 +7,8 @@
 //		SDM unit
 /////////////////////////////////////////////////////////////////////////////////////
 module sdm #(
-    parameter BIT_WIDTH = 16;
-    parameter INT_WIDTH = 1;
+    parameter BIT_WIDTH = 16,
+    parameter INT_WIDTH = 1
 ) (
     input logic CLK,
     input logic nRST,

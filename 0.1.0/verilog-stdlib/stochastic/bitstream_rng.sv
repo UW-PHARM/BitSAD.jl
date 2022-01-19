@@ -10,9 +10,9 @@
 //  Set BITWIDTH to adjust the LFSR size (20 or 64).
 //////////////////////////////////////////////////////////////////////////////////
 module bitstream_rng #(
-    parameter BITWIDTH = 20;
-    parameter VALUE = {BITWIDTH{1'b0}};
-    parameter IS_NEGATIVE = 1'b0;
+    parameter BITWIDTH = 20,
+    parameter VALUE = {BITWIDTH{1'b0}},
+    parameter IS_NEGATIVE = 1'b0
 ) (
     input logic CLK,
     input logic nRST,

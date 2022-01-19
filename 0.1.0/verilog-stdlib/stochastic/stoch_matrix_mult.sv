@@ -9,9 +9,9 @@
 //  Instantiates a stochastic matrix multiplier (via stoch_dot_prod).
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_matrix_mult #(
-    parameter NUM_ROWS = 2;
-    parameter NUM_MID = 2;
-    parameter NUM_COLS = 2;
+    parameter NUM_ROWS = 2,
+    parameter NUM_MID = 2,
+    parameter NUM_COLS = 2
 ) (
     input logic CLK,
     input logic nRST,

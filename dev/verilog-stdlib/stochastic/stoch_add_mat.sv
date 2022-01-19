@@ -9,8 +9,8 @@
 //  Instantiates a stochastic matrix adder.
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_add_mat #(
-    parameter NUM_ROWS = 2;
-    parameter NUM_COLS = 2;
+    parameter NUM_ROWS = 2,
+    parameter NUM_COLS = 2
 ) (
     input logic CLK,
     input logic nRST,

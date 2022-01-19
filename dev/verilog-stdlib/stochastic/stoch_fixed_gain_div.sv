@@ -2,29 +2,28 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: PHARM
 // Engineer: Kyle Daruwalla
-// 
+//
 // Create Date: 03/01/2018 03:07:51 PM
 // Module Name: stoch_fixed_gain_div
-// Description: 
+// Description:
 //  Computes stochastic bitstream divided by fixed integer.
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_fixed_gain_div #(
-    parameter GAIN = 2;
-) (CLK, nRST, a, y);
+    parameter GAIN = 2
+) (
+    input logic CLK,
+    input logic nRST,
+    input logic a,
+    output logic y
+);
 
-// parameters
-parameter COUNTER_SIZE = 8;
-parameter ALPHA = (1 << COUNTER_SIZE) - 1;
-parameter SCALED_GAIN = ALPHA * GAIN;
-
-// I/O
-input CLK, nRST;
-input a;
-output y;
+localparam COUNTER_SIZE = 8;
+localparam ALPHA = (1 << COUNTER_SIZE) - 1;
+localparam SCALED_GAIN = ALPHA * GAIN;
 
 // internal wires
-wire [2*COUNTER_SIZE-1:0] c;
-reg [2*COUNTER_SIZE-1:0] counter, next_counter;
+logic [(2*COUNTER_SIZE-1):0] c;
+logic [(2*COUNTER_SIZE-1):0] counter, next_counter;
 
 assign c = (a == 1'b1) ? counter + ((1 << COUNTER_SIZE) - 1) : counter;
 assign y = (c >= SCALED_GAIN) ? 1'b1 : 1'b0;

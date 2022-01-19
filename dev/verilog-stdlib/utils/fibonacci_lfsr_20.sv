@@ -10,7 +10,7 @@
 //  https://www.xilinx.com/support/documentation/application_notes/xapp052.pdf 
 //////////////////////////////////////////////////////////////////////////////////
 module fibonacci_lfsr_20 #(
-    parameter SEED = 20'hDEADBEEF;
+    parameter SEED = 20'hDEADBEEF
 ) (
     input logic CLK,
     input logic nRST,

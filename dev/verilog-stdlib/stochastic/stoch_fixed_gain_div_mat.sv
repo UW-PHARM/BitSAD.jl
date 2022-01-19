@@ -9,9 +9,9 @@
 // 	Instantiates stoch_fixed_gain_div for matrices.
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_fixed_gain_div_mat #(
-    parameter GAIN = 2;
-    parameter NUM_ROWS = 2;
-    parameter NUM_COLS = 2;
+    parameter GAIN = 2,
+    parameter NUM_ROWS = 2,
+    parameter NUM_COLS = 2
 ) (
     input logic CLK,
     input logic nRST,

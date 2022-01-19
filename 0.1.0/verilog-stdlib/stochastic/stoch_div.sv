@@ -9,7 +9,7 @@
 //  Computes the stochastic quotient y = a / b
 //////////////////////////////////////////////////////////////////////////////////
 module stoch_div #(
-    parameter LFSR_WIDTH = 64;
+    parameter LFSR_WIDTH = 64
 ) (
     input logic CLK,
     input logic nRST,
