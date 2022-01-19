@@ -34,7 +34,6 @@ function (handler::SMaxHandler{N})(buffer, netlist, state, inputs, outputs) wher
             assign max_$(N)_$(state.id)_inputs_m[((max_$(N)_$(state.id)_i + 1)*$N - 1) -: $N] = {$(join(map(fname -> fname("_m"), names), "[max_$(N)_$(state.id)_i], "))[max_$(N)_$(state.id)_i]};
 
             stoch_signed_nmax #(
-                    .COUNTER_SIZE(8),
                     .NUM_INPUTS($N)
                 ) max_$(N)_$(state.id) (
                     .CLK(CLK),
@@ -61,7 +60,6 @@ function (handler::SMaxHandler{N})(buffer, netlist, state, inputs, outputs) wher
         write(buffer, "};\n")
         write(buffer, """
             stoch_signed_nmax #(
-                    .COUNTER_SIZE(8),
                     .NUM_INPUTS($N)
                 ) max_$(N)_$(state.id) (
                     .CLK(CLK),

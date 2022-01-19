@@ -16,16 +16,15 @@ function (handler::SL2NormHandler)(buffer, netlist, state, inputs, outputs)
         $stdcomment
         // BEGIN l2norm$(state.id)
         stoch_l2_norm #(
-                .COUNTER_SIZE(8),
                 .VEC_LEN($(netsize(inputs[1])[1]))
             ) l2norm$(state.id) (
                 .CLK  (CLK),
                 .nRST (nRST),
                 .up   ($(name(inputs[1]))_p),
                 .un   ($(name(inputs[1]))_m),
-                .y    ($(name(outputs[1]))_p)
+                .yp   ($(name(outputs[1]))_p),
+                .yn   ($(name(outputs[1]))_m)
             );
-        assign $(name(outputs[1]))_m = 1'b0;
         // END l2norm$(state.id)
         \n""")
 

@@ -17,7 +17,6 @@ function (handler::SFixedGainDivHandler)(buffer, netlist, state, inputs, outputs
         $stdcomment
         // BEGIN fdiv$(state.id)
         stoch_fixed_gain_div_mat #(
-                .COUNTER_SIZE(8),
                 .GAIN($(name(inputs[2]))),
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
@@ -28,7 +27,6 @@ function (handler::SFixedGainDivHandler)(buffer, netlist, state, inputs, outputs
                 .Y($(name(outputs[1]))_p)
             );
         stoch_fixed_gain_div_mat #(
-                .COUNTER_SIZE(8),
                 .GAIN($(name(inputs[2]))),
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))

@@ -30,18 +30,14 @@ function (handler::SAddHandler)(buffer, netlist, state, inputs, outputs)
         assign add$(state.id)_$(name(inputs[2]))_bcast_m = $(rname("_m"));
         """)
     write_bcast_instantiation(buffer, "add$(state.id)", outsize, """
-        stoch_add #(
-                .COUNTER_SIZE(8)
-            ) add$(state.id)_pp (
+        stoch_add add$(state.id)_pp (
                 .CLK(CLK),
                 .nRST(nRST),
                 .a(add$(state.id)_$(name(inputs[1]))_bcast_p[add$(state.id)_i]),
                 .b(add$(state.id)_$(name(inputs[2]))_bcast_p[add$(state.id)_i]),
                 .y($(name(outputs[1]))_p[add$(state.id)_i])
             );
-        stoch_add #(
-                .COUNTER_SIZE(8)
-            ) add$(state.id)_mm (
+        stoch_add add$(state.id)_mm (
                 .CLK(CLK),
                 .nRST(nRST),
                 .a(add$(state.id)_$(name(inputs[1]))_bcast_m[add$(state.id)_i]),

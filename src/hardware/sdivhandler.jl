@@ -24,7 +24,6 @@ function (handler::SDivHandler)(buffer, netlist, state, inputs, outputs)
         $stdcomment
         // BEGIN div$(state.id)
         stoch_div_mat #(
-                .COUNTER_SIZE(8),
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
             ) div$(state.id)_pp (
@@ -35,7 +34,6 @@ function (handler::SDivHandler)(buffer, netlist, state, inputs, outputs)
                 .Y(div$(state.id)_out_pp)
             );
         stoch_div_mat #(
-                .COUNTER_SIZE(8),
                 .NUM_ROWS($(outsize[1])),
                 .NUM_COLS($(outsize[2]))
             ) div$(state.id)_mp (

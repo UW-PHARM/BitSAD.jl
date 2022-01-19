@@ -11,9 +11,7 @@ function (handler::SSqrtHandler)(buffer, netlist, state, inputs, outputs)
     write(buffer, """
         $stdcomment
         // BEGIN sqrt$(state.id)
-        stoch_square_root #(
-                .COUNTER_SIZE(10)
-            ) sqrt$(state.id) (
+        stoch_square_root sqrt$(state.id) (
                 .CLK  (CLK),
                 .nRST (nRST),
                 .up   ($(name(inputs[1]))_p),
