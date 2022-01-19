@@ -26,7 +26,7 @@ integer row, col;
 always @(B) begin
     for (row = 0; row < NUM_MID; row = row + 1) begin
         for (col = 0; col < NUM_COLS; col = col + 1) begin
-            B_transpose[j][i] <= B[i][j];
+            B_transpose[col][row] <= B[row][col];
         end
     end
 end
