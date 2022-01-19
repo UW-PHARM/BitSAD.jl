@@ -2,40 +2,44 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: PHARM
 // Engineer: Kyle Daruwalla
-// 
+//
 // Create Date: 03/04/2018 03:16:40 AM
 // Module Name: stoch_decorr
-// Description: 
-//  Decorrelates stochastic bitstream 
+// Description:
+//  Decorrelates stochastic bitstream.
+//  Set LFSR_WIDTH to 20 or 64 to choose the LFSR size.
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_decorr(CLK, nRST, a, y);
+module stoch_decorr #(
+    parameter LFSR_WIDTH = 64;
+) (
+    input logic CLK,
+    input logic nRST,
+    input logic a,
+    output logic y
+);
 
-// parameters
-parameter COUNTER_SIZE = 8;
-parameter NEW_COUNTER_SIZE = (COUNTER_SIZE != 8) ? 8 : COUNTER_SIZE;
-parameter STEP_VAL = 16;
-
-// I/O
-input CLK, nRST;
-input a;
-output y;
+localparam STEP_VAL = 16;
+localparam COUNTER_SIZE = 8;
+localparam _LFSR_WIDTH = (LFSR_WIDTH == 20) ? 20 : 64;
 
 // internal wires
-wire [NEW_COUNTER_SIZE-1:0] c;
-reg [1:0] buffer, next_buffer;
-reg [NEW_COUNTER_SIZE-1:0] counter, next_counter;
-wire [63:0] r;
-wire shift_in;
-wire [NEW_COUNTER_SIZE-1:0] dec;
+logic [(COUNTER_SIZE-1):0] c;
+logic [1:0] buffer, next_buffer;
+logic [(COUNTER_SIZE-1):0] counter, next_counter;
+logic [(_LFSR_WIDTH-1):0] r;
+logic shift_in;
+logic [(COUNTER_SIZE-1):0] dec;
 
-fibonacci_lfsr_64 lfsr(
-    .CLK(CLK),
-    .nRST(nRST),
-    .r(r)
+fibonacci_lfsr #(
+        .BITWIDTH(_LFSR_WIDTH)
+    ) lfsr(
+        .CLK(CLK),
+        .nRST(nRST),
+        .r(r)
     );
 
 assign c = (a == 1'b1) ? counter + STEP_VAL : counter;
-assign shift_in = (r[NEW_COUNTER_SIZE-1:0] <= counter) ? 1'b1 : 1'b0;
+assign shift_in = (r[(NEW_COUNTER_SIZE-1):0] <= counter) ? 1'b1 : 1'b0;
 assign y = buffer[1];
 assign dec = (y == 1'b1) ? c - STEP_VAL : c;
 

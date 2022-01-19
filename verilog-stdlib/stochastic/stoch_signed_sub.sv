@@ -8,20 +8,20 @@
 // Description: 
 //  Performs a - b on signed channel stochastic numbers
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_signed_sub(CLK, nRST, a_p, a_m, b_p, b_m, y_p, y_m);
+module stoch_signed_sub (
+    input logic CLK,
+    input logic nRST,
+    input logic a_p,
+    input logic a_m,
+    input logic b_p,
+    input logic b_m,
+    output logic y_p,
+    output logic y_m
+);
 
-parameter COUNTER_SIZE = 8;
+logic s_pp, s_pm, s_mp, s_mm;
 
-input CLK, nRST;
-input a_p, a_m;
-input b_p, b_m;
-output y_p, y_m;
-
-wire s_pp, s_pm, s_mp, s_mm;
-
-stoch_sat_sub #(
-        .COUNTER_SIZE(COUNTER_SIZE)
-    ) subpp (
+stoch_sat_sub subpp (
         .CLK(CLK),
         .nRST(nRST),
         .a(a_p),
@@ -29,9 +29,7 @@ stoch_sat_sub #(
         .y(s_pp)
     );
 
-stoch_sat_sub #(
-        .COUNTER_SIZE(COUNTER_SIZE)
-    ) subpm (
+stoch_sat_sub subpm (
         .CLK(CLK),
         .nRST(nRST),
         .a(a_p),
@@ -39,9 +37,7 @@ stoch_sat_sub #(
         .y(s_pm)
     );
 
-stoch_sat_sub #(
-        .COUNTER_SIZE(COUNTER_SIZE)
-    ) submp (
+stoch_sat_sub submp (
         .CLK(CLK),
         .nRST(nRST),
         .a(a_m),
@@ -49,9 +45,7 @@ stoch_sat_sub #(
         .y(s_mp)
     );
 
-stoch_sat_sub #(
-        .COUNTER_SIZE(COUNTER_SIZE)
-    ) submm (
+stoch_sat_sub submm (
         .CLK(CLK),
         .nRST(nRST),
         .a(a_m),
@@ -59,9 +53,7 @@ stoch_sat_sub #(
         .y(s_mm)
     );
 
-stoch_add #(
-        .COUNTER_SIZE(COUNTER_SIZE)
-    ) addp (
+stoch_add addp (
         .CLK(CLK),
         .nRST(nRST),
         .a(s_pp),
@@ -69,9 +61,7 @@ stoch_add #(
         .y(y_p)
     );
 
-stoch_add #(
-        .COUNTER_SIZE(COUNTER_SIZE)
-    ) addm (
+stoch_add addm (
         .CLK(CLK),
         .nRST(nRST),
         .a(s_mp),

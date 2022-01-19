@@ -2,43 +2,48 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: PHARM
 // Engineer: Kyle Daruwalla
-// 
+//
 // Create Date: 03/04/2018 04:00:01 PM
 // Module Name: stoch_square_root
-// Description: 
+// Description:
 //  Computes stochastic square root.
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_square_root(CLK, nRST, a, y);
+module stoch_square_root #(
+    parameter LFSR_WIDTH = 64;
+) (
+    input logic CLK,
+    input logic nRST,
+    input logic a,
+    output logic y
+);
 
 // params
-parameter COUNTER_SIZE = 10;
-
-// I/O
-input CLK, nRST;
-input a;
-output y;
+localparam COUNTER_SIZE = 10;
+localparam _LFSR_WIDTH = (LFSR_WIDTH == 20) ? 20 : 64;
 
 // internal wires
-reg signed [COUNTER_SIZE-1:0] counter, next_counter;
-reg b_and;
-wire next_b_and;
-wire y_decorr;
-wire [2:0] a_x4, b_and_x4;
-wire signed [COUNTER_SIZE-1:0] new_counter;
-wire [63:0] r;
+logic signed [(COUNTER_SIZE-1):0] counter, next_counter;
+logic b_and;
+logic next_b_and;
+logic y_decorr;
+logic [2:0] a_x4, b_and_x4;
+logic signed [(COUNTER_SIZE-1):0] new_counter;
+logic [(_LFSR_WIDTH-1):0] r;
 
-fibonacci_lfsr_64 lfsr(
-    .CLK(CLK),
-    .nRST(nRST),
-    .r(r)
+fibonacci_lfsr #(
+        .BITWIDTH(_LFSR_WIDTH)
+    ) lfsr (
+        .CLK(CLK),
+        .nRST(nRST),
+        .r(r)
     );
 
-stoch_decorr decorr(
-	.CLK(CLK),
-	.nRST(nRST),
-	.a(y),
-	.y(y_decorr)
-	);
+stoch_decorr decorr (
+        .CLK(CLK),
+        .nRST(nRST),
+        .a(y),
+        .y(y_decorr)
+    );
 
 assign a_x4 = a << 2;
 assign b_and_x4 = b_and << 2;

@@ -5,25 +5,26 @@
 // 
 // Create Date: 04/05/2018 06:14:27 PM
 // Module Name: stoch_avg
-// Description: 
+// Description:
 //  Averages several stochastic bitstreams.
+//  Set NUM_POPS equal to the number of bitstreams.
+//  Input "a" should be vector of bitstreams.
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_avg(CLK, nRST, a, y);
+module stoch_avg #(
+    parameter NUM_POPS = 2;
+) (
+    input logic CLK,
+    input logic nRST,
+    input logic [(NUM_POPS-1):0] a,
+    output logic y
+);
 
-// parameters
-parameter NUM_POPS = 2;
-parameter COUNTER_SIZE = $clog2(2*NUM_POPS + 1);
-
-// I/O
-input CLK;
-input nRST;
-input [NUM_POPS-1:0] a;
-output y;
+localparam COUNTER_SIZE = $clog2(2*NUM_POPS + 1);
 
 // internal wires
-reg [COUNTER_SIZE-2:0] sum [0:NUM_POPS-2];
-wire [COUNTER_SIZE-1:0] new_counter;
-reg [COUNTER_SIZE-1:0] counter, next_counter;
+logic [(COUNTER_SIZE-2):0] sum [NUM_POPS-1];
+logic [(COUNTER_SIZE-1):0] new_counter;
+logic [(COUNTER_SIZE-1):0] counter, next_counter;
 
 integer i;
 always @(*) begin
@@ -37,7 +38,7 @@ assign new_counter = counter + sum[NUM_POPS - 2];
 assign y = (new_counter >= $signed(NUM_POPS)) ? 1'b1 : 1'b0;
 
 always @(posedge CLK) begin
-    if (!nRST) counter <= {COUNTER_SIZE{1'b0}};
+    if (!nRST) counter <= {(COUNTER_SIZE{1)'b0}};
     else counter <= next_counter;
 end
 

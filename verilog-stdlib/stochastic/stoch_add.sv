@@ -2,25 +2,25 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: PHARM
 // Engineer: Kyle Daruwalla
-// 
+//
 // Create Date: 03/01/2018 11:30:40 AM
 // Module Name: stoch_add
-// Description: 
-//  Adds to stochastic bitstreams 
+// Description:
+//  Adds two stochastic bitstreams.
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_add(CLK, nRST, a, b, y);
+module stoch_add (
+    input logic CLK,
+    input logic nRST,
+    input logic a,
+    input logic b,
+    output logic y
+);
 
-// parameters
-parameter COUNTER_SIZE = 8;
-
-// I/O
-input CLK, nRST;
-input a, b;
-output y;
+localparam COUNTER_SIZE = 8;
 
 // internal wires
-wire [COUNTER_SIZE-1:0] c;
-reg [COUNTER_SIZE-1:0] counter, next_counter;
+logic [COUNTER_SIZE-1:0] c;
+logic [COUNTER_SIZE-1:0] counter, next_counter;
 
 assign c = counter + a + b;
 assign y = (c >= {{(COUNTER_SIZE - 1){1'b0}}, 1'b1}) ? 1'b1 : 1'b0;

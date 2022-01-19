@@ -2,37 +2,36 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: PHARM
 // Engineer: Kyle Daruwalla
-// 
+//
 // Create Date: 03/01/2018 11:48:24 AM
 // Module Name: stoch_add_mat
-// Description: 
+// Description:
 //  Instantiates a stochastic matrix adder.
-//  Accepts inputs and outputs as row major vectors.
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_add_mat(CLK, nRST, A, B, Y);
-
-// parameters
-parameter NUM_ROWS = 2;
-parameter NUM_COLS = 2;
-
-// I/O
-input CLK, nRST;
-input [(NUM_ROWS*NUM_COLS)-1:0] A, B;
-output [(NUM_ROWS*NUM_COLS)-1:0] Y;
+module stoch_add_mat #(
+    parameter NUM_ROWS = 2;
+    parameter NUM_COLS = 2;
+) (
+    input logic CLK,
+    input logic nRST,
+    input logic [(NUM_ROWS-1):0][(NUM_COLS-1):0] A,
+    input logic [(NUM_ROWS-1):0][(NUM_COLS-1):0] B,
+    output logic [(NUM_ROWS-1):0][(NUM_COLS-1):0] Y
+);
 
 genvar i, j;
 generate
     for (i = 0; i < NUM_ROWS; i = i + 1) begin : row
         for (j = 0; j < NUM_COLS; j = j + 1) begin: col
-            stoch_add add(
-                .CLK(CLK),
-                .nRST(nRST),
-                .a(A[(i*NUM_COLS)+j]),
-                .b(B[(i*NUM_COLS)+j]),
-                .y(Y[(i*NUM_COLS)+j])
+            stoch_add add (
+                    .CLK(CLK),
+                    .nRST(nRST),
+                    .a(A[i][j]),
+                    .b(B[i][j]),
+                    .y(Y[i][j])
                 );
         end
-    end 
+    end
 endgenerate
 
 endmodule

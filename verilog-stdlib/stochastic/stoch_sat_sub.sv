@@ -2,29 +2,29 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: PHARM
 // Engineer: Kyle Daruwalla
-// 
+//
 // Create Date: 02/28/2018 08:37:06 PM
 // Module Name: stoch_sat_sub
-// Description: 
-//  Performs max(a - b, 0) 
+// Description:
+//  Performs max(a - b, 0)
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_sat_sub(CLK, nRST, a, b, y);
+module stoch_sat_sub (
+    input logic CLK,
+    input logic nRST,
+    input logic a,
+    input logic b,
+    output logic y
+);
 
-// parameters
-parameter COUNTER_SIZE = 8;
-localparam COUNTER_ONE = {{(COUNTER_SIZE - 1){1'b0}}, 1'b1};
-
-// I/O
-input CLK, nRST;
-input a, b;
-output y;
+localparam COUNTER_SIZE = 8;
+localparam COUNTER_ONE = {{(COUNTER_SIZE-1){1'b0}}, 1'b1};
 
 // internal wires
-wire c;
-wire inc, dec;
-wire [(COUNTER_SIZE - 1):0] count_up;
-reg [(COUNTER_SIZE - 1):0] counter;
-wire [(COUNTER_SIZE - 1):0] next_counter;
+logic c;
+logic inc, dec;
+logic [(COUNTER_SIZE-1):0] count_up;
+logic [(COUNTER_SIZE-1):0] counter;
+logic [(COUNTER_SIZE-1):0] next_counter;
 
 assign c = a ^ b;
 assign inc = c & a;

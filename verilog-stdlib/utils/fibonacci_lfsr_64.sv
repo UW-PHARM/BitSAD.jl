@@ -2,26 +2,25 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: PHARM
 // Engineer: Kyle Daruwalla
-// 
+//
 // Create Date: 03/01/2018 04:40:30 PM
 // Module Name: fibonacci_lfsr_64
-// Description: 
+// Description:
 //  Generates a pseudorandom 64-bit integer using a Fibonacci LFSR.
 //  https://www.xilinx.com/support/documentation/application_notes/xapp052.pdf 
 //////////////////////////////////////////////////////////////////////////////////
-module fibonacci_lfsr_64(CLK, nRST, r);
-
-// parameters
-parameter SEED = 64'hFEEDBABEDEADBEEF;
-
-// I/O
-input CLK, nRST;
-output reg [63:0] r;
+module fibonacci_lfsr_64 #(
+    parameter SEED = 64'hFEEDBABEDEADBEEF;
+) (
+    input logic CLK,
+    input logic nRST,
+    output logic r
+);
 
 // internal wires
-reg [63:0] shift_reg, next_shift_reg;
-reg [63:0] next_r;
-wire shift_in;
+logic [63:0] shift_reg, next_shift_reg;
+logic [63:0] next_r;
+logic shift_in;
 
 assign shift_in = shift_reg[63] ^ shift_reg[62] ^ shift_reg[60] ^ shift_reg[59];
 

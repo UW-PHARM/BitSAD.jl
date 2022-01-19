@@ -8,11 +8,12 @@
 // Description: 
 //  Computes stochastic bitstream divided by fixed integer.
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_fixed_gain_div(CLK, nRST, a, y);
+module stoch_fixed_gain_div #(
+    parameter GAIN = 2;
+) (CLK, nRST, a, y);
 
 // parameters
 parameter COUNTER_SIZE = 8;
-parameter GAIN = 2;
 parameter ALPHA = (1 << COUNTER_SIZE) - 1;
 parameter SCALED_GAIN = ALPHA * GAIN;
 

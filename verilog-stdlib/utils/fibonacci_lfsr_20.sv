@@ -5,23 +5,22 @@
 // 
 // Create Date: 12/05/2021
 // Module Name: fibonacci_lfsr_20
-// Description: 
+// Description:
 //  Generates a pseudorandom 20-bit integer using a Fibonacci LFSR.
 //  https://www.xilinx.com/support/documentation/application_notes/xapp052.pdf 
 //////////////////////////////////////////////////////////////////////////////////
-module fibonacci_lfsr_20(CLK, nRST, r);
-
-// parameters
-parameter SEED = 20'hDEADBEEF;
-
-// I/O
-input CLK, nRST;
-output reg [19:0] r;
+module fibonacci_lfsr_20 #(
+    parameter SEED = 20'hDEADBEEF;
+) (
+    input logic CLK,
+    input logic nRST,
+    output logic [19:0] r
+);
 
 // internal wires
-reg [19:0] shift_reg, next_shift_reg;
-reg [19:0] next_r;
-wire shift_in;
+logic [19:0] shift_reg, next_shift_reg;
+logic [19:0] next_r;
+logic shift_in;
 
 assign shift_in = shift_reg[19] ^ shift_reg[16];
 

@@ -8,23 +8,26 @@
 // Description: 
 //  Takes the max(a, b) where a and b are signed channel stochastic bitstreams.
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_signed_max(CLK, nRST, a_p, a_m, b_p, b_m, y_p, y_m);
+module stoch_signed_max (
+    input logic CLK,
+    input logic nRST,
+    input logic a_p,
+    input logic a_m,
+    input logic b_p,
+    input logic b_m,
+    output logic y_p,
+    output logic y_m
+);
 
-parameter COUNTER_SIZE = 8;
+localparam COUNTER_SIZE = 8;
 localparam COUNTER_ONE = {{(COUNTER_SIZE - 1){1'b0}}, 1'b1};
 
-input CLK, nRST;
-input a_p, a_m, b_p, b_m;
-output y_p, y_m;
+logic a_sub_b_p, a_sub_b_m;
+logic inc, dec;
+logic [(COUNTER_SIZE - 1):0] counter;
+logic [(COUNTER_SIZE - 1):0] next_counter;
 
-wire a_sub_b_p, a_sub_b_m;
-wire inc, dec;
-reg [(COUNTER_SIZE - 1):0] counter;
-wire [(COUNTER_SIZE - 1):0] next_counter;
-
-stoch_signed_sub #(
-        .COUNTER_SIZE(COUNTER_SIZE)
-    ) sub (
+stoch_signed_sub sub (
         .CLK(CLK),
         .nRST(nRST),
         .a_p(a_p),

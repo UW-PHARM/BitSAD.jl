@@ -2,28 +2,29 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company: PHARM
 // Engineer: Kyle Daruwalla
-// 
+//
 // Create Date: 03/06/2018 08:48:40 AM
 // Module Name: stoch_dot_prod
-// Description: 
-//  Computes the dot product of two vectors of stochastic bitstreams 
+// Description:
+//  Computes the dot product of two vectors of stochastic bitstreams
 //////////////////////////////////////////////////////////////////////////////////
-module stoch_dot_prod(CLK, nRST, u, v, y);
+module stoch_dot_prod #
+    parameter VEC_LEN = 2;
+) (
+    input logic CLK,
+    input logic nRST,
+    input logic [(VEC_LEN-1):0] u,
+    input logic [(VEC_LEN-1):0] v,
+    output logic y
+);
 
-// parameters
-parameter VEC_LEN = 2;
-parameter COUNTER_SIZE = 8;
-
-// I/O
-input CLK, nRST;
-input [VEC_LEN-1:0] u, v;
-output y;
+localparam COUNTER_SIZE = $clog2(2*VEC_LEN + 1);
 
 // internal wires
-wire [VEC_LEN-1:0] c;
-reg signed [COUNTER_SIZE-1:0] sum [0:VEC_LEN-2];
-wire signed [COUNTER_SIZE-1:0] new_counter;
-reg signed [COUNTER_SIZE-1:0] counter, next_counter;
+logic [(VEC_LEN-1):0] c;
+logic signed [(COUNTER_SIZE-1):0] sum [VEC_LEN-2];
+logic signed [(COUNTER_SIZE-1):0] new_counter;
+logic signed [(COUNTER_SIZE-1):0] counter, next_counter;
 
 assign c = u & v;
 
