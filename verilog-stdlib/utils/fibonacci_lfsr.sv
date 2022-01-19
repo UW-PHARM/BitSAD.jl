@@ -16,7 +16,7 @@ module fibonacci_lfsr #(
     input logic CLK,
     input logic nRST,
     output logic [(BITWIDTH-1):0] r
-)
+);
 
 generate
     if (BITWIDTH == 20) begin
