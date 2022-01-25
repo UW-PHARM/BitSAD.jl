@@ -37,7 +37,7 @@ generate
         for (j = 0; j < NUM_COLS; j = j + 1) begin : col_gen
             stoch_dot_prod #(
                 .VEC_LEN(NUM_MID)
-            ) dot_prod(
+            ) dot_prod (
                 .CLK(CLK),
                 .nRST(nRST),
                 .u(A[i]),
