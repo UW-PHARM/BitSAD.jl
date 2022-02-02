@@ -44,16 +44,22 @@ function write_for_loop(buffer, index_name, sz_name, stride, write_body, padding
     end
 end
 
+function write_nested_for_loop(buffer, prefix, i, sizes, strides, write_body)
+    if i == length(sizes)
+        write_for_loop(buffer, "$(prefix)_i_$i", sizes[i], strides[i], write_body, i)
+    else
+        _write_body(buffer, index_name, padding) =
+            write_nested_for_loop(buffer, prefix, i + 1, sizes, strides, write_body)
+        write_for_loop(buffer, "$(prefix)_i_$i", sizes[i], strides[i], _write_body, i)
+    end
+end
+
 function write_bcast_instantiation(buffer, prefix, outsize, body)
     write(buffer, """
         genvar $(join(ntuple(i -> "$(prefix)_i_$i", length(outsize)), ", "));
 
         generate
         """)
-
-    padding = 0
-    for sz in outsize
-        
     for (i, sz) in enumerate(outsize)
         write(buffer, repeat(" ", i - 1) * "for ($(prefix)_i_$i = 0; $(prefix)_i_$i < $sz; $(prefix)_i_$i = $(prefix)_i_$i + 1) begin : $(prefix)_gen_$i\n")
     end
