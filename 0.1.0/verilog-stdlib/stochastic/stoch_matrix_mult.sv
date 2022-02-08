@@ -20,17 +20,28 @@ module stoch_matrix_mult #(
     output logic [(NUM_ROWS-1):0][(NUM_COLS-1):0] Y
 );
 
+logic [(NUM_COLS-1):0][(NUM_MID-1):0] B_transpose;
+
+integer row, col;
+always @(B) begin
+    for (row = 0; row < NUM_MID; row = row + 1) begin
+        for (col = 0; col < NUM_COLS; col = col + 1) begin
+            B_transpose[col][row] <= B[row][col];
+        end
+    end
+end
+
 genvar i, j;
 generate
-    for (i = 0; i < NUM_ROWS; i = i + 1) begin : row
-        for (j = 0; j < NUM_COLS; j = j + 1) begin : col
+    for (i = 0; i < NUM_ROWS; i = i + 1) begin : row_gen
+        for (j = 0; j < NUM_COLS; j = j + 1) begin : col_gen
             stoch_dot_prod #(
                 .VEC_LEN(NUM_MID)
-            ) dot_prod(
+            ) dot_prod (
                 .CLK(CLK),
                 .nRST(nRST),
                 .u(A[i]),
-                .v(B[(NUM_MID-1):0][j]),
+                .v(B_transpose[j]),
                 .y(Y[i][j])
             );
         end

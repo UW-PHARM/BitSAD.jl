@@ -29,9 +29,7 @@ assign max_outs_m[0] = as_m[0];
 genvar i;
 generate
 for (i = 1; i < NUM_INPUTS; i = i + 1) begin : max_tree
-    stoch_signed_max #(
-            .COUNTER_SIZE(COUNTER_SIZE)
-        ) maxi (
+    stoch_signed_max maxi (
             .CLK(CLK),
             .nRST(nRST),
             .a_p(max_outs_p[i - 1]),

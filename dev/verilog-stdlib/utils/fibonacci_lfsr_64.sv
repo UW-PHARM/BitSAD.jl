@@ -14,7 +14,7 @@ module fibonacci_lfsr_64 #(
 ) (
     input logic CLK,
     input logic nRST,
-    output logic r
+    output logic [63:0] r
 );
 
 // internal wires

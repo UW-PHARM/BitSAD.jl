@@ -22,7 +22,7 @@ module stoch_avg #(
 localparam COUNTER_SIZE = $clog2(2*NUM_POPS + 1);
 
 // internal wires
-logic [(COUNTER_SIZE-2):0] sum [NUM_POPS-1];
+logic [(COUNTER_SIZE-2):0] sum [0:(NUM_POPS-1)];
 logic [(COUNTER_SIZE-1):0] new_counter;
 logic [(COUNTER_SIZE-1):0] counter, next_counter;
 
