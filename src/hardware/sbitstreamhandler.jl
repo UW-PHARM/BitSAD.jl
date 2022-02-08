@@ -42,20 +42,34 @@ function (handler::SBitstreamHandler)(buffer, netlist, state, inputs, outputs)
     write(buffer, "localparam $(input_string)_isneg = $(length(isneg))'b")
     write(buffer, join(isneg, ""))
     write(buffer, ";\n")
-    write_bcast_instantiation(buffer, "bitstream_rng$(state.id)", netsize(outputs[1]), """
-        bitstream_rng #(
+    write(buffer, """
+        bitstream_rng_array #(
                 .BITWIDTH($input_size),
-                .VALUE($input_string[bitstream_rng$(state.id)_i*$input_size +: $input_size]),
-                .IS_NEGATIVE($(input_string)_isneg[bitstream_rng$(state.id)_i])
+                .VALUE($input_string),
+                .IS_NEGATIVE($(input_string)_isneg),
+                .NUM_ELEMENTS($num_elements)
             ) bitstream_rng$(state.id) (
                 .CLK(CLK),
                 .nRST(nRST),
-                .out_p($(name(outputs[1]))_p[bitstream_rng$(state.id)_i]),
-                .out_m($(name(outputs[1]))_m[bitstream_rng$(state.id)_i])
-            );""")
-    write(buffer, """
+                .out_p($(name(outputs[1]))_p),
+                .out_m($(name(outputs[1]))_m)
+            );
         // END bitstream_rng$(state.id)
         \n""")
+    # write_bcast_instantiation(buffer, "bitstream_rng$(state.id)", netsize(outputs[1]), """
+    #     bitstream_rng #(
+    #             .BITWIDTH($input_size),
+    #             .VALUE($input_string[bitstream_rng$(state.id)_i*$input_size +: $input_size]),
+    #             .IS_NEGATIVE($(input_string)_isneg[bitstream_rng$(state.id)_i])
+    #         ) bitstream_rng$(state.id) (
+    #             .CLK(CLK),
+    #             .nRST(nRST),
+    #             .out_p($(name(outputs[1]))_p[bitstream_rng$(state.id)_i]),
+    #             .out_m($(name(outputs[1]))_m[bitstream_rng$(state.id)_i])
+    #         );""")
+    # write(buffer, """
+    #     // END bitstream_rng$(state.id)
+    #     \n""")
 
     return buffer, (id = state.id + 1,)
 end
