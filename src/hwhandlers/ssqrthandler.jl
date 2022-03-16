@@ -5,9 +5,6 @@ gethandler(broadcasted, ::Type{typeof(sqrt)}, ::Type{<:SBitstreamLike}) =
 init_state(::SSqrtHandler) = (id = 0,)
 
 function (handler::SSqrtHandler)(buffer, netlist, state, inputs, outputs)
-    # add output net to netlist
-    setsigned!(netlist, outputs[1], true)
-
     write(buffer, """
         $stdcomment
         // BEGIN sqrt$(state.id)

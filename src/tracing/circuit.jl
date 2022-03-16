@@ -121,29 +121,28 @@ function printdfg(m::Module)
 end
 
 function _printnet(net::Net)
-    reg = isreg(net) ? "reg" : ""
-    bitlength = bitwidth(net) * prod(netsize(net)) - 1
-    bitstr = (bitlength == 0) ? "" : "[$bitlength:0]"
-    names = issigned(net) ? "$(name(net))_p, $(name(net))_m" : name(net)
+    widthstr = (bitwidth(net) == 1) ? "" : "[$(bitwidth(net) - 1):0]"
+    sizestr = join(map(s -> (s == 1) ? "" : "[($s - 1):0]", netsize(net)), "")
+    names = join(map(s -> "$(name(net))_$s", suffixes(net)), ", ")
 
-    return join([reg, bitstr, names], " ")
+    return join([widthstr, sizestr, names], " ")
 end
 
 _encodeparameter(buffer, name, value) =
-    write(buffer, "parameter $name = $value;")
+    write(buffer, "parameter $name = $value")
 function _encodeparameter(buffer, name, value::AbstractArray)
     for (i, sz) in enumerate(size(value))
-        write(buffer, "parameter $(name)_sz_$i = $sz;\n")
+        write(buffer, "parameter $(name)_sz_$i = $sz,\n")
     end
     write(buffer, "parameter $name = {")
     write(buffer, join(value, ", "))
-    write(buffer, "};")
+    write(buffer, "}")
 end
 function _encodeparameter(buffer, name, value::Tuple)
-    write(buffer, "parameter $(name)_sz_1 = $(length(value));\n")
+    write(buffer, "parameter $(name)_sz_1 = $(length(value)),\n")
     write(buffer, "parameter $name = {")
     write(buffer, join(value, ", "))
-    write(buffer, "};")
+    write(buffer, "}")
 end
 
 function _generatetopmatter(buffer, m::Module, netlist::Netlist)
@@ -155,7 +154,18 @@ function _generatetopmatter(buffer, m::Module, netlist::Netlist)
     wires = filter(iswire, internals)
     regs = filter(isreg, internals)
 
-    write(buffer, "module $(m.name)(CLK, nRST, ")
+    write(buffer, "module $(m.name) #(\n")
+
+    for (i, (name, value)) in enumerate(m.parameters)
+        write(buffer, "    ")
+        _encodeparameter(buffer, name, value)
+        (i != length(m.parameters)) && write(buffer, ",")
+        write(buffer, "\n")
+    end
+
+    write(buffer, ") (\n")
+    write(buffer, "    input logic CLK,\n")
+    write(buffer, "    input logic nRST,\n")
 
     write(buffer, join(map(inputs) do input
         issigned(input) ? "$(name(input))_p, $(name(input))_m" : name(input)
@@ -165,12 +175,6 @@ function _generatetopmatter(buffer, m::Module, netlist::Netlist)
         issigned(output) ? "$(name(output))_p, $(name(output))_m" : name(output)
     end, ", "))
     write(buffer, ");\n\n")
-
-    for (name, value) in m.parameters
-        _encodeparameter(buffer, name, value)
-        write(buffer, "\n")
-    end
-    write(buffer, "\n")
 
     write(buffer, "input CLK, nRST;\n")
 
@@ -239,6 +243,7 @@ function generateverilog(io::IO, m::Module)
             handler, state = get!(m.handlers, typeof(handler), (handler, init_state(handler)))
 
             set_prop!(m.dfg, node, :inputs, _sync_nodes!(inputs, netlist))
+            write(buffer, stdcomment * "\n")
             _, state = handler(buffer, netlist, state, inputs, outputs)
             m.handlers[typeof(handler)] = (handler, state)
             set_prop!(m.dfg, node, :outputs, _sync_nodes!(outputs, netlist))

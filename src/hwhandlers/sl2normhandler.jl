@@ -6,12 +6,6 @@ gethandler(broadcasted, ::Type{typeof(LinearAlgebra.norm)}, ::Type{<:AbstractVec
 init_state(::SL2NormHandler) = (id = 0,)
 
 function (handler::SL2NormHandler)(buffer, netlist, state, inputs, outputs)
-    # update netlist with inputs
-    setsigned!(netlist, inputs[1], true)
-
-    # add output net to netlist
-    setsigned!(netlist, outputs[1], true)
-
     write(buffer, """
         $stdcomment
         // BEGIN l2norm$(state.id)

@@ -8,9 +8,6 @@ gethandler(::Bool, ::Type{typeof(SBitstream)}, ::Type{<:Union{Real, AbstractArra
 init_state(::SBitstreamHandler) = (id = 0,)
 
 function (handler::SBitstreamHandler)(buffer, netlist, state, inputs, outputs)
-    # set output as signed
-    setsigned!(netlist, outputs[1], true)
-
     num_elements = join(netsize(outputs[1]), "*")
 
     # value

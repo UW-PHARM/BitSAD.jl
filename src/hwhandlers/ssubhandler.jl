@@ -4,17 +4,10 @@ gethandler(broadcasted, ::Type{typeof(-)}, ::Type{<:SBitstreamLike}, ::Type{<:SB
 init_state(::SSubHandler) = (id = 0,)
 
 function (handler::SSubHandler)(buffer, netlist, state, inputs, outputs)
-    # update netlist with inputs
-    setsigned!(netlist, inputs[1], true)
-    setsigned!(netlist, inputs[2], true)
-
     # compute output size
     lname, rname = handle_broadcast_name(name(inputs[1]), name(inputs[2]),
                                          netsize(inputs[1]), netsize(inputs[2]))
     outsize = netsize(outputs[1])
-
-    # add output net to netlist
-    setsigned!(netlist, outputs[1], true)
 
     # add internal nets to netlist
     push!(netlist, Net(name = "sub$(state.id)_out_pp", size = outsize))

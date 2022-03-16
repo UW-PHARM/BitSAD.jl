@@ -13,17 +13,10 @@ gethandler(broadcasted::Bool,
 init_state(::SMatMultHandler) = (id = 0,)
 
 function (handler::SMultHandler)(buffer, netlist, state, inputs, outputs)
-    # update netlist with inputs
-    setsigned!(netlist, inputs[1], true)
-    setsigned!(netlist, inputs[2], true)
-
-    # compute output size
+    # compute broadcast naming
     lname, rname = handle_broadcast_name(name(inputs[1]), name(inputs[2]),
                                          netsize(inputs[1]), netsize(inputs[2]))
     outsize = netsize(outputs[1])
-
-    # add output net to netlist
-    setsigned!(netlist, outputs[1], true)
 
     write(buffer, """
         $stdcomment
@@ -48,17 +41,10 @@ function (handler::SMultHandler)(buffer, netlist, state, inputs, outputs)
 end
 
 function (handler::SMatMultHandler)(buffer, netlist, state, inputs, outputs)
-    # update netlist with inputs
-    setsigned!(netlist, inputs[1], true)
-    setsigned!(netlist, inputs[2], true)
-
     # compute output size
     m, n = netsize(inputs[1])
     _, p = netsize(inputs[2])
     outsize = netsize(outputs[1])
-
-    # add output net to netlist
-    setsigned!(netlist, outputs[1], true)
 
     write(buffer, """
         $stdcomment

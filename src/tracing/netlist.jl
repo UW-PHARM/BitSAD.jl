@@ -1,36 +1,40 @@
-_checktype(type) = (type != :reg && type != :wire) &&
-    error("Cannot create net with type $type (use :reg or :wire)")
-_checkclass(class) = (class != :input &&
-                      class != :output &&
-                      class != :internal &&
-                      class != :constant &&
-                      class != :parameter) &&
-    error("Cannot create net with class $class (use :input, :output, :internal, :constant, or :parameter)")
+const VALID_NET_TYPES = [:logic]
+const VALID_NET_CLASSES = [:input, :output, :internal, :constant, :parameter]
 
-struct Net
-    name
-    value
+_checktype(type) = (type ∈ VALID_NET_TYPES) ||
+    throw(ArgumentError("Cannot create net with type $type (use one of $VALID_NET_TYPES)"))
+_checkclass(class) = (class ∈ VALID_NET_CLASSES) ||
+    throw(ArgumentError("Cannot create net with class $class (use one of $VALID_NET_CLASSES)"))
+
+struct Net{T, S}
+    name::String
+    suffixes::Vector{String}
+    value::T
     type::Symbol
     class::Symbol
     signed::Bool
     bitwidth::Int
-    size
+    size::S
 
-    function Net(name, value, type, class, signed, bitwidth, size)
+    function Net(name, suffixes, value::T, type, class, signed, bitwidth, size::S) where {T, S}
         _checktype(type)
         _checkclass(class)
 
-        new(name, value, type, class, signed, bitwidth, size)
+        new{T, S}(name, value, type, class, signed, bitwidth, size)
     end
 end
 Net(; name = "",
+      suffixes = [""],
       value = missing,
       type = :wire,
       class = :internal,
       signed = false,
       bitwidth = 1,
-      size = (1, 1)) = Net(name, value, type, class, signed, bitwidth, size)
+      size = (1, 1)) = Net(name, suffixes, value, type, class, signed, bitwidth, size)
 Net(x; kwargs...) = Net(; value = x, size = netsize(x), kwargs...)
+Net(x::SBitstream; suffixes = ["_p", "_m"], kwargs...) = Net(x; suffixes = suffixes, kwargs...)
+Net(x::AbstractArray{<:SBitstream}; suffixes = ["_p", "_m"], kwargs...) =
+    Net(x; suffixes = suffixes, kwargs...)
 
 function Base.show(io::IO, n::Net)
     limitedshow(x) = sprint(show, x; context = IOContext(stdout, :compact => true, :limit => true))
@@ -49,9 +53,11 @@ Base.hash(x::Net, h::UInt) = hash(x.name, h)
 
 name(x::Net) = x.name
 
+suffixes(x::Net) = x.suffixes
+
 value(x::Net) = x.value
 
-jltypeof(x::Net) = typeof(value(x))
+jltypeof(::Net{T}) where T = T
 
 bitwidth(x::Net) = x.bitwidth
 
@@ -64,9 +70,6 @@ function netsize(x::Net)
     actual_size = netsize(value(x))
     return ntuple(i -> "$(name(x))_sz_$i", length(actual_size))
 end
-
-isreg(x::Net) = (x.type == :reg)
-iswire(x::Net) = !isreg(x)
 
 isinput(x::Net) = (x.class == :input)
 isoutput(x::Net) = (x.class == :output)
@@ -109,6 +112,21 @@ function setname!(n::Netlist, x::Net, name)
     return n
 end
 
+function setsuffixes(x::Net, suffixes)
+    @set! x.suffixes = suffixes
+
+    return x
+end
+function setsuffixes!(n::Netlist, x::Net, suffixes)
+    is = find(n, x)
+    isempty(is) && error("Cannot set net $x suffixes to $suffixes because it does not exist in netlist.")
+    for i in is
+        n[i] = setsuffixes(n[i], suffixes)
+    end
+
+    return n
+end
+
 function setvalue(x::Net, value)
     @set! x.value = value
 
@@ -135,36 +153,6 @@ function setclass!(n::Netlist, x::Net, class)
     isempty(is) && error("Cannot set net $x as $class because it does not exist in netlist.")
     for i in is
         n[i] = setclass(n[i], class)
-    end
-
-    return n
-end
-
-function setreg(x::Net)
-    @set! x.type = :reg
-
-    return x
-end
-function setreg!(n::Netlist, x::Net)
-    is = find(n, x)
-    isempty(is) && error("Cannot set net $x as register because it does not exist in netlist.")
-    for i in is
-        n[i] = setreg(n[i])
-    end
-
-    return n
-end
-
-function setwire(x::Net)
-    @set! x.type = :wire
-
-    return x
-end
-function setwire!(n::Netlist, x::Net)
-    is = find(n, x)
-    isempty(is) && error("Cannot set net $x as wire because it does not exist in netlist.")
-    for i in is
-        n[i] = setwire(n[i])
     end
 
     return n

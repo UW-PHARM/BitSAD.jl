@@ -4,19 +4,16 @@ gethandler(::Bool, ::Type{typeof(+)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstr
 init_state(::SAddHandler) = (id = 0,)
 
 function (handler::SAddHandler)(buffer, netlist, state, inputs, outputs)
-    # update netlist with inputs
-    setsigned!(netlist, inputs[1], true)
-    setsigned!(netlist, inputs[2], true)
-
-    # compute output naming
+    # compute broadcast naming
     lname, rname = handle_broadcast_name(name.(inputs), netsize.(inputs), netsize(outputs[1]))
 
     # add broadcast signals
-    push!(netlist, Net(name = "add$(state.id)_$(name(inputs[1]))_bcast", size = netsize(outputs[1]), signed = true))
-    push!(netlist, Net(name = "add$(state.id)_$(name(inputs[2]))_bcast", size = netsize(outputs[1]), signed = true))
-
-    # update netlist with output
-    setsigned!(netlist, outputs[1], true)
+    push!(netlist, Net(name = "add$(state.id)_$(name(inputs[1]))_bcast",
+                       size = netsize(outputs[1]),
+                       suffixes = ["_p", "_m"]))
+    push!(netlist, Net(name = "add$(state.id)_$(name(inputs[2]))_bcast",
+                       size = netsize(outputs[1]),
+                       signed = ["_p", "_m"]))
 
     outsize = netsize(outputs[1])
     write(buffer, """

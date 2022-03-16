@@ -34,7 +34,7 @@ function insertrng!(m::Module)
             if isparameter(input) &&
                (jltypeof(input) <: Union{SBitstream, AbstractArray{<:SBitstream}})
                 newnet = Net(value(input);
-                             name = "$(name(input))_rng", class = :internal, signed = true)
+                             name = "$(name(input))_rng", class = :internal)
                 inputs[i] = newnet
                 set_prop!(m.dfg, v, :inputs, inputs)
             end
@@ -45,7 +45,7 @@ function insertrng!(m::Module)
     for (name, value) in m.parameters
         if typeof(value) <: SBitstream
             rngin = Net(float(value); name = name, class = :parameter)
-            rngout = Net(value; name = "$(name)_rng", class = :internal, signed = true)
+            rngout = Net(value; name = "$(name)_rng", class = :internal)
             op = (name = Symbol(""), type = typeof(SBitstream), broadcasted = false)
             m.parameters[name] = float(value)
             addnode!(m, [rngin], [rngout], op)

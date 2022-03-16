@@ -75,6 +75,9 @@ function _squash_binary_vararg(ctx, call::Ghost.Call)
     return new_calls, length(new_calls)
 end
 
+# eagerly materialize broadcasting
+# while still maintaining the original call on the stack
+# removing the call from the stack will cause issues with contexts
 _unbroadcast(ctx, entry) = [entry], 1
 _unbroadcast(ctx, call::Ghost.Call{typeof(Base.broadcasted)}) =
     ([call, Ghost.mkcall(Base.materialize, Ghost.Variable(call))], 2)

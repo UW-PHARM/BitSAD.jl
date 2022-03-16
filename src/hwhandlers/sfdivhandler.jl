@@ -4,14 +4,8 @@ gethandler(::Bool, ::Type{typeof(÷)}, ::Type{<:SBitstreamLike}, ::Type{<:Real})
 init_state(::SFixedGainDivHandler) = (id = 0,)
 
 function (handler::SFixedGainDivHandler)(buffer, netlist, state, inputs, outputs)
-    # update netlist with inputs
-    setsigned!(netlist, inputs[1], true)
-
     # compute output size
     outsize = netsize(outputs[1])
-
-    # add output net to netlist
-    setsigned!(netlist, outputs[1], true)
 
     write(buffer, """
         $stdcomment

@@ -10,8 +10,8 @@ function (handler::TransposeHandler)(buffer, netlist, state, inputs, outputs)
     outsize = netsize(outputs[1])
 
     # add output net to netlist
-    setsigned!(netlist, outputs[1], true)
-    setreg!(netlist, outputs[1])
+    # setsigned!(netlist, outputs[1], true)
+    # setreg!(netlist, outputs[1])
 
     write(buffer, """
         $stdcomment

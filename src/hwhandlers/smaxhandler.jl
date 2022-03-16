@@ -11,20 +11,14 @@ init_state(::SMaxHandler) = (id = 0,)
 function (handler::SMaxHandler{N})(buffer, netlist, state, inputs, outputs) where N
     @assert length(inputs) == N "Cannot apply SMaxHandler{$N} to length(inputs) == $(length(inputs))"
 
-    # update netlist with inputs
-    foreach(inputs) do input
-        setsigned!(netlist, input, true)
-    end
-
     # compute broadcast naming
     names = handle_broadcast_name(name.(inputs), netsize.(inputs), netsize(outputs[1]))
 
-    # update netlist with output
-    setsigned!(netlist, outputs[1], true)
-
     if handler.broadcasted
         num_elements = join(netsize(outputs[1]), "*")
-        push!(netlist, Net(name = "max_$(N)_$(state.id)_inputs", size = (N, netsize(outputs[1])...), signed = true))
+        push!(netlist, Net(name = "max_$(N)_$(state.id)_inputs",
+                           size = (N, netsize(outputs[1])...),
+                           suffixes = ["_p", "_m"]))
         write(buffer, """
             $stdcomment
             // BEGIN max_$(N)_$(state.id)
@@ -47,7 +41,9 @@ function (handler::SMaxHandler{N})(buffer, netlist, state, inputs, outputs) wher
             // END max_$(N)_$(state.id)
             \n""")
     else
-        push!(netlist, Net(name = "max_$(N)_$(state.id)_inputs", size = (N, 1), signed = true))
+        push!(netlist, Net(name = "max_$(N)_$(state.id)_inputs",
+                           size = (N, 1),
+                           suffixes = ["_p", "_m"]))
         write(buffer, """
             $stdcomment
             // BEGIN max_$(N)_$(state.id)

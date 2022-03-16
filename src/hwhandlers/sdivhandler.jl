@@ -4,17 +4,10 @@ gethandler(::Bool, ::Type{typeof(/)}, ::Type{<:SBitstreamLike}, ::Type{<:SBitstr
 init_state(::SDivHandler) = (id = 0,)
 
 function (handler::SDivHandler)(buffer, netlist, state, inputs, outputs)
-    # update netlist with inputs
-    setsigned!(netlist, inputs[1], true)
-    setsigned!(netlist, inputs[2], true)
-
-    # compute output size
+    # compute broadcast naming
     lname, rname = handle_broadcast_name(name(inputs[1]), name(inputs[2]),
                                          netsize(inputs[1]), netsize(inputs[2]))
     outsize = netsize(outputs[1])
-
-    # update netlist with output
-    setsigned!(netlist, outputs[1], true)
 
     # add internal nets to netlist
     push!(netlist, Net(name = "div$(state.id)_out_pp", size = outsize))

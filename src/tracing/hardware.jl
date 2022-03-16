@@ -7,7 +7,7 @@ is_hardware_primitive(sig...) = is_trace_primitive(sig...)
 function generatehw(io::IO, f, args...;
                     top = _nameof(f),
                     submodules = [],
-                    transforms = [constantreduction!])
+                    transforms = [insertrng!, constantreduction!])
     # get tape and transform
     # if f itself is a primitive, do a manual tape
     if is_hardware_primitive(Ghost.get_type_parameters(Ghost.call_signature(f, args...))...)
@@ -35,9 +35,6 @@ function generatehw(io::IO, f, args...;
     m = Module(fn = f, name = top)
     extracttrace!(m, tape)
     tape = nothing # don't hold onto tape
-
-    # replace constant SBitstreams with calls to SBitstream constructor on floats
-    insertrng!(m)
 
     # apply transformations
     foreach(t! -> t!(m), transforms)
@@ -71,21 +68,37 @@ function _handle_parameter(::T, submodules) where T
 end
 
 function _handle_getproperty!(m::Module, call, param_map, const_map)
+    # if we are getting a property from the top level function
+    # then treat this as a parameter
     if m.fn == _gettapeval(call.args[1])
+        # get the value of the parameter, handling tuples accordingly
         val = _handle_parameter(_gettapeval(call), m.submodules)
+        # get the name of the parameter as the symbol of the property
         prop = string(_gettapeval(call.args[2]))
-        encodable = (val isa Union{AbstractArray, Tuple}) ? !all(isnothing, val) : !isnothing(val)
+        # _handle_parameter returns nothing for parameters
+        # that cannot be encoded in SystemVerilog
+        encodable = (val isa Tuple) ? !all(isnothing, val) : !isnothing(val)
         if encodable
+            # if the parameter is encodable,
+            # store it in the Module for later
+            # also store is in the param_map so we can replace
+            # references in the call stack with the symbol
             m.parameters[prop] = val
             param_map[_getid(call)] = prop
         end
     else
+        # anything that isn't accessing a top level struct
+        # is treated like a constant in the circuit
+        # these constants may or may not be valid SystemVerilog
         const_map[_getid(call)] = string(_gettapeval(call))
     end
 
     return m
 end
 
+# recurse calls to Base.materialize until we get the function
+# being broadcasted
+# our tracing will eagerly materialize
 function _get_materialize_origin(x)
     origin = _gettapeop(x)
 
@@ -102,22 +115,30 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
     # skip first call which is the function being compiled
     for call in tape
         if call isa Ghost.Call
-            # remap constants on tape
+            # get the function representing this entry in the tape
+            # if it is a Constant, use the underlying value
+            # otherwise it is just the Julia function/callable stored in the entry
             fn = (_gettapeval(call.fn) isa Ghost.Constant) ? _gettapeval(call.fn).val : call.fn
 
             # ignore materialize calls
             if fn == Base.materialize
                 origin = _get_materialize_origin(call.args[1])
+                # store the "origin" of the broadcasting so that we can
+                # reference back to it
                 materialize_map[_getid(call)] = (origin, _gettapeval(call))
                 continue
             end
 
             # handle calls to getproperty
+            # in particular, calling get property on the top level
+            # will be treated as a parameter
             if fn == Base.getproperty
                 _handle_getproperty!(m, call, param_map, const_map)
                 continue
             end
 
+            # if the current call isn't something we would generate hardware for
+            # then skip it (this can result in unconnected nets in the final circuit)
             is_hardware_primitive(Ghost.get_type_parameters(Ghost.call_signature(tape, call))...) ||
                 continue
 
@@ -132,32 +153,30 @@ function extracttrace!(m::Module, tape::Ghost.Tape)
             # map inputs and outputs of Ghost.Call to Nets
             # set args that are Ghost.Input to :input class
             inputs = map(call.args[(1 + isbroadcast):end]) do arg
+                # get the id of the argument on the call stack and its value
+                # check the materialize_map first to see if this argument references
+                # the output of a broadcasted operation (effectively bypassing the materialize)
                 arg, val = get(materialize_map, _getid(arg), (arg, _gettapeval(arg)))
-                name = haskey(param_map, _getid(arg)) ? param_map[_getid(arg)] :
-                       haskey(const_map, _getid(arg)) ? const_map[_getid(arg)] :
-                       _isvariable(arg) ? "net_$(_getid(arg))" : string(val)
-                net = Net(val; name = name)
-
-                if _isvariable(arg)
-                    if _isinput(arg)
-                        net = setclass(net, :input)
-                    elseif haskey(param_map, _getid(arg))
-                        net = setclass(net, :parameter)
-                    elseif haskey(const_map, _getid(arg))
-                        net = setclass(net, :constant)
-                    end
-                else # treat all non-variables as constants
-                    net = setclass(net, :constant)
-                end
+                # if the argument is a
+                # - parameter: replace its name with the parameter name and class as :parameter
+                # - constant: replace its name with the constant string and class as :constant
+                # - a variable in the Ghost sense: generate the name "net_$id" and class :internal
+                # - something else: just dump the value string and class as :constant
+                name, class = haskey(param_map, _getid(arg)) ? (param_map[_getid(arg)], :parameter) :
+                       haskey(const_map, _getid(arg)) ? (const_map[_getid(arg)], :constant) :
+                       _isvariable(arg) ? ("net_$(_getid(arg))", :internal) :
+                       (string(val), :constant)
+                net = Net(val; name = name, class = class)
 
                 return net
             end
+            # get the output which is potentially broadcasted (eagerly materialize)
             outval = isbroadcast ? Base.materialize(_gettapeval(call)) : _gettapeval(call)
-            output = Net(outval; name = "net_$(_getid(call))")
-
-            if tape.result == Ghost.Variable(call)
-                output = setclass(output, :output)
-            end
+            # the output name is definitely an internal net
+            # if the output is the output of the tape call stack
+            # make its class :output
+            outclass = (tape.result == Ghost.Variable(call)) ? :output : :internal
+            output = Net(outval; name = "net_$(_getid(call))", class = outclass)
 
             addnode!(m, inputs, [output], op)
         end
