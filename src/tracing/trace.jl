@@ -1,6 +1,15 @@
 _typeof(f) = typeof(f)
 _typeof(T::Type) = T
 
+"""
+    is_trace_primitive(ftype::Type, argtypes::Type...)
+
+Return true if calling a callable of type `ftype` on arguments
+of types `argtypes` is a BitSAD primitive operator.
+
+Custom operators should overload this function.
+Defaults to false.
+"""
 is_trace_primitive(x...) = false
 
 ## Default primitives
@@ -9,6 +18,17 @@ is_trace_primitive(::Type{typeof(LinearAlgebra.norm)},
                    ::Type{<:AbstractVector},
                    ::Type{<:Any}) = true
 
+"""
+    trace(f, args; is_primitive = is_trace_primitive,
+                   submodules = [],
+                   ctx = Dict{Any, Any}())
+
+Trace the function call `f(args...)` and return the `Ghost.Tape`.
+Callables in `submodules` are considered primitive operators.
+
+This function is not meant to be called by users.
+Users should use [`simulatable`](#) or [`generatehw`](#) instead.
+"""
 function trace(f, args...; isprimitive = is_trace_primitive, submodules = [], ctx = Dict{Any, Any}())
     primitive_sigs =
         Ghost.FunctionResolver{Bool}([Tuple{_typeof(f), Vararg} => true for f in submodules])
@@ -21,6 +41,26 @@ function trace(f, args...; isprimitive = is_trace_primitive, submodules = [], ct
     return tape
 end
 
+"""
+    transform!(f, [fctx,] tape::Ghost.Tape)
+
+Transform `tape` by applying `f` to each entry in the tape.
+
+`f(tape.ctx, entry)` cannot manipulate `tape` directly.
+Instead, `f` should return a tuple of the form `([calls...], idx)`
+where `[calls...]` is a vector of tape entries that should replace `entry`.
+`idx` specifies that references to `entry` in `tape` should be rebound to
+`calls[idx]`.
+If `calls` is empty, then `entry` is deleted from the tape,
+and references to it are rebound to `idx`.
+Note that if `entry isa Ghost.Input`, then it cannot be deleted from `tape`.
+
+`fctx(tape.ctx, calls)` can be used to update `tape.ctx`.
+`calls` is the same list of entries returned by `f` except
+that the ID for each entry in `calls` is the ID *after* being rebound in `tape`.
+If `calls` was empty, then `fctx` is not called.
+If not specified, `fctx` is a no-op.
+"""
 function transform!(f, fctx, tape::Ghost.Tape)
     local entry, rebind_to
     itr = iterate(tape)
@@ -56,11 +96,25 @@ function transform!(f, fctx, tape::Ghost.Tape)
 end
 transform!(f, tape::Ghost.Tape) = transform!(f, (x...) -> nothing, tape)
 
+"""
+    squashable(ftype::Type)
+
+Return true if a callable of type `ftype` is a
+"squashable" 2-arg function.
+Defaults to false.
+
+Functions like `+` are n-arg functions in Julia,
+but most hardware designers think of them as 2-arg.
+When `squashable` returns true, BitSAD's tracing engine will
+"squash" a single n-arg call into nested 2-arg calls.
+"""
 squashable(x) = false
 for op in (:+, :-, :*, :/, :÷)
     @eval squashable(::typeof($op)) = true
 end
 
+# transform a call like `f(args...)` into
+# nested 2-arg calls to `f` when `squashable(f)` is true
 _squash_binary_vararg(ctx, entry) = [entry], 1
 function _squash_binary_vararg(ctx, call::Ghost.Call)
     squashable(call.fn) || return [call], 1
@@ -81,6 +135,19 @@ end
 _unbroadcast(ctx, entry) = [entry], 1
 _unbroadcast(ctx, call::Ghost.Call{typeof(Base.broadcasted)}) =
     ([call, Ghost.mkcall(Base.materialize, Ghost.Variable(call))], 2)
+
+## TUPLE TRACKING
+# the remaining code is used to re-route
+#  multiple return value handling and splatting in Julia
+# we record calls to `tuple` and `ntuple` so that references
+#  to splatting or `indexed_iterate`-ing those tuples just
+#  directly uses the values that made up the tuple
+# to use this functionality,
+# 1. make sure the tape has a `TupleCtx`
+# 2. apply the `_record_tuples_and_splats` transform
+# 3. apply the `_reroute_tuple_index` transform
+# 4. apply the `_desplat` transform
+# (see `generatehw` for an example)
 
 struct TupleCtx
     tuple_map::Dict{Ghost.Variable, Vector{Any}}
@@ -180,25 +247,13 @@ function _desplat(ctx::TupleCtx, call::Ghost.Call)
     end
 end
 
-_squash_tuple_index(::TupleCtx, entry) = [entry], 1
-function _squash_tuple_index(ctx::TupleCtx, call::Ghost.Call)
-    if call.fn == tuple
-        return [], nothing
-    elseif call.fn == Base.indexed_iterate && haskey(ctx.tuple_map, call.args[1])
-        return [], nothing
-    else
-        return [call], 1
-    end
-end
-
-# TODO: do we need macros for defining primitive operations?
-# macro operator(ex)
-#     @capture(ex, fdef_ => optype_(opargs__)) ||
-#         error("Cannot parse expression $ex in @simulatable. Expected: f(arg1, arg2, ...) => Operator(oparg1, oparg2, ...)")
-#     @capture(fdef, f_(args__)) || error("Cannot parse expression $f in @simulatable. Expected: f(arg1, arg2, ...)")
-#     argsyms = map(x -> splitarg(x)[1], args)
-#     argtypes = map(x -> splitarg(x)[2], args)
-
-#     return quote
+# _squash_tuple_index(::TupleCtx, entry) = [entry], 1
+# function _squash_tuple_index(ctx::TupleCtx, call::Ghost.Call)
+#     if call.fn == tuple
+#         return [], nothing
+#     elseif call.fn == Base.indexed_iterate && haskey(ctx.tuple_map, call.args[1])
+#         return [], nothing
+#     else
+#         return [call], 1
 #     end
 # end
