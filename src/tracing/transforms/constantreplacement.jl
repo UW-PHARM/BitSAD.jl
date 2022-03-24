@@ -31,7 +31,7 @@ getfixedpoint(x::NTuple{<:Any, <:Real}, width) = map(x) do xi
     getfixedpoint(xi, width)
 end
 
-function constantreplacement!(m::Module)
+function constantreplacement!(m::CircuitModule)
     maxintwidth = m.bitwidth.integral
     maxfracwidth = m.bitwidth.fractional
 

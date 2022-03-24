@@ -1,4 +1,4 @@
-function insertrng!(m::Module)
+function insertrng!(m::CircuitModule)
     id = 0
     # replace all SBitstream constants and re-route parameters
     for v in vertices(m.dfg)

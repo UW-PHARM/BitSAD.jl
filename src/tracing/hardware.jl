@@ -32,7 +32,7 @@ function generatehw(io::IO, f, args...;
     # transform!(_squash_tuple_index, tape)
 
     # extract tape into module
-    m = Module(fn = f, name = top)
+    m = CircuitModule(fn = f, name = top)
     extracttrace!(m, tape)
     tape = nothing # don't hold onto tape
 
@@ -67,7 +67,7 @@ function _handle_parameter(::T, submodules) where T
     return nothing
 end
 
-function _handle_getproperty!(m::Module, call, param_map, const_map)
+function _handle_getproperty!(m::CircuitModule, call, param_map, const_map)
     # if we are getting a property from the top level function
     # then treat this as a parameter
     if m.fn == _gettapeval(call.args[1])
@@ -80,7 +80,7 @@ function _handle_getproperty!(m::Module, call, param_map, const_map)
         encodable = (val isa Tuple) ? !all(isnothing, val) : !isnothing(val)
         if encodable
             # if the parameter is encodable,
-            # store it in the Module for later
+            # store it in the CircuitModule for later
             # also store is in the param_map so we can replace
             # references in the call stack with the symbol
             m.parameters[prop] = val
@@ -105,7 +105,7 @@ function _get_materialize_origin(x)
     return (origin.fn == Base.materialize) ? _get_materialize_origin(origin.args[1]) : x
 end
 
-function extracttrace!(m::Module, tape::Ghost.Tape)
+function extracttrace!(m::CircuitModule, tape::Ghost.Tape)
     # we use ids instead of Ghost.Variables as keys b/c
     # there are hashing issues with Ghost.Variable
     # see https://github.com/dfdx/Ghost.jl/issues/20

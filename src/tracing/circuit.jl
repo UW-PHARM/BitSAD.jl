@@ -4,7 +4,7 @@ _nameof(x) = nameof(typeof(x))
 _nameof(x::Function) = nameof(x)
 
 """
-    Module
+    CircuitModule
 
 A data structure to store information to generate hardware for a circuit.
 This structure can be manually modified if needed but typically [`@circuit`](@ref)
@@ -21,7 +21,7 @@ Hardware generation traverses `dfg` and uses `handlers` to generate Verilog stri
 
 See also: [HW.generate](@ref)
 """
-@kwdef mutable struct Module{T}
+@kwdef mutable struct CircuitModule{T}
     fn::T
     name::Symbol = _nameof(fn)
     bitwidth::@NamedTuple{integral::Int, fractional::Int} = (integral = 1, fractional = 0)
@@ -31,10 +31,10 @@ See also: [HW.generate](@ref)
     handlers::Dict{Any, Tuple{Any, Any}} = Dict{Any, Tuple{Any, Any}}()
 end
 
-Base.show(io::IO, m::Module) =
-    print(io, "Module $(m.name) with $(length(m.parameters)) parameters and $(length(m.submodules)) submodules.")
-Base.show(io::IO, ::MIME"text/plain", m::Module) = print(io, """
-    Module $(m.name):
+Base.show(io::IO, m::CircuitModule) =
+    print(io, "CircuitModule $(m.name) with $(length(m.parameters)) parameters and $(length(m.submodules)) submodules.")
+Base.show(io::IO, ::MIME"text/plain", m::CircuitModule) = print(io, """
+    CircuitModule $(m.name):
         Parameters:
             $(m.parameters)
         Submodules:
@@ -65,7 +65,7 @@ function traverse(g::MetaDiGraph, vs::Vector{T}, visited = T[]) where T
     return parents, union(parents, visited)
 end
 
-function addnode!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Operation)
+function addnode!(m::CircuitModule, inputs::Vector{Net}, outputs::Vector{Net}, op::Operation)
     add_vertex!(m.dfg)
     node = nv(m.dfg)
     set_prop!(m.dfg, node, :inputs, inputs)
@@ -87,7 +87,7 @@ function addnode!(m::Module, inputs::Vector{Net}, outputs::Vector{Net}, op::Oper
     return m
 end
 
-function getnetlist(m::Module)
+function getnetlist(m::CircuitModule)
     netlist = Net[]
     for v in vertices(m.dfg)
         inputs = getinputs(m.dfg, v)
@@ -99,7 +99,7 @@ function getnetlist(m::Module)
     return netlist |> unique
 end
 
-function printdfg(m::Module)
+function printdfg(m::CircuitModule)
     nodes = getroots(m.dfg)
     visited = nodes
     padding = ""
@@ -145,7 +145,7 @@ function _encodeparameter(buffer, name, value::Tuple)
     write(buffer, "}")
 end
 
-function _generatetopmatter(buffer, m::Module, netlist::Netlist)
+function _generatetopmatter(buffer, m::CircuitModule, netlist::Netlist)
     netlist = unique(netlist)
     inputs = filter(isinput, netlist)
     outputs = filter(isoutput, netlist)
@@ -208,22 +208,22 @@ function _sync_nodes!(nets, netlist)
 end
 
 """
-    HW.generate(m::Module, netlist::Netlist)
-    HW.generate(m::Module, f)
-    HW.generate(c::Tuple{Module, Function}, dut, args...)
+    HW.generate(m::CircuitModule, netlist::Netlist)
+    HW.generate(m::CircuitModule, f)
+    HW.generate(c::Tuple{CircuitModule, Function}, dut, args...)
 
 Generate the Verilog implementation of the module.
 Users will most likely call the last method form above.
 
 # Fields:
-- `m::Module`: the module to generate
+- `m::CircuitModule`: the module to generate
 - `netlist::Netlist`: the netlist for the circuit being generated
 - `f`: a closure with one argument (a netlist) that calls a runtime information extraction function
-- `c::Tuple{Module, Function}`: the tuple returned by [`@circuit`](@ref)
+- `c::Tuple{CircuitModule, Function}`: the tuple returned by [`@circuit`](@ref)
 - `dut`: an instance of the circuit struct
 - `args`: example arguments to circuit
 """
-function generateverilog(io::IO, m::Module)
+function generateverilog(io::IO, m::CircuitModule)
     outstr = ""
     netlist = getnetlist(m)
 
@@ -272,4 +272,4 @@ function generateverilog(io::IO, m::Module)
 
     return io
 end
-generateverilog(m::Module) = generateverilog(IOBuffer(), m)
+generateverilog(m::CircuitModule) = generateverilog(IOBuffer(), m)

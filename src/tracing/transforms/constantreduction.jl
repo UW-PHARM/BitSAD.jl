@@ -1,7 +1,7 @@
-_isreducible(m::Module, v) = (getoperator(m.dfg, v).type != typeof(SBitstream)) &&
+_isreducible(m::CircuitModule, v) = (getoperator(m.dfg, v).type != typeof(SBitstream)) &&
                              all(isconstant, getinputs(m.dfg, v))
 
-function _reducenode!(m::Module, v)
+function _reducenode!(m::CircuitModule, v)
     # determine constant
     val = value.(getoutputs(m.dfg, v))
 
@@ -31,7 +31,7 @@ function _reducenode!(m::Module, v)
     return m
 end
 
-function constantreduction!(m::Module)
+function constantreduction!(m::CircuitModule)
     # if there are no nodes to reduce then return
     nodes = filter(v -> _isreducible(m, v), getroots(m.dfg))
     isempty(nodes) && return m
