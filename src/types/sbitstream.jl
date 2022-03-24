@@ -7,9 +7,10 @@ neg(b::SBit) = b.neg
 
 Base.zero(::Type{SBit}) = SBit((false, false))
 Base.one(::Type{SBit}) = SBit((true, false))
+SBit(pos::Bool, neg::Bool) = SBit((pos, neg))
 SBit(value::Number) = isone(value) ? one(SBit) :
-                       iszero(value) ? zero(SBit) :
-                       error("Cannot create an SBit($value). Use pop!(SBitstream($value)) instead.")
+                      iszero(value) ? zero(SBit) :
+                      error("Cannot create an SBit($value). Use pop!(SBitstream($value)) instead.")
 
 Base.show(io::IO, b::SBit) = print(io, "($(b.pos), $(b.neg))")
 Base.show(io::IO, ::MIME"text/plain", b::SBit) = print(io, "SBit(pos = $(b.pos), neg = $(b.neg))")

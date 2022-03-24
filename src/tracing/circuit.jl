@@ -4,22 +4,23 @@ _nameof(x) = nameof(typeof(x))
 _nameof(x::Function) = nameof(x)
 
 """
-    CircuitModule
+    CircuitModule(fn; kwargs...)
 
-A data structure to store information to generate hardware for a circuit.
-This structure can be manually modified if needed but typically [`@circuit`](@ref)
-is used to auto-populate it.
+A data structure to store information to generate hardware for `fn`.
 
 Hardware generation traverses `dfg` and uses `handlers` to generate Verilog strings.
 
-# Fields:
-- `name::Symbol`: the name of the module
-- `parameters::Dict{Symbol, Number}`: a map from the name of each parameter to its default value
+# Keywords:
+- `name::Symbol`: the name of the module (defaults to `nameof(fn)`)
+- `bitwidth::@NamedTuple{integral::Int, fractional::Int}`:
+   the maximum bit width in the circuit
+- `parameters::Dict{String, Number}`:
+   a map from the name of each parameter to its default value
 - `submodules::Vector{Type}`: a list of submodule types
-- `dfg::MetaDiGraph{Int, Float64}`: a data flow graph representing the circuit to be generated
-- `handlers::Dict{Operation, AbstractHandler}`: a map from operation type to a hardware generation handler.
-
-See also: [HW.generate](@ref)
+- `dfg::MetaDiGraph{Int, Float64}`:
+   a data flow graph representing the circuit to be generated
+- `handlers::Dict{Operation, AbstractHandler}`:
+   a map from operation type to a hardware generation handler and state
 """
 @kwdef mutable struct CircuitModule{T}
     fn::T
@@ -207,22 +208,6 @@ function _sync_nodes!(nets, netlist)
     return nets
 end
 
-"""
-    HW.generate(m::CircuitModule, netlist::Netlist)
-    HW.generate(m::CircuitModule, f)
-    HW.generate(c::Tuple{CircuitModule, Function}, dut, args...)
-
-Generate the Verilog implementation of the module.
-Users will most likely call the last method form above.
-
-# Fields:
-- `m::CircuitModule`: the module to generate
-- `netlist::Netlist`: the netlist for the circuit being generated
-- `f`: a closure with one argument (a netlist) that calls a runtime information extraction function
-- `c::Tuple{CircuitModule, Function}`: the tuple returned by [`@circuit`](@ref)
-- `dut`: an instance of the circuit struct
-- `args`: example arguments to circuit
-"""
 function generateverilog(io::IO, m::CircuitModule)
     outstr = ""
     netlist = getnetlist(m)
