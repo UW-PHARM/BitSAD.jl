@@ -51,18 +51,22 @@
 <hr />
 <p><a href="../docstrings.html">API Reference</a></p>
 </div>
-        <article id="content"><div class='docs' id='SSignedMatMultiplier'>
-<p><code>private</code> <code>SSignedMatMultiplier</code> — <code>struct</code></p>
+        <article id="content"><div class='docs' id='is_simulatable_primitive'>
+<p><code>private</code> <code>is_simulatable_primitive</code> — <code>function</code></p>
 <div class='doc' id='1'>
-<pre><code>SSignedMatMultiplier
+<pre><code>is_simulatable_primitive(ftype::Type, argtypes::Type...)
 </code></pre>
-<p>A stochastic bitstream matrix multiply operator.</p>
+<p>Return true if calling a callable of type <code>ftype</code> on arguments
+of types <code>argtypes</code> is a BitSAD simulatable primitive operator.</p>
+<p>Custom operators should overload <a href="BitSAD.is_trace_primitive.html"><code>BitSAD.is_trace_primitive</code></a> before this function.
+<code>is_simulatable_primitive</code> should only be overloaded if the primitive behavior is
+different for only simulation. Defaults to <code>is_trace_primitive</code>.</p>
 </div>
 </div>
 </article>
         <div id="page-navigation">
-            <a id="previous-page" title="Previous" href="BitSAD.SSignedFixedGainDivider.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
-            <a id="next-page" title="Next" href="BitSAD.SSignedMultiplier.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="previous-page" title="Previous" href="BitSAD.getsimulator.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="next-page" title="Next" href="BitSAD.is_trace_primitive.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
         </div>
         <footer>
             Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language</a>.

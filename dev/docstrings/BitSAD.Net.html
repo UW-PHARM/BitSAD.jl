@@ -51,18 +51,37 @@
 <hr />
 <p><a href="../docstrings.html">API Reference</a></p>
 </div>
-        <article id="content"><div class='docs' id='SSignedMatMultiplier'>
-<p><code>private</code> <code>SSignedMatMultiplier</code> — <code>struct</code></p>
+        <article id="content"><div class='docs' id='Net'>
+<p><code>private</code> <code>Net</code> — <code>parametric type</code></p>
 <div class='doc' id='1'>
-<pre><code>SSignedMatMultiplier
+<pre><code>Net(; name = &quot;&quot;, suffixes = [&quot;&quot;], value = missing,
+      type = :wire, class = :internal, signed = false,
+      bitwidth = 1, size = (1, 1))
+Net(x; kwargs...)
 </code></pre>
-<p>A stochastic bitstream matrix multiply operator.</p>
+<p>Create a new multi-dimensional SystemVerilog net (for <code>x</code>).</p>
+<h1 id="arguments"><a href="#arguments" class="anchor"></a>Arguments</h1>
+<ul>
+<li><code>name::String</code>: the name of the net (this can be a SystemVerilog constant expression too)</li>
+<li><code>suffixes::Vector{String}</code>: set if this net represents multiple wires with suffixes
+(e.g. a signed stochastic bitstream has suffixes <code>_p</code> and <code>_m</code>)</li>
+<li><code>value</code>: the underlying Julia value that this net represents</li>
+<li><code>type::Symbol</code>: one of [:logic] (a SystemVerilog type)</li>
+<li><code>class::Symbol</code>: one of [:input, :output, :internal, :constant, :parameter]</li>
+<li><code>signed::Bool</code>: set true if the net is signed in SystemVerilog</li>
+<li><code>bitwidth::Int</code>: the bit width of each element in the net</li>
+<li><code>size::Tuple{Int, Int, ...}</code>: the size of the net in terms of number of elements</li>
+</ul>
+<p>If <code>x</code> is specified, then <code>value = x</code> and <code>size = netsize(x)</code>.
+<code>netsize</code> is like <code>Base.size</code>, but it expands scalars and vectors to 2D sizes (e.g. <code>(1, 1)</code>)
+If <code>x</code> is a <code>SBitstream</code> or <code>AbstractArray{&lt;:SBitstream}</code>,
+then <code>suffixes = [&quot;_p&quot;, &quot;_m&quot;]</code>.</p>
 </div>
 </div>
 </article>
         <div id="page-navigation">
-            <a id="previous-page" title="Previous" href="BitSAD.SSignedFixedGainDivider.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
-            <a id="next-page" title="Next" href="BitSAD.SSignedMultiplier.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="previous-page" title="Previous" href="BitSAD.CircuitModule.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="next-page" title="Next" href="BitSAD.SBitstream.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
         </div>
         <footer>
             Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language</a>.

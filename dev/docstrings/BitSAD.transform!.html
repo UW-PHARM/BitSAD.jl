@@ -51,18 +51,31 @@
 <hr />
 <p><a href="../docstrings.html">API Reference</a></p>
 </div>
-        <article id="content"><div class='docs' id='SSignedMatMultiplier'>
-<p><code>private</code> <code>SSignedMatMultiplier</code> — <code>struct</code></p>
+        <article id="content"><div class='docs' id='transform!'>
+<p><code>private</code> <code>transform!</code> — <code>function</code></p>
 <div class='doc' id='1'>
-<pre><code>SSignedMatMultiplier
+<pre><code>transform!(f, [fctx,] tape::Ghost.Tape)
 </code></pre>
-<p>A stochastic bitstream matrix multiply operator.</p>
+<p>Transform <code>tape</code> by applying <code>f</code> to each entry in the tape.</p>
+<p><code>f(tape.ctx, entry)</code> cannot manipulate <code>tape</code> directly.
+Instead, <code>f</code> should return a tuple of the form <code>([calls...], idx)</code>
+where <code>[calls...]</code> is a vector of tape entries that should replace <code>entry</code>.
+<code>idx</code> specifies that references to <code>entry</code> in <code>tape</code> should be rebound to
+<code>calls[idx]</code>.
+If <code>calls</code> is empty, then <code>entry</code> is deleted from the tape,
+and references to it are rebound to <code>idx</code>.
+Note that if <code>entry isa Ghost.Input</code>, then it cannot be deleted from <code>tape</code>.</p>
+<p><code>fctx(tape.ctx, calls)</code> can be used to update <code>tape.ctx</code>.
+<code>calls</code> is the same list of entries returned by <code>f</code> except
+that the ID for each entry in <code>calls</code> is the ID <em>after</em> being rebound in <code>tape</code>.
+If <code>calls</code> was empty, then <code>fctx</code> is not called.
+If not specified, <code>fctx</code> is a no-op.</p>
 </div>
 </div>
 </article>
         <div id="page-navigation">
-            <a id="previous-page" title="Previous" href="BitSAD.SSignedFixedGainDivider.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
-            <a id="next-page" title="Next" href="BitSAD.SSignedMultiplier.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="previous-page" title="Previous" href="BitSAD.trace.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="next-page" title="Next" href="BitSAD.value.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
         </div>
         <footer>
             Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language</a>.
