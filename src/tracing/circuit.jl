@@ -66,7 +66,7 @@ function traverse(g::MetaDiGraph, vs::Vector{T}, visited = T[]) where T
     return parents, union(parents, visited)
 end
 
-function addnode!(m::CircuitModule, inputs::Vector{Net}, outputs::Vector{Net}, op::Operation)
+function addnode!(m::CircuitModule, inputs::Netlist, outputs::Netlist, op::Operation)
     add_vertex!(m.dfg)
     node = nv(m.dfg)
     set_prop!(m.dfg, node, :inputs, inputs)
@@ -124,9 +124,9 @@ end
 function _printnet(net::Net)
     widthstr = (bitwidth(net) == 1) ? "" : "[$(bitwidth(net) - 1):0]"
     sizestr = join(map(s -> (s == 1) ? "" : "[($s - 1):0]", netsize(net)), "")
-    names = join(map(s -> "$(name(net))_$s", suffixes(net)), ", ")
+    names = join(map(s -> "$(name(net))$s", suffixes(net)), ", ")
 
-    return join([widthstr, sizestr, names], " ")
+    return "logic " * join([widthstr, sizestr, names], " ")
 end
 
 _encodeparameter(buffer, name, value) =
@@ -152,46 +152,32 @@ function _generatetopmatter(buffer, m::CircuitModule, netlist::Netlist)
     outputs = filter(isoutput, netlist)
     # parameters = filter(isparameter, netlist)
     internals = filter(isinternal, netlist)
-    wires = filter(iswire, internals)
-    regs = filter(isreg, internals)
 
-    write(buffer, "module $(m.name) #(\n")
+    write(buffer, "module $(m.name) ")
 
-    for (i, (name, value)) in enumerate(m.parameters)
-        write(buffer, "    ")
-        _encodeparameter(buffer, name, value)
-        (i != length(m.parameters)) && write(buffer, ",")
-        write(buffer, "\n")
+    if !isempty(m.parameters)
+        write(buffer, "#(\n")
+        for (i, (name, value)) in enumerate(m.parameters)
+            write(buffer, "    ")
+            _encodeparameter(buffer, name, value)
+            (i != length(m.parameters)) && write(buffer, ",")
+            write(buffer, "\n")
+        end
+        write(buffer, ") ")
     end
 
-    write(buffer, ") (\n")
+    write(buffer, "(\n")
     write(buffer, "    input logic CLK,\n")
     write(buffer, "    input logic nRST,\n")
 
-    write(buffer, join(map(inputs) do input
-        issigned(input) ? "$(name(input))_p, $(name(input))_m" : name(input)
-    end, ", "))
-    write(buffer, ", ")
-    write(buffer, join(map(outputs) do output
-        issigned(output) ? "$(name(output))_p, $(name(output))_m" : name(output)
-    end, ", "))
+    write(buffer, join(map(i -> "    input " * _printnet(i), inputs), ",\n"))
+    !isempty(inputs) && write(buffer, ",\n")
+    write(buffer, join(map(o -> "    output " * _printnet(o), outputs), ",\n"))
+    !isempty(outputs) && write(buffer, "\n")
     write(buffer, ");\n\n")
 
-    write(buffer, "input CLK, nRST;\n")
-
-    write(buffer, join(map(inputs) do input
-        "input $(_printnet(input));"
-    end, "\n"))
-    write(buffer, "\n")
-    write(buffer, join(map(outputs) do output
-        "output $(_printnet(output));"
-    end, "\n"))
-    write(buffer, "\n")
-    write(buffer, join(map(_printnet, regs), "\n"))
-    write(buffer, "\n")
-    write(buffer, join(map(wires) do wire
-        "wire $(_printnet(wire));"
-    end, "\n"))
+    write(buffer, join(map(_printnet, internals), ";\n"))
+    !isempty(internals) && write(buffer, ",\n")
     write(buffer, "\n\n")
 
     return buffer
@@ -209,7 +195,6 @@ function _sync_nodes!(nets, netlist)
 end
 
 function generateverilog(io::IO, m::CircuitModule)
-    outstr = ""
     netlist = getnetlist(m)
 
     # start at inputs
@@ -236,6 +221,13 @@ function generateverilog(io::IO, m::CircuitModule)
 
         # move one level up in the DFG
         nodes, visited = traverse(m.dfg, nodes, visited)
+    end
+
+    # set inputs
+    for v in getroots(m.dfg)
+        for input in getinputs(m.dfg, v)
+            setclass!(netlist, input, :input)
+        end
     end
 
     # set outputs

@@ -20,7 +20,6 @@ function (handler::SMaxHandler{N})(buffer, netlist, state, inputs, outputs) wher
                            size = (N, netsize(outputs[1])...),
                            suffixes = ["_p", "_m"]))
         write(buffer, """
-            $stdcomment
             // BEGIN max_$(N)_$(state.id)
             """)
         write_bcast_instantiation(buffer, "max_$(N)_$(state.id)", netsize(outputs[1]), """
@@ -45,7 +44,6 @@ function (handler::SMaxHandler{N})(buffer, netlist, state, inputs, outputs) wher
                            size = (N, 1),
                            suffixes = ["_p", "_m"]))
         write(buffer, """
-            $stdcomment
             // BEGIN max_$(N)_$(state.id)
             """)
         write(buffer, "assign max_$(N)_$(state.id)_inputs_p = {")

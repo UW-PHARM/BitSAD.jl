@@ -17,7 +17,6 @@ function (handler::SAddHandler)(buffer, netlist, state, inputs, outputs)
 
     outsize = netsize(outputs[1])
     write(buffer, """
-        $stdcomment
         // BEGIN add$(state.id)
         """)
     write(buffer, """

@@ -14,7 +14,6 @@ function (handler::SDivHandler)(buffer, netlist, state, inputs, outputs)
     push!(netlist, Net(name = "div$(state.id)_out_mp", size = outsize))
 
     write(buffer, """
-        $stdcomment
         // BEGIN div$(state.id)
         stoch_div_mat #(
                 .NUM_ROWS($(outsize[1])),

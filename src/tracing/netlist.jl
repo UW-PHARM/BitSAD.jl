@@ -44,21 +44,22 @@ struct Net{T, S}
         _checktype(type)
         _checkclass(class)
 
-        new{T, S}(name, value, type, class, signed, bitwidth, size)
+        new{T, S}(name, suffixes, value, type, class, signed, bitwidth, size)
     end
 end
 Net(; name = "",
       suffixes = [""],
       value = missing,
-      type = :wire,
+      type = :logic,
       class = :internal,
       signed = false,
       bitwidth = 1,
       size = (1, 1)) = Net(name, suffixes, value, type, class, signed, bitwidth, size)
 Net(x; kwargs...) = Net(; value = x, size = netsize(x), kwargs...)
-Net(x::SBitstream; suffixes = ["_p", "_m"], kwargs...) = Net(x; suffixes = suffixes, kwargs...)
+Net(x::SBitstream; suffixes = ["_p", "_m"], kwargs...) =
+    Net(; value = x, size = netsize(x), suffixes = suffixes, kwargs...)
 Net(x::AbstractArray{<:SBitstream}; suffixes = ["_p", "_m"], kwargs...) =
-    Net(x; suffixes = suffixes, kwargs...)
+    Net(; value = x, size = netsize(x), suffixes = suffixes, kwargs...)
 
 function Base.show(io::IO, n::Net)
     limitedshow(x) = sprint(show, x; context = IOContext(stdout, :compact => true, :limit => true))
@@ -135,7 +136,7 @@ isparameter(x::Net) = (x.class == :parameter)
 
 issigned(x::Net) = x.signed
 
-const Netlist = Vector{Net}
+const Netlist = Vector{<:Net}
 
 inputs(n::Netlist) = filter(isinput, n)
 outputs(n::Netlist) = filter(isoutput, n)

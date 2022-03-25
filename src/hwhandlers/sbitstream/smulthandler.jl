@@ -7,8 +7,8 @@ init_state(::SMultHandler) = (id = 0,)
 
 gethandler(broadcasted::Bool,
            ::Type{typeof(*)},
-           ::Type{<:AbstractArray{<:SBitstream, 2}},
-           ::Type{<:AbstractArray{<:SBitstream, 2}}) =
+           ::Type{<:AbstractVecOrMat{<:SBitstream}},
+           ::Type{<:AbstractVecOrMat{<:SBitstream}}) =
     broadcasted ? SMultHandler() : SMatMultHandler()
 init_state(::SMatMultHandler) = (id = 0,)
 
@@ -19,7 +19,6 @@ function (handler::SMultHandler)(buffer, netlist, state, inputs, outputs)
     outsize = netsize(outputs[1])
 
     write(buffer, """
-        $stdcomment
         // BEGIN mult$(state.id)
         stoch_signed_elem_mult_mat #(
                 .NUM_ROWS($(outsize[1])),
@@ -47,7 +46,6 @@ function (handler::SMatMultHandler)(buffer, netlist, state, inputs, outputs)
     outsize = netsize(outputs[1])
 
     write(buffer, """
-        $stdcomment
         // BEGIN mmult$(state.id)
         stoch_signed_matrix_mult #(
                 .NUM_ROWS($m),

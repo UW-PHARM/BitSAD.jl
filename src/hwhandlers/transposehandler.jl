@@ -14,7 +14,6 @@ function (handler::TransposeHandler)(buffer, netlist, state, inputs, outputs)
     # setreg!(netlist, outputs[1])
 
     write(buffer, """
-        $stdcomment
         // BEGIN transpose$(state.id)
         $(state.id > 0 ? "" : "integer i, j;")
         always @(*) begin

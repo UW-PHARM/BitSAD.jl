@@ -48,9 +48,10 @@ The function `power_iteration` is almost an exact copy of the mathematical algor
 # use a 2x2 matrix
 m, n = (2, 2)
 
-A_float = 2 .* rand(m, n) .- 1
-v₀_float = rand(n)
-v₀_float .= v₀_float ./ norm(v₀_float) # v should be a unit vector
+# example matrix
+A_float = [ -0.99009   0.954132;
+            -0.148342  0.139824]
+v₀_float = [0.5, 0.5] # v should be a unit vector
 
 # compute the SVD for the floating point A
 svddecomp = svd(A_float)
@@ -58,10 +59,10 @@ svddecomp = svd(A_float)
 A = SBitstream.(A_float)
 v₀ = SBitstream.(v₀_float)
 
-function run_power_iteration(A, v₀; T = 10)
+function run_power_iteration(A, v₀; T = 5)
     u = similar(A, size(A, 1))
     σ = 0.0
-    v = v₀
+    v = deepcopy(v₀)
     for k in 1:T
         u, v, σ = power_iteration(A, v)
     end
@@ -102,35 +103,36 @@ The test above only verified that the basic algorithm worked with the limited nu
 ```julia
 using DataStructures
 
-# simulate for more iterations
-T = 5000
+# simulate for T iterations
+T = 10_000
 
 # record the error on each iteration
 ϵ = zeros(T)
 
-# record the most recent 5000 samples of each output
-ubuffer = CircularBuffer{Vector{Int}}(5000)
-vbuffer = CircularBuffer{Vector{Int}}(5000)
-σbuffer = CircularBuffer{Int}(5000)
+# record the most recent 100 samples of each output
+ubuffer = CircularBuffer{Vector{Int}}(100)
+vbuffer = CircularBuffer{Vector{Int}}(100)
+σbuffer = CircularBuffer{Int}(100)
 
-# generate T samples of A
-# generate 1000 samples of v,
-#  then switch to feeding v back into the algorithm
-generate!.(A, T)
-generate!.(v₀, 1000)
+# add a decorrelator on the feedback path
+function power_iteration_fb(A, v)
+    u, v, σ = power_iteration(A, v)
 
-sim = simulatable(power_iteration, A, v₀)
+    return u, decorrelate.(v), σ
+end
+
+sim = simulatable(power_iteration_fb, A, v₀)
 for t in 1:T
     # evaluate module
-    output = sim(power_iteration, A, v₀)
+    output = sim(power_iteration_fb, A, v₀)
 
     # accumulate results in buffer
     global u = estimate!(ubuffer, output[1])
     global v = estimate!(vbuffer, output[2])
     global σ = estimate!(σbuffer, output[3])
 
-    # feedback output
-    (t >= 1000) && push!(v₀, pop!(decorrelate.(output[2])))
+    # feedback output after t = 1000
+    (t >= 1000) && push!.(v₀, pop!.(output[2]))
 
     # record loss
     ϵ[t] = norm(α * (A_float * v - u * σ * sqrt(n)))
@@ -143,7 +145,7 @@ v = estimate(vbuffer)
 println("final error: $(ϵ[end])")
 ```
 
-Since we are simulating bits, we need to store the bits in order to compute an estimate of the current simulation output. We use a `CircularBuffer` from DataStructures.jl to do this. Additionally, in the previous section, we directly fed back the output, `v`, as an input in the subsequent iteration. Now, `v` is unstable during the first few iterations, so we initiate the simulation with 1,000 pre-computed samples of `v₀`. Finally, we measure the output error using the formula
+Since we are simulating bits, we need to store the bits in order to compute an estimate of the current simulation output. We use a `CircularBuffer` from DataStructures.jl to do this. Additionally, in the previous section, we directly fed back the output, `v`, as an input in the subsequent iteration. Now, `v` is unstable during the first few iterations, so we only start the feedback after 1,000 iterations. Finally, we measure the output error using the formula
 
 ```math
 Av = \sigma u
@@ -153,18 +155,16 @@ Any valid SVD will satisfy this property. Our error is how closely this property
 
 ## Generating hardware for the power iteration
 
-Since our function is working at the bit-level, the next step is to generate Verilog for it. Unfortunately, using [`generatehw`](#) directly results in an error.
+Since our function is working at the bit-level, the next step is to generate Verilog for it.
 
 {cell=iterative-svd}
 ```julia
-try
-    power_iteration_verilog, _ = generatehw(power_iteration, A, v₀)
-catch e
-    println(e)
-end
+power_iteration_verilog, _ = generatehw(power_iteration, A, v₀)
+# print only the first 60 lines
+println(join(split(power_iteration_verilog, "\n")[1:60], "\n"))
 ```
 
-BitSAD does not know how to interpret `size(A, 1)` in our function. In hardware, we would not compute the array size on the fly. Instead, it would be a parameter of the circuit. To replicate this behavior in BitSAD, we need to use a struct.
+This is great, but we see that BitSAD interprets `sqrt(size(A, 1))` in our function as a constant. In hardware, we could not compute the array size on the fly. Instead, it would be a parameter of the circuit. To replicate this behavior in BitSAD, we need to use a struct.
 
 {cell=iterative-svd}
 ```julia
@@ -195,8 +195,8 @@ Here, we created the `PowerIteration` struct which can be instantiated with the 
 circuit = PowerIteration(nrows = size(A, 1), ncols = size(A, 2))
 power_iteration_verilog, _ = generatehw(circuit, A, v₀)
 
-# print only the first 20 lines
-println(join(split(power_iteration_verilog, "\n")[1:20], "\n"))
+# print only the first 60 lines
+println(join(split(power_iteration_verilog, "\n")[1:60], "\n"))
 ```
 
 We can see that the generated Verilog contains `scalew` and `scalez` as parameters, and BitSAD automatically determined the fixed point binary values for them.

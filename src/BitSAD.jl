@@ -10,7 +10,6 @@ using LightGraphs, MetaGraphs
 using Base: @kwdef
 using Artifacts, LazyArtifacts
 
-export AbstractBitstream
 export SBit, SBitstream
 # export DBit, DBitstream
 export pos, neg
@@ -22,7 +21,6 @@ export generatehw
 
 include("tracing/trace.jl")
 
-include("types/bitstream.jl")
 include("types/sbitstream.jl")
 # include("types/dbitstream.jl")
 # include("modules/sdm.jl")

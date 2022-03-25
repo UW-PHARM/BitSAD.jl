@@ -16,7 +16,6 @@ function (handler::SSubHandler)(buffer, netlist, state, inputs, outputs)
     push!(netlist, Net(name = "sub$(state.id)_out_mm", size = outsize))
 
     write(buffer, """
-        $stdcomment
         // BEGIN sub$(state.id)
         stoch_signed_sub_mat #(
                 .NUM_ROWS($(outsize[1])),

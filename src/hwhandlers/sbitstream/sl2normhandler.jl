@@ -7,7 +7,6 @@ init_state(::SL2NormHandler) = (id = 0,)
 
 function (handler::SL2NormHandler)(buffer, netlist, state, inputs, outputs)
     write(buffer, """
-        $stdcomment
         // BEGIN l2norm$(state.id)
         stoch_l2_norm #(
                 .VEC_LEN($(netsize(inputs[1])[1]))

@@ -13,9 +13,12 @@ struct SimulatableContext
     popmap::Dict{Ghost.Variable, Ghost.Variable}
     # map from signatures to variable bindings
     opmap::Dict{Tuple, Ghost.Variable}
+    # map from broadcasted variable to materialized call
+    materialize_map::Dict{Ghost.Variable, Ghost.Call}
 end
 SimulatableContext() = SimulatableContext(Dict{Ghost.Variable, Vector{Ghost.Variable}}(),
-                                          Dict{Tuple, Ghost.Variable}())
+                                          Dict{Tuple, Ghost.Variable}(),
+                                          Dict{Ghost.Variable, Ghost.Call}())
 
 function Ghost.rebind_context!(tape::Ghost.Tape{SimulatableContext}, subs::Dict)
     replace!(tape.c.popmap) do kv
@@ -43,6 +46,7 @@ function _update_ctx!(ctx::SimulatableContext, vars)
         elseif vars[1] isa Ghost.Call && _isbcast(vars[1].fn) && length(vars) > 1
             ctx.popmap[Ghost.Variable(vars[1])] = Ghost.Variable(vars[end - 1])
             ctx.popmap[Ghost.Variable(vars[2])] = Ghost.Variable(vars[end - 1])
+            ctx.materialize_map[Ghost.Variable(vars[1])] = vars[2]
         elseif vars[1] isa Ghost.Call && length(vars) > 1
             ctx.popmap[Ghost.Variable(vars[1])] = Ghost.Variable(vars[end - 1])
         # elseif vars[1] isa Ghost.Call # identity replacement
@@ -114,6 +118,7 @@ function _broadcasted_transform(ctx, call, sim)
     popcalls, popbits = _popcalls(ctx, args)
     # materialize broadcasted
     mat = Ghost.mkcall(Base.materialize, Ghost.Variable(call))
+    ctx.materialize_map[Ghost.Variable(call)] = mat
     # evaluate simulator on popped bits
     bit = Ghost.mkcall(sim, popbits...)
     # push resulting bits onto bitstream
@@ -131,6 +136,7 @@ function _broadcasted_transform(ctx, call, sims::AbstractArray)
     popcalls, popbits = _popcalls(ctx, args)
     # materialize broadcasted
     mat = Ghost.mkcall(Base.materialize, Ghost.Variable(call))
+    ctx.materialize_map[Ghost.Variable(call)] = mat
     # evaluate simulators element-wise on popped bits
     wrapcalls, wrapbits = _wrap_bcast_bits(popbits)
     bits = Ghost.mkcall(Base.broadcasted, (f, a...) -> f(a...), sims, wrapbits...)
@@ -153,6 +159,11 @@ _simtransform(ctx, input::Ghost.Input) =
         ([input, Ghost.mkcall(getbit, Ghost.Variable(input))], 1) :
         ([input], 1)
 function _simtransform(ctx, call::Ghost.Call)
+    # if this call is a materialize and it has already been materialized
+    # then delete it
+    (call.fn == Base.materialize) && haskey(ctx.materialize_map, call.args[1]) &&
+        return [], ctx.materialize_map[call.args[1]]
+
     # if the args don't contain SBitstreamLike, then skip
     sig = Ghost.get_type_parameters(Ghost.call_signature(call.fn, _gettapeval.(call.args)...))
     is_simulatable_primitive(sig...) || return [call], 1

@@ -26,7 +26,7 @@ Fields:
 - `bits::Vector{SBit}`: the underlying bitstream
 - `value::Float64`: the underlying floating-point number being represented
 """
-struct SBitstream{T<:Real} <: AbstractBitstream
+struct SBitstream{T<:Real} <: Number
     bits::Vector{SBit}
     value::T
 
@@ -169,9 +169,20 @@ function generate(s::SBitstream, T::Integer = 1)
 
     return sbits
 end
-generate!(s::SBitstream, T::Integer = 1) = push!(s, generate(s, T))
+generate!(s::SBitstream, T::Integer = 1) = append!(s, generate(s, T))
+
+Base.length(s::SBitstream) = length(bits(s))
+
+Base.iterate(s::SBitstream, state...) = iterate(bits(s), state...)
+
+Base.eltype(s::SBitstream) = eltype(bits(s))
+
+Base.getindex(s::SBitstream, i::Integer) = s.bits[i]
+Base.firstindex(s::SBitstream) = 1
+Base.lastindex(s::SBitstream) = length(s)
 
 Base.push!(s::SBitstream, b) = push!(s.bits, b)
+Base.append!(s::SBitstream, bits) = foreach(Base.Fix1(push!, s), bits)
 Base.pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : popfirst!(s.bits)
 observe(s::SBitstream) = last(s.bits)
 
@@ -199,7 +210,7 @@ function estimate!(buffer::AbstractVector, s::SBitstream)
     return estimate(buffer)
 end
 function estimate!(buffer::AbstractVector, s::VecOrMat{<:SBitstream})
-    bs = observe(s)
+    bs = observe.(s)
     push!(buffer, pos.(bs) - neg.(bs))
 
     return estimate(buffer)

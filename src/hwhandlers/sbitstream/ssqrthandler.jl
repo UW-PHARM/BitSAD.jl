@@ -6,7 +6,6 @@ init_state(::SSqrtHandler) = (id = 0,)
 
 function (handler::SSqrtHandler)(buffer, netlist, state, inputs, outputs)
     write(buffer, """
-        $stdcomment
         // BEGIN sqrt$(state.id)
         stoch_square_root sqrt$(state.id) (
                 .CLK  (CLK),

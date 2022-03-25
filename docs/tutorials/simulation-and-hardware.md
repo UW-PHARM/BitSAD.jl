@@ -127,4 +127,4 @@ We do this by calling [`generatehw`](#) which has a similar syntax to [`simulata
 print(f_verilog)
 ```
 
-That's a lot of Verilog for a simple multiply! We see that each net has a "_p" and "_m" appended for "plus" and "minus." Recall, this is because `SBitstream`s are signed and represented by two channels. Handling these channels correctly to produce a single `SBitstream` as the output is why our hardware is so much more complex than a single AND gate. BitSAD was created to automate this complexity away.
+We see that each net has a "_p" and "_m" appended for "plus" and "minus." Recall, this is because `SBitstream`s are signed and represented by two channels. Handling these channels correctly to produce a single `SBitstream` as the output is why our hardware is so much more complex than a single AND gate. BitSAD was created to automate this complexity away.

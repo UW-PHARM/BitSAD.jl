@@ -8,7 +8,6 @@ function (handler::SFixedGainDivHandler)(buffer, netlist, state, inputs, outputs
     outsize = netsize(outputs[1])
 
     write(buffer, """
-        $stdcomment
         // BEGIN fdiv$(state.id)
         stoch_fixed_gain_div_mat #(
                 .GAIN($(name(inputs[2]))),
