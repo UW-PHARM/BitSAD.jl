@@ -52,6 +52,10 @@ function _update_ctx!(ctx::SimulatableContext, vars)
         # elseif vars[1] isa Ghost.Call # identity replacement
         #     ctx.popmap[Ghost.Variable(vars[1])] = vars[1].args[1]
         end
+    elseif (vars[1] isa Ghost.Call) &&
+           (vars[1].fn == getproperty) &&
+           (_gettapeval(vars[1]) isa SBitstreamLike)
+        ctx.popmap[Ghost.Variable(vars[1])] = Ghost.Variable(vars[2])
     end
     foreach(vars) do var
         (var isa Ghost.Call) && push!(ctx.opmap, (var.fn, var.args...) => Ghost.Variable(var))
@@ -98,6 +102,7 @@ function _wrap_bcast_bits(popbits)
 end
 
 # how we transform unbroadcasted operations
+# when the simulatable is a single object
 function _unbroadcasted_transform(ctx, call, sim)
     # insert calls to pop bits from the args
     popcalls, popbits = _popcalls(ctx, call.args)
@@ -107,6 +112,22 @@ function _unbroadcasted_transform(ctx, call, sim)
     psh = Ghost.mkcall(setbit!, Ghost.Variable(call), Ghost.Variable(bit))
 
     return [call, popcalls..., bit, psh], 1
+end
+
+# how we transform unbroadcasted operations
+# when the simulatable is an array of simulatables
+function _unbroadcasted_transform(ctx, call, sims::AbstractArray)
+    # insert calls to pop bits from the args
+    popcalls, popbits = _popcalls(ctx, call.args)
+    # evaluate simulator on popped bits
+    # evaluate simulators element-wise on popped bits
+    wrapcalls, wrapbits = _wrap_bcast_bits(popbits)
+    bits = Ghost.mkcall(Base.broadcasted, (f, a...) -> f(a...), sims, wrapbits...)
+    matbits = Ghost.mkcall(Base.materialize, Ghost.Variable(bits))
+    # push resulting bits onto bitstream
+    psh = Ghost.mkcall(setbit!, Ghost.Variable(call), Ghost.Variable(matbits))
+
+    return [call, popcalls..., wrapcalls..., bits, matbits, psh], 1
 end
 
 # how we transform broadcasted operations
@@ -153,6 +174,11 @@ _handle_bcast_and_transform(ctx, call, sim) =
     _isbcast(call.fn) ? _broadcasted_transform(ctx, call, sim) :
                         _unbroadcasted_transform(ctx, call, sim)
 
+# pop bits for getproperty
+_getproperty_transform(ctx, call) = haskey(ctx.opmap, (call.fn, call.args...)) ?
+    ([], ctx.opmap[(call.fn, call.args...)].id) :
+    ([call, Ghost.mkcall(getbit, Ghost.Variable(call))], 1)
+
 # the main tranform for simulatables
 _simtransform(ctx, input::Ghost.Input) =
     _gettapeval(Ghost.Variable(input)) isa SBitstreamLike ?
@@ -163,6 +189,11 @@ function _simtransform(ctx, call::Ghost.Call)
     # then delete it
     (call.fn == Base.materialize) && haskey(ctx.materialize_map, call.args[1]) &&
         return [], ctx.materialize_map[call.args[1]]
+
+    # if this is a getproperty call that returns a SBitstreamLike
+    # then pop the bits
+    (call.fn == getproperty) && (_gettapeval(call) isa SBitstreamLike) &&
+        return _getproperty_transform(ctx, call)
 
     # if the args don't contain SBitstreamLike, then skip
     sig = Ghost.get_type_parameters(Ghost.call_signature(call.fn, _gettapeval.(call.args)...))

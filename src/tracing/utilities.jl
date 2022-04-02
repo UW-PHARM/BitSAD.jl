@@ -19,7 +19,7 @@ _issimulatable(op) = false
 _issimulatable(var::Ghost.Variable) = 
     (_gettapeval(var) isa Base.Broadcast.Broadcasted) ? _issimulatable(_gettapeop(var)) :
                                                         _gettapeval(var) isa SBitstreamLike
-_issimulatable(input::Ghost.Input) = input.val isa SBitstreamLike
+_issimulatable(input::Ghost.Input) = _gettapeval(input) isa SBitstreamLike
 _issimulatable(call::Ghost.Call) = any(_issimulatable, call.args)
 
 _isbcast(::typeof(Base.broadcasted)) = true

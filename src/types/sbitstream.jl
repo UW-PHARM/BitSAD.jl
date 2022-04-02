@@ -81,12 +81,21 @@ for (op, sim) in ((:+, :SSignedAdder),
                   (:*, :SSignedMultiplier),
                   (:/, :SSignedDivider))
     @eval begin
-        is_trace_primitive(::Type{typeof($op)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}) = true
+        is_trace_primitive(::Type{typeof($op)},
+                           ::Type{<:SBitstreamLike},
+                           ::Type{<:SBitstreamLike}) = true
         is_trace_primitive(::Type{typeof(Base.broadcasted)},
                            ::Type{typeof($op)},
                            ::Type{<:SBitstreamLike},
                            ::Type{<:SBitstreamLike}) = true
         getsimulator(::typeof($op), x::SBitstream, y::SBitstream) = $(sim)()
+        getsimulator(::typeof($op), x::AbstractArray{<:SBitstream}, y::SBitstream) =
+            getsimulator.($op, x, y)
+        getsimulator(::typeof($op), x::SBitstream, y::AbstractArray{<:SBitstream}) =
+            getsimulator.($op, x, y)
+        getsimulator(::typeof($op),
+                     x::AbstractArray{<:SBitstream},
+                     y::AbstractArray{<:SBitstream}) = getsimulator.($op, x, y)
         getsimulator(::typeof(Base.broadcasted),
                      ::typeof($op),
                      x::SBitstreamLike,
@@ -118,6 +127,7 @@ is_trace_primitive(::Type{typeof(Base.broadcasted)},
 getsimulator(::typeof(sqrt), x::SBitstream) = SSquareRoot()
 getsimulator(::typeof(Base.broadcasted), ::typeof(sqrt), x::SBitstream) = getsimulator.(sqrt, x)
 
+decorrelate(x::Number) = x
 decorrelate(x::SBitstream) = SBitstream(float(x))
 is_trace_primitive(::Type{typeof(decorrelate)}, ::Type{<:SBitstream}) = true
 is_trace_primitive(::Type{typeof(Base.broadcasted)},
