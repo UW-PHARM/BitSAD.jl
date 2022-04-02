@@ -1,7 +1,7 @@
 name = "BitSAD"
 uuid = "7f90e340-ca22-4a3e-a259-118ed254aff3"
 authors = ["Kyle Daruwalla", "University of Wisconsin-Madison PHARM Group"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
