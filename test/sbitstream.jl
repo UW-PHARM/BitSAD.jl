@@ -123,6 +123,28 @@
                 z / T
             end ≈ float(max(x, y, w)) rtol = 0.1
         end
+        @testset "op = * (matrix, scalar)" begin
+            sim = simulatable(*, X, y)
+            @test begin
+                Z = zeros(2, 2)
+                for t in 1:T
+                    bit = pop!.(sim(*, X, y))
+                    Z .+= pos.(bit) .- neg.(bit)
+                end
+
+                Z ./ T
+            end ≈ float.(X * y) rtol = 0.1
+            sim = simulatable(*, y, X)
+            @test begin
+                Z = zeros(2, 2)
+                for t in 1:T
+                    bit = pop!.(sim(*, y, X))
+                    Z .+= pos.(bit) .- neg.(bit)
+                end
+
+                Z ./ T
+            end ≈ float.(y * X) rtol = 0.1
+        end
         @testset "op = * (matrix, matrix)" begin
             sim = simulatable(*, X, Y)
             @test begin
