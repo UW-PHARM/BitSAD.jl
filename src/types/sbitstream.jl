@@ -82,26 +82,25 @@ for (op, sim) in ((:+, :SSignedAdder),
                   (:/, :SSignedDivider))
     @eval begin
         is_trace_primitive(::Type{typeof($op)},
-                           ::Type{<:SBitstreamLike},
-                           ::Type{<:SBitstreamLike}) = true
+                           ::Type{<:SBitstream},
+                           ::Type{<:SBitstream}) = true
         is_trace_primitive(::Type{typeof(Base.broadcasted)},
                            ::Type{typeof($op)},
                            ::Type{<:SBitstreamLike},
                            ::Type{<:SBitstreamLike}) = true
         getsimulator(::typeof($op), x::SBitstream, y::SBitstream) = $(sim)()
-        getsimulator(::typeof($op), x::AbstractArray{<:SBitstream}, y::SBitstream) =
-            getsimulator.($op, x, y)
-        getsimulator(::typeof($op), x::SBitstream, y::AbstractArray{<:SBitstream}) =
-            getsimulator.($op, x, y)
-        getsimulator(::typeof($op),
-                     x::AbstractArray{<:SBitstream},
-                     y::AbstractArray{<:SBitstream}) = getsimulator.($op, x, y)
         getsimulator(::typeof(Base.broadcasted),
                      ::typeof($op),
                      x::SBitstreamLike,
                      y::SBitstreamLike) = getsimulator.($op, x, y)
     end
 end
+
+Base.:(*)(x::SBitstreamLike, y::SBitstreamLike) = x .* y
+is_trace_primitive(::Type{typeof(*)},
+                   ::Type{<:SBitstreamLike},
+                   ::Type{<:SBitstreamLike}) = true
+getsimulator(::typeof(*), x::SBitstreamLike, y::SBitstreamLike) = getsimulator.(*, x, y)
 
 function Base.:(÷)(x::SBitstream, y::Real)
     if y < 1
