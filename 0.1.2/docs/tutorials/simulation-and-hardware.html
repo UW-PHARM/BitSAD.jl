@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="generator" content="Publish.jl" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="" />
+    <title>BitSAD.jl</title>
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;normalize.css" />
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;tabulator_simple.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;publish.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;default.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;custom.css" />
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.js"></script>
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;contrib&#x2F;auto-render.min.js"></script>
+    <script src="..&#x2F;..&#x2F;versions.js"></script>
+    <script src="..&#x2F;..&#x2F;lunr.js"></script>
+    <script src="..&#x2F;..&#x2F;highlight.min.js"></script>
+    <script src="..&#x2F;..&#x2F;tabulator.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia-repl.min.js"></script>
+    <script src="..&#x2F;..&#x2F;publish.js"></script>
+    
+</head>
+<body>
+    <main id="page">
+        <div class="menu">
+            <div id="projectname">BitSAD.jl</div>
+            <input id="search-input" placeholder="Search">
+            <select id="version-selector"></select>
+            <svg id="menu-toggler" title="Contents" onclick="toggleIndexPage();" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6C2 5.44772 2.44772 5 3 5H21C21.5523 5 22 5.44772 22 6C22 6.55228 21.5523 7 21 7H3C2.44772 7 2 6.55228 2 6Z" fill="currentColor" /><path d="M2 12.0322C2 11.4799 2.44772 11.0322 3 11.0322H21C21.5523 11.0322 22 11.4799 22 12.0322C22 12.5845 21.5523 13.0322 21 13.0322H3C2.44772 13.0322 2 12.5845 2 12.0322Z" fill="currentColor" /><path d="M3 17.0645C2.44772 17.0645 2 17.5122 2 18.0645C2 18.6167 2.44772 19.0645 3 19.0645H21C21.5523 19.0645 22 18.6167 22 18.0645C22 17.5122 21.5523 17.0645 21 17.0645H3Z" fill="currentColor" /></svg>
+        </div>
+        <div id="toc"><p><a href="../../README.html">Introduction</a></p>
+<h1 id="tutorials"><a href="../../#tutorials" class="anchor"></a>Tutorials</h1>
+<ul>
+<li><a href="../../docs/tutorials/getting-started.html">Quickstart</a></li>
+<li><a href="../../docs/tutorials/sbitstream.html">Stochastic bitstreams 101</a></li>
+<li><a href="../../docs/tutorials/simulation-and-hardware.html">Simulation and hardware</a></li>
+<li><a href="../../docs/tutorials/iterative-svd.html">Complex functions of bitstreams</a></li>
+</ul>
+<h1 id="how-to-"><a href="../../#how-to-" class="anchor"></a>How To …</h1>
+<ul>
+<li><a href="../../docs/how-tos/custom-sbitstream.html">Create a custom <code>SBitstream</code> operator</a></li>
+<li><a href="../../docs/how-tos/nosim.html">Create a simulation nop</a></li>
+</ul>
+<h1 id="developer-guide"><a href="../../#developer-guide" class="anchor"></a>Developer Guide</h1>
+<!-- * [Archicture overview](dev-guide/architecture.md) -->
+<!-- * [Understanding simulation](dev-guide/simulation.md) -->
+<!-- * [Understanding hardware generation](dev-guide/hardware.md) -->
+<hr />
+<p><a href="../../docstrings.html">API Reference</a></p>
+</div>
+        <article id="content"><h1 id="simulating-and-generating-hardware-in-bitsad"><a href="#simulating-and-generating-hardware-in-bitsad" class="anchor"></a>Simulating and generating hardware in BitSAD</h1>
+<p>In <a href="sbitstream.html#stochastic-bitstreams-101">stochastic bitstreams 101</a>, we multiplied two <code>SBitstream</code>s manually in a loop. This can be cumbersome for complex functions involving many inputs and outputs. A key feature of BitSAD is the automation of this step which we will explore in the following tutorial. As a bonus, you’ll see how the same principles enable automatic <a href="https://en.wikipedia.org/wiki/Verilog">Verilog</a> generation to create hardware for your functions.</p>
+<h2 id="simulating-functions-on-sbitstreams"><a href="#simulating-functions-on-sbitstreams" class="anchor"></a>Simulating functions on <code>SBitstream</code>s</h2>
+<p>Suppose we have the following function, <code>f</code>, which multiplies two <code>SBitstream</code>s.</p>
+<pre><code cell="sim-and-hw" class="language-julia">using BitSAD
+
+f(x, y) = x * y
+
+x, y = SBitstream(0.3), SBitstream(0.5)
+z = f(x, y)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.15)
+    with 0 bits.</code></pre>
+<p>We see that the output, <code>z</code>, is similar to the <a href="sbitstream.html#sbitstream-101-z">previous tutorial</a>. Instead of manually simulating the bit-level multiplication in <code>f</code>, we can use <a href="../../docstrings/BitSAD.simulatable.html"><code>simulatable</code></a>.</p>
+<pre><code cell="sim-and-hw" class="language-julia">fsim = simulatable(f, x, y)
+fsim(f, x, y)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.15)
+    with 1 bits.</code></pre>
+<p><code>fsim</code> is a Julia function that can be called similar to <code>f</code> (the exception being that <code>fsim</code> expects the first argument to be the function to simulate, <code>f</code>).</p>
+<div class="admonition tip"><p class="admonition-title">Tip</p>
+<p>For static functions like <code>f</code>, it may see redundant to pass <code>f</code> in. But the simulated function can be a <a href="https://docs.julialang.org/en/v1.6/manual/methods/#Function-like-objects">callable struct</a> as well. This means that you can modify the struct between invocations of the simulation object if you desire.</p>
+</div>
+<p>BitSAD generates <code>fsim</code> by executing <code>f(x, y)</code> once and storing the program execution on a trace. This trace gets transformed into a similar program except calls to operations are replaced by calls to simulators. These simulators emulate the bit-level execution, similar to <code>multiply_sbit</code> from the previous tutorial.</p>
+<p>Let’s verify that <code>fsim</code> works like our manual simulation from before.</p>
+<pre><code cell="sim-and-hw" class="language-julia">num_samples = 1000
+foreach(1:num_samples) do t
+    push!(z, pop!(fsim(f, x, y)))
+end
+
+abs(estimate(z) - float(z))
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.0020000000000000018</code></pre>
+<p>What’s actually happening inside <code>fsim</code>? We can take a peek under the hood with <a href="../../docstrings/BitSAD.show_simulatable.html"><code>show_simulatable</code></a> which will print out the Julia function being compiled by BitSAD.</p>
+<pre><code cell="sim-and-hw" class="language-julia">BitSAD.show_simulatable(f, x, y)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_f#428&quot;(x1::typeof(Main.anonymous.f), x2::SBitstream{Float64}, x4::SBitstream{Float64})
+      x3 = (BitSAD.getbit)(x2)
+      x5 = (BitSAD.getbit)(x4)
+      x6 = (*)(x2, x4)
+      x7 = (SSignedMultiplier(...))(x3, x5)
+      x8 = (BitSAD.setbit!)(x6, x7)
+      return x6
+  end)</code></pre>
+<p>Here, we see that <code>fsim</code> is a function that accepts two <code>SBitstream{Float64}</code>s as input. Walking through each step, we see:</p>
+<ol>
+<li><code>x3 = getbit(x2)</code> pops a sample from the first input (similarly, <code>x5 = getbit(x4)</code>).</li>
+<li>The regular <code>*(x2, x4)</code> is called on our input <code>SBitstream</code>s to produce the output <code>SBitstream</code>, <code>x6</code>.</li>
+<li>A simulator, <code>SSignedMultiplier</code> is called on the popped bits, <code>x3</code> and <code>x4</code>.</li>
+<li>The resulting <code>SBit</code>, <code>x7</code>, is pushed onto the output bitstream with <code>setbit!(x6, x7)</code>.</li>
+</ol>
+<p>These four steps are the basic transformation applied to any simulatable operation on the trace.</p>
+<h3 id="single-evalutaion"><a href="#single-evalutaion" class="anchor"></a>Single evalutaion</h3>
+<p>When writing software, it is reasonable to execute the same function twice on the same set of inputs.</p>
+<pre><code cell="sim-and-hw" class="language-julia">g(a, b) = a + b
+h(x, y) = g(x, y) * g(x, y)
+z = h(x, y)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.6400000000000001)
+    with 0 bits.</code></pre>
+<p><code>h</code> calls <code>g(x, y)</code> twice, and as we can see it causes no issues when running the code. In hardware, <code>g</code> is a stateful operator, so it cannot be called twice, since multiple invocations will produce different outputs. Instead, we want to re-use the first evaluation of <code>g(x, y)</code>. BitSAD does this automatically.</p>
+<pre><code cell="sim-and-hw" class="language-julia">BitSAD.show_simulatable(h, x, y)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_h#429&quot;(x1::typeof(Main.anonymous.h), x2::SBitstream{Float64}, x4::SBitstream{Float64})
+      x3 = (BitSAD.getbit)(x2)
+      x5 = (BitSAD.getbit)(x4)
+      x6 = (+)(x2, x4)
+      x7 = (SSignedAdder(...))(x3, x5)
+      x8 = (BitSAD.setbit!)(x6, x7)
+      x9 = (*)(x6, x6)
+      x10 = (SSignedMultiplier(...))(x7, x7)
+      x11 = (BitSAD.setbit!)(x9, x10)
+      return x9
+  end)</code></pre>
+<p>Examining the compiled function, we see that only a single <code>SSignedAdder</code> is invoked on the inputs. The same resulting bit, <code>x7</code>, is passed to the final <code>SSignedMultiplier</code>.</p>
+<h3 id="applying-decorrelation"><a href="#applying-decorrelation" class="anchor"></a>Applying decorrelation</h3>
+<p>Recall from <a href="sbitstream.html#operations-on-sbitstreams">stochastic bitstreams 101</a> that stochastic computing operators exploit the statistical independence of their inputs. But in the previous section, we can see clearly that <code>hsim</code> does not pass independent inputs to the <code>SSignedMultiplier</code> (it’s the <em>exact same</em> bit!). So, we should expect incorrect results</p>
+<pre><code cell="sim-and-hw" class="language-julia">z = h(x, y)
+hsim = simulatable(h, x, y)
+for t in 1:num_samples
+    push!(z, pop!(hsim(h, x, y)))
+end
+
+abs(estimate(z) - float(z))
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.17999999999999983</code></pre>
+<p>Note that the algorithmic-level of <code>h</code> had no issues (<code>float(z) == 0.64</code>), but the bit-level output has measurable error. BitSAD was designed to make spotting issues that appear at the hardware-level easier. How can we fix this? In stochastic computing circuits, we can <a href="../../docstrings/BitSAD.decorrelate.html"><code>decorrelate</code></a> bitstreams to make them independent.</p>
+<pre><code cell="sim-and-hw" class="language-julia">hfixed(x, y) = g(x, y) * decorrelate(g(x, y))
+z = hfixed(x, y)
+hfixed_sim = simulatable(hfixed, x, y)
+for t in 1:num_samples
+    push!(z, pop!(hfixed_sim(hfixed, x, y)))
+end
+
+@show BitSAD.show_simulatable(hfixed, x, y)
+abs(estimate(z) - float(z))
+</code></pre>
+<pre><code class="plaintext cell-output cell-stream">BitSAD.show_simulatable(hfixed, x, y) = :(function var&quot;##tape_hfixed#432&quot;(x1::typeof(Main.anonymous.hfixed), x2::SBitstream{Float64}, x4::SBitstream{Float64})
+      x3 = (BitSAD.getbit)(x2)
+      x5 = (BitSAD.getbit)(x4)
+      x6 = (+)(x2, x4)
+      x7 = (SSignedAdder(...))(x3, x5)
+      x8 = (BitSAD.setbit!)(x6, x7)
+      x9 = (BitSAD.decorrelate)(x6)
+      x10 = (SSignedDecorrelator(...))(x7)
+      x11 = (BitSAD.setbit!)(x9, x10)
+      x12 = (*)(x6, x9)
+      x13 = (SSignedMultiplier(...))(x7, x10)
+      x14 = (BitSAD.setbit!)(x12, x13)
+      return x12
+  end)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.025000000000000133</code></pre>
+<h2 id="generating-hardware"><a href="#generating-hardware" class="anchor"></a>Generating hardware</h2>
+<p>With BitSAD, we’ve been able to create functions on stochastic bitstreams, and we verified that they should work at the bit-level. The next step is to generate hardware for these functions! BitSAD can take any Julia function and generate synthesizable Verilog code.</p>
+<p>Let’s start by creating hardware for <code>f</code>.</p>
+<pre><code cell="sim-and-hw" result="false" class="language-julia">f_verilog, f_circuit = generatehw(f, x, y)
+</code></pre>
+<p>We do this by calling <a href="../../docstrings/BitSAD.generatehw.html"><code>generatehw</code></a> which has a similar syntax to <a href="../../docstrings/BitSAD.simulatable.html"><code>simulatable</code></a>. It returned two values, <code>f_verilog</code> and <code>f_circuit</code>. <code>f_verilog</code> is a <code>String</code> of the Verilog code. You can write this to disk or examine it in the Julia REPL.</p>
+<pre><code cell="sim-and-hw" class="language-julia">print(f_verilog)
+</code></pre>
+<pre><code class="plaintext cell-output cell-stream">module f (
+    input logic CLK,
+    input logic nRST,
+    input logic   net_2_p, net_2_m,
+    input logic   net_3_p, net_3_m,
+    output logic   net_4_p, net_4_m
+);
+
+
+
+// Autogenerated by BitSAD
+// BEGIN mult0
+stoch_signed_elem_mult_mat #(
+        .NUM_ROWS(1),
+        .NUM_COL(1)
+    ) mult0 (
+        .CLK(CLK),
+        .nRST(nRST),
+        .A_p(net_2_p),
+        .A_m(net_2_m),
+        .B_p(net_3_p),
+        .B_m(net_3_m),
+        .Y_p(net_4_p),
+        .Y_m(net_4_m)
+    );
+// END mult0
+
+
+endmodule
+</code></pre>
+<p>We see that each net has a “_p” and “_m” appended for “plus” and “minus.” Recall, this is because <code>SBitstream</code>s are signed and represented by two channels. Handling these channels correctly to produce a single <code>SBitstream</code> as the output is why our hardware is so much more complex than a single AND gate. BitSAD was created to automate this complexity away.</p>
+</article>
+        <div id="page-navigation">
+            <a id="previous-page" title="Previous" href="sbitstream.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="next-page" title="Next" href="iterative-svd.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
+        </div>
+        <footer>
+            Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language</a>.
+        </footer>
+    </main>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false},
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "\\[", right: "\\]", display: true}
+                ]
+            });
+        });
+    </script>
+</body>
+</html>

@@ -188,7 +188,8 @@ v = estimate(vbuffer)
 
 println(&quot;final error: $(ϵ[end])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">LoadError(&quot;string&quot;, 22, BoundsError(NamedTuple{(:pos, :neg), Tuple{Bool, Bool}}[], (0,)))</code></pre>
+<pre><code class="plaintext cell-output cell-stream">final error: 0.17988449557924774
+</code></pre>
 <p>Since we are simulating bits, we need to store the bits in order to compute an estimate of the current simulation output. We use a <code>CircularBuffer</code> from DataStructures.jl to do this. Additionally, in the previous section, we directly fed back the output, <code>v</code>, as an input in the subsequent iteration. Now, <code>v</code> is unstable during the first few iterations, so we only start the feedback after 1,000 iterations. Finally, we measure the output error using the formula</p>
 <div class="display-math tex">\[Av = \sigma u\]</div>
 <p>Any valid SVD will satisfy this property. Our error is how closely this property holds for our current estimates. We chose to use this error to illustrate how <a href="../../docstrings/BitSAD.estimate!.html"><code>estimate!</code></a> can be used to mix floating point and bitstream computation.</p>
