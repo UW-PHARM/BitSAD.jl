@@ -5,6 +5,7 @@ using DataStructures
 using Random: MersenneTwister
 using Setfield
 using Ghost
+using OrderedCollections: LittleDict
 using MacroTools: @capture
 using LightGraphs, MetaGraphs
 using Base: @kwdef
