@@ -188,7 +188,7 @@ v = estimate(vbuffer)
 
 println(&quot;final error: $(ϵ[end])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">final error: 0.17988449557924774
+<pre><code class="plaintext cell-output cell-stream">final error: 0.788181764199672
 </code></pre>
 <p>Since we are simulating bits, we need to store the bits in order to compute an estimate of the current simulation output. We use a <code>CircularBuffer</code> from DataStructures.jl to do this. Additionally, in the previous section, we directly fed back the output, <code>v</code>, as an input in the subsequent iteration. Now, <code>v</code> is unstable during the first few iterations, so we only start the feedback after 1,000 iterations. Finally, we measure the output error using the formula</p>
 <div class="display-math tex">\[Av = \sigma u\]</div>

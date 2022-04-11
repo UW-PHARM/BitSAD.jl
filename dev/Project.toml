@@ -23,6 +23,7 @@ Ghost = "0.3.1"
 LightGraphs = "1"
 MacroTools = "0.5"
 MetaGraphs = "0.6"
+OrderedCollections = "1.4"
 Setfield = "0.7, 0.8"
 julia = "1.6"
 
