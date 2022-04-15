@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="generator" content="Publish.jl" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="" />
+    <title>BitSAD.jl</title>
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;normalize.css" />
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;tabulator_simple.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;publish.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;default.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;custom.css" />
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.js"></script>
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;contrib&#x2F;auto-render.min.js"></script>
+    <script src="..&#x2F;..&#x2F;versions.js"></script>
+    <script src="..&#x2F;..&#x2F;lunr.js"></script>
+    <script src="..&#x2F;..&#x2F;highlight.min.js"></script>
+    <script src="..&#x2F;..&#x2F;tabulator.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia-repl.min.js"></script>
+    <script src="..&#x2F;..&#x2F;publish.js"></script>
+    
+</head>
+<body>
+    <main id="page">
+        <div class="menu">
+            <div id="projectname">BitSAD.jl</div>
+            <input id="search-input" placeholder="Search">
+            <select id="version-selector"></select>
+            <svg id="menu-toggler" title="Contents" onclick="toggleIndexPage();" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6C2 5.44772 2.44772 5 3 5H21C21.5523 5 22 5.44772 22 6C22 6.55228 21.5523 7 21 7H3C2.44772 7 2 6.55228 2 6Z" fill="currentColor" /><path d="M2 12.0322C2 11.4799 2.44772 11.0322 3 11.0322H21C21.5523 11.0322 22 11.4799 22 12.0322C22 12.5845 21.5523 13.0322 21 13.0322H3C2.44772 13.0322 2 12.5845 2 12.0322Z" fill="currentColor" /><path d="M3 17.0645C2.44772 17.0645 2 17.5122 2 18.0645C2 18.6167 2.44772 19.0645 3 19.0645H21C21.5523 19.0645 22 18.6167 22 18.0645C22 17.5122 21.5523 17.0645 21 17.0645H3Z" fill="currentColor" /></svg>
+        </div>
+        <div id="toc"><p><a href="../../README.html">Introduction</a></p>
+<h1 id="tutorials"><a href="../../#tutorials" class="anchor"></a>Tutorials</h1>
+<ul>
+<li><a href="../../docs/tutorials/getting-started.html">Quickstart</a></li>
+<li><a href="../../docs/tutorials/sbitstream.html">Stochastic bitstreams 101</a></li>
+<li><a href="../../docs/tutorials/simulation-and-hardware.html">Simulation and hardware</a></li>
+<li><a href="../../docs/tutorials/iterative-svd.html">Complex functions of bitstreams</a></li>
+</ul>
+<h1 id="how-to-"><a href="../../#how-to-" class="anchor"></a>How To …</h1>
+<ul>
+<li><a href="../../docs/how-tos/custom-sbitstream.html">Create a custom <code>SBitstream</code> operator</a></li>
+<li><a href="../../docs/how-tos/nosim.html">Create a simulation nop</a></li>
+</ul>
+<h1 id="developer-guide"><a href="../../#developer-guide" class="anchor"></a>Developer Guide</h1>
+<!-- * [Archicture overview](dev-guide/architecture.md) -->
+<!-- * [Understanding simulation](dev-guide/simulation.md) -->
+<!-- * [Understanding hardware generation](dev-guide/hardware.md) -->
+<hr />
+<p><a href="../../docstrings.html">API Reference</a></p>
+</div>
+        <article id="content"><h1 id="complex-functions-of-bitstreams"><a href="#complex-functions-of-bitstreams" class="anchor"></a>Complex functions of bitstreams</h1>
+<p>So far, we worked with relatively simple functions of <code>SBitstream</code>s that could be simulated and mapped to hardware manually. In this tutorial, we will look at a more complex example, the power iteration singular value decomposition algorithm of a matrix.</p>
+<h2 id="power-iteration-for-svd"><a href="#power-iteration-for-svd" class="anchor"></a>Power iteration for SVD</h2>
+<p>The <a href="https://en.wikipedia.org/wiki/Singular_value_decomposition">singular value decomposition</a> (SVD) is a fundamental decomposition in linear algebra. Solutions to many problems can be expressed using the SVD and its components. We won’t go into too much detail about this algorithm or its applications (you could read <a href="https://dl.acm.org/doi/10.1145/3316482.3326355">our paper</a>). Instead, we will focus on how to implement the algorithm in BitSAD. First, let’s take a look at the power iteration itself.</p>
+<div class="display-math tex">\[\begin{aligned}
+\text{Step 1:} \qquad w_k & \gets A v_{k - 1} \\
+\text{Step 2:} \qquad u_k & \gets w_k / \|w_k\|_2 \\
+\text{Step 3:} \qquad z_k & \gets A^\top v_{k - 1} \\
+\text{Step 4:} \qquad \sigma_k & \gets \|z_k\|_2 \\
+\text{Step 5:} \qquad v_k & \gets z_k / \sigma_k
+\end{aligned}\]</div>
+<p>The algorithm above is repeated for <span class="math tex">\(T\)</span> iterations. <span class="math tex">\(A\)</span>, <span class="math tex">\(v_k\)</span>, and <span class="math tex">\(u_k\)</span> are all matrices or vectors, and <span class="math tex">\(\| \cdot \|_2\)</span> denotes the L2-norm of a vector. While this might seem very complex compared to our examples in the previous tutorials, BitSAD will make implementing these five steps easy.</p>
+<h2 id="define-the-power-iteration-function"><a href="#define-the-power-iteration-function" class="anchor"></a>Define the power iteration function</h2>
+<p>We begin by defining the five steps as a plain function in Julia:</p>
+<pre><code cell="iterative-svd" class="language-julia">using BitSAD
+using LinearAlgebra
+
+function power_iteration(A::Matrix, v₀::Vector)
+    w = A * v₀
+    wscaled = w .÷ sqrt(size(A, 1))
+    u = wscaled ./ norm(wscaled)
+
+    z = permutedims(A) * u
+    zscaled = z .÷ sqrt(size(A, 2))
+    σ = norm(zscaled)
+    v = zscaled ./ σ
+
+    return u, v, σ
+end
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">power_iteration (generic function with 1 method)</code></pre>
+<p>The function <code>power_iteration</code> is almost an exact copy of the mathematical algorithm, except we do some additional scaling to <code>w</code> and <code>z</code>. We’ll see why in a moment. For now, let’s test it on a random matrix to see if it works as expected.</p>
+<pre><code cell="iterative-svd" class="language-julia"># use a 2x2 matrix
+m, n = (2, 2)
+
+# example matrix
+A_float = [ -0.99009   0.954132;
+            -0.148342  0.139824]
+v₀_float = [0.5, 0.5] # v should be a unit vector
+
+# compute the SVD for the floating point A
+svddecomp = svd(A_float)
+
+A = SBitstream.(A_float)
+v₀ = SBitstream.(v₀_float)
+
+function run_power_iteration(A, v₀; T = 5)
+    u = similar(A, size(A, 1))
+    σ = 0.0
+    v = deepcopy(v₀)
+    for k in 1:T
+        u, v, σ = power_iteration(A, v)
+    end
+
+    return u, v, σ
+end
+
+u, v, σ = run_power_iteration(A, v₀)
+
+println(&quot;u error: $(float.(u) - svddecomp.U[1, :])&quot;)
+println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
+println(&quot;σ error: $(float(σ) * sqrt(n) - svddecomp.S[1])&quot;)
+</code></pre>
+<pre><code class="plaintext cell-output cell-stream">┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
+└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:35
+┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
+└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:35
+┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
+└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:35
+┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
+└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:35
+u error: [0.00933908309264786, -0.053089361040584454]
+v error: [6.005047311419265e-5, 6.234863760379294e-5]
+σ error: -0.002019506217728395
+</code></pre>
+<p>Unfortunately, our result is incorrect, but we can see that BitSAD reported saturation occuring several times. Let’s try this again, but now, we’ll pre-scale <code>A</code> so that none of the operations in the algorithm saturate (more details on the choice of scaling are in <a href="https://www.frontiersin.org/articles/10.3389/fnins.2018.00115/full">our paper</a>). Note that this is also the reason why we scaled <code>w</code> and <code>z</code> in the original function (so that <code>norm(w)</code> did not saturate).</p>
+<pre><code cell="iterative-svd" class="language-julia">α = 2 * max(norm(A_float, Inf), norm(A_float, 1))
+A_float .= A_float ./ α
+
+A = SBitstream.(A_float)
+
+u, v, σ = run_power_iteration(A, v₀)
+
+println(&quot;u error: $(float.(u) - svddecomp.U[1, :])&quot;)
+println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
+println(&quot;σ error: $(float(σ) * α * sqrt(n) - svddecomp.S[1])&quot;)
+</code></pre>
+<pre><code class="plaintext cell-output cell-stream">u error: [-2.220446049250313e-16, -2.7755575615628914e-17]
+v error: [1.1102230246251565e-16, 0.0]
+σ error: -2.220446049250313e-16
+</code></pre>
+<p>Without saturation, our results are more accurate.</p>
+<h2 id="simulating-the-power-iteration"><a href="#simulating-the-power-iteration" class="anchor"></a>Simulating the power iteration</h2>
+<p>The test above only verified that the basic algorithm worked with the limited numeric range of stochastic bitstreams. It did not verify that bit-level operations would converge as well. Let’s try that next.</p>
+<pre><code cell="iterative-svd" class="language-julia">using DataStructures
+
+# simulate for T iterations
+T = 10_000
+
+# record the error on each iteration
+ϵ = zeros(T)
+
+# record the most recent 100 samples of each output
+ubuffer = CircularBuffer{Vector{Int}}(100)
+vbuffer = CircularBuffer{Vector{Int}}(100)
+σbuffer = CircularBuffer{Int}(100)
+
+# add a decorrelator on the feedback path
+function power_iteration_fb(A, v)
+    u, v, σ = power_iteration(A, v)
+
+    return u, decorrelate.(v), σ
+end
+
+sim = simulatable(power_iteration_fb, A, v₀)
+for t in 1:T
+    # evaluate module
+    output = sim(power_iteration_fb, A, v₀)
+
+    # accumulate results in buffer
+    global u = estimate!(ubuffer, output[1])
+    global v = estimate!(vbuffer, output[2])
+    global σ = estimate!(σbuffer, output[3])
+
+    # feedback output after t = 1000
+    (t &gt;= 1000) &amp;&amp; push!.(v₀, pop!.(output[2]))
+
+    # record loss
+    ϵ[t] = norm(α * (A_float * v - u * σ * sqrt(n)))
+end
+
+u = estimate(ubuffer)
+v = estimate(vbuffer)
+σ = estimate(σbuffer) * α * sqrt(n)
+
+println(&quot;final error: $(ϵ[end])&quot;)
+</code></pre>
+<pre><code class="plaintext cell-output cell-stream">final error: 0.05093733607503775
+</code></pre>
+<p>Since we are simulating bits, we need to store the bits in order to compute an estimate of the current simulation output. We use a <code>CircularBuffer</code> from DataStructures.jl to do this. Additionally, in the previous section, we directly fed back the output, <code>v</code>, as an input in the subsequent iteration. Now, <code>v</code> is unstable during the first few iterations, so we only start the feedback after 1,000 iterations. Finally, we measure the output error using the formula</p>
+<div class="display-math tex">\[Av = \sigma u\]</div>
+<p>Any valid SVD will satisfy this property. Our error is how closely this property holds for our current estimates. We chose to use this error to illustrate how <a href="../../docstrings/BitSAD.estimate!.html"><code>estimate!</code></a> can be used to mix floating point and bitstream computation.</p>
+<h2 id="generating-hardware-for-the-power-iteration"><a href="#generating-hardware-for-the-power-iteration" class="anchor"></a>Generating hardware for the power iteration</h2>
+<p>Since our function is working at the bit-level, the next step is to generate Verilog for it.</p>
+<pre><code cell="iterative-svd" class="language-julia">power_iteration_verilog, _ = generatehw(power_iteration, A, v₀)
+# print only the first 60 lines
+println(join(split(power_iteration_verilog, &quot;\n&quot;)[1:60], &quot;\n&quot;))
+</code></pre>
+<pre><code class="plaintext cell-output cell-stream">module power_iteration (
+    input logic CLK,
+    input logic nRST,
+    input logic  [(2 - 1):0][(2 - 1):0] net_2_p, net_2_m,
+    input logic  [(2 - 1):0] net_3_p, net_3_m,
+    output logic  [(2 - 1):0] net_22_p, net_22_m
+);
+
+logic  [(2 - 1):0] net_4_p, net_4_m;
+logic  [(2 - 1):0] net_7_p, net_7_m;
+logic   net_10_p, net_10_m;
+logic  [(2 - 1):0] net_11_p, net_11_m;
+logic  [(2 - 1):0][(2 - 1):0] net_14_p, net_14_m;
+logic  [(2 - 1):0] net_15_p, net_15_m;
+logic  [(2 - 1):0] net_18_p, net_18_m;
+logic   net_21_p, net_21_m;
+logic  [(2 - 1):0] div0_out_pp;
+logic  [(2 - 1):0] div0_out_mp;
+logic  [(2 - 1):0] div1_out_pp;
+logic  [(2 - 1):0] div1_out_mp,
+
+
+// Autogenerated by BitSAD
+// BEGIN mmult0
+stoch_signed_matrix_mult #(
+        .NUM_ROWS(2),
+        .NUM_MID(2),
+        .NUM_COLS(1)
+    ) mmult0 (
+        .CLK(CLK),
+        .nRST(nRST),
+        .A_p(net_2_p),
+        .A_m(net_2_m),
+        .B_p(net_3_p),
+        .B_m(net_3_m),
+        .Y_p(net_4_p),
+        .Y_m(net_4_m)
+    );
+// END mmult0
+
+// Autogenerated by BitSAD
+// BEGIN fdiv0
+stoch_fixed_gain_div_mat #(
+        .GAIN(4'b0101),
+        .NUM_ROWS(2),
+        .NUM_COLS(1)
+    ) fdiv0_p (
+        .CLK(CLK),
+        .nRST(nRST),
+        .A(net_4_p),
+        .Y(net_7_p)
+    );
+stoch_fixed_gain_div_mat #(
+        .GAIN(4'b0101),
+        .NUM_ROWS(2),
+        .NUM_COLS(1)
+    ) fdiv0_m (
+        .CLK(CLK),
+        .nRST(nRST),
+        .A(net_4_m),
+</code></pre>
+<p>This is great, but we see that BitSAD interprets <code>sqrt(size(A, 1))</code> in our function as a constant. In hardware, we could not compute the array size on the fly. Instead, it would be a parameter of the circuit. To replicate this behavior in BitSAD, we need to use a struct.</p>
+<pre><code cell="iterative-svd" class="language-julia">struct PowerIteration
+    scalew::Float64
+    scalez::Float64
+end
+PowerIteration(; nrows, ncols) = PowerIteration(sqrt(nrows), sqrt(ncols))
+
+function (circuit::PowerIteration)(A, v₀)
+    w = A * v₀
+    wscaled = w .÷ circuit.scalew
+    u = wscaled ./ norm(wscaled)
+
+    z = permutedims(A) * u
+    zscaled = z .÷ circuit.scalez
+    σ = norm(zscaled)
+    v = zscaled ./ σ
+
+    return u, v, σ
+end
+</code></pre>
+<p>Here, we created the <code>PowerIteration</code> struct which can be instantiated with the matrix size like <code>PowerIteration(m, n)</code>. We made the struct callable, and the body of the function is nearly the same as <code>power_iteration</code>.  The only difference is that we use <code>circuit.scalew</code> instead of <code>sqrt(size(A, 1))</code> (same for the number of columns). We can generate harware for <code>PowerIteration</code> just like we did for regular functions, but now any accesses to the fields of the <code>PowerIteration</code> struct will be treated like parameters in Verilog.</p>
+<pre><code cell="iterative-svd" class="language-julia">circuit = PowerIteration(nrows = size(A, 1), ncols = size(A, 2))
+power_iteration_verilog, _ = generatehw(circuit, A, v₀)
+
+# print only the first 60 lines
+println(join(split(power_iteration_verilog, &quot;\n&quot;)[1:60], &quot;\n&quot;))
+</code></pre>
+<pre><code class="plaintext cell-output cell-stream">module PowerIteration #(
+    parameter scalez = 4'b0101,
+    parameter scalew = 4'b0101
+) (
+    input logic CLK,
+    input logic nRST,
+    input logic  [(2 - 1):0][(2 - 1):0] net_2_p, net_2_m,
+    input logic  [(2 - 1):0] net_3_p, net_3_m,
+    output logic  [(2 - 1):0] net_20_p, net_20_m
+);
+
+logic  [(2 - 1):0] net_4_p, net_4_m;
+logic  [(2 - 1):0] net_6_p, net_6_m;
+logic   net_9_p, net_9_m;
+logic  [(2 - 1):0] net_10_p, net_10_m;
+logic  [(2 - 1):0][(2 - 1):0] net_13_p, net_13_m;
+logic  [(2 - 1):0] net_14_p, net_14_m;
+logic  [(2 - 1):0] net_16_p, net_16_m;
+logic   net_19_p, net_19_m;
+logic  [(2 - 1):0] div0_out_pp;
+logic  [(2 - 1):0] div0_out_mp;
+logic  [(2 - 1):0] div1_out_pp;
+logic  [(2 - 1):0] div1_out_mp,
+
+
+// Autogenerated by BitSAD
+// BEGIN mmult0
+stoch_signed_matrix_mult #(
+        .NUM_ROWS(2),
+        .NUM_MID(2),
+        .NUM_COLS(1)
+    ) mmult0 (
+        .CLK(CLK),
+        .nRST(nRST),
+        .A_p(net_2_p),
+        .A_m(net_2_m),
+        .B_p(net_3_p),
+        .B_m(net_3_m),
+        .Y_p(net_4_p),
+        .Y_m(net_4_m)
+    );
+// END mmult0
+
+// Autogenerated by BitSAD
+// BEGIN fdiv0
+stoch_fixed_gain_div_mat #(
+        .GAIN(scalew),
+        .NUM_ROWS(2),
+        .NUM_COLS(1)
+    ) fdiv0_p (
+        .CLK(CLK),
+        .nRST(nRST),
+        .A(net_4_p),
+        .Y(net_6_p)
+    );
+stoch_fixed_gain_div_mat #(
+        .GAIN(scalew),
+        .NUM_ROWS(2),
+        .NUM_COLS(1)
+    ) fdiv0_m (
+</code></pre>
+<p>We can see that the generated Verilog contains <code>scalew</code> and <code>scalez</code> as parameters, and BitSAD automatically determined the fixed point binary values for them.</p>
+</article>
+        <div id="page-navigation">
+            <a id="previous-page" title="Previous" href="simulation-and-hardware.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="next-page" title="Next" href="..&#x2F;how-tos&#x2F;custom-sbitstream.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
+        </div>
+        <footer>
+            Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language</a>.
+        </footer>
+    </main>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false},
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "\\[", right: "\\]", display: true}
+                ]
+            });
+        });
+    </script>
+</body>
+</html>

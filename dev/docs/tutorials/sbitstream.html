@@ -72,7 +72,7 @@ x = SBitstream(0.3)
 <p>You’ll also notice that there were “0 bits enqueue” in <code>x</code>. This refers to the fact that the bitstream, <code>x</code>, is a sequence of samples. Currently, we have not drawn any samples from <code>x</code>. We can try that now:</p>
 <pre><code cell="sbitstream-101" class="language-julia">xt = pop!(x)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBit(pos = true, neg = false)</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBit(pos = false, neg = false)</code></pre>
 <p>Now, we have a single sample, <code>xt</code>, which is of type <a href="../../docstrings/BitSAD.SBit.html"><code>SBit</code></a>. An <code>SBit</code> is a “stochastic bit” which is just a convenient alias for a <a href="https://docs.julialang.org/en/v1.6/manual/functions/#Named-Tuples"><code>NamedTuple</code></a> with two parts — the positive part (<a href="../../docstrings/BitSAD.pos.html"><code>pos</code></a>) and the negative part (<a href="../../docstrings/BitSAD.neg.html"><code>neg</code></a>).</p>
 <blockquote>
 <p>Wait, I thought stochastic bitstreams were a single bit sequence? <br />
@@ -100,7 +100,7 @@ x
 <p>Finally, we can see that the empirical average over the <code>SBit</code>s in queue matches to encoded value quite closely.</p>
 <pre><code cell="sbitstream-101" class="language-julia">abs(estimate(x) - float(x))
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.0033932135728543256</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.014371257485029931</code></pre>
 <h2 id="operations-on-sbitstreams"><a href="#operations-on-sbitstreams" class="anchor"></a>Operations on <code>SBitstream</code>s</h2>
 <p>So far, we have not computed any meaningful results with BitSAD. Let’s go back to the multiplication example and try to multiply two <code>SBitstream</code>s.</p>
 <pre><code id="sbitstream-101-z" cell="sbitstream-101" class="language-julia">y = SBitstream(0.5)
