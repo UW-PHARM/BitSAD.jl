@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="generator" content="Publish.jl" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="" />
+    <title>BitSAD.jl</title>
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;normalize.css" />
+    <link rel="stylesheet" href="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;tabulator_simple.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;publish.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;default.min.css" />
+    <link rel="stylesheet" href="..&#x2F;..&#x2F;custom.css" />
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;katex.min.js"></script>
+    <script src="https:&#x2F;&#x2F;cdn.jsdelivr.net&#x2F;npm&#x2F;katex@0.12.0&#x2F;dist&#x2F;contrib&#x2F;auto-render.min.js"></script>
+    <script src="..&#x2F;..&#x2F;versions.js"></script>
+    <script src="..&#x2F;..&#x2F;lunr.js"></script>
+    <script src="..&#x2F;..&#x2F;highlight.min.js"></script>
+    <script src="..&#x2F;..&#x2F;tabulator.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia.min.js"></script>
+    <script src="..&#x2F;..&#x2F;julia-repl.min.js"></script>
+    <script src="..&#x2F;..&#x2F;publish.js"></script>
+    
+</head>
+<body>
+    <main id="page">
+        <div class="menu">
+            <div id="projectname">BitSAD.jl</div>
+            <input id="search-input" placeholder="Search">
+            <select id="version-selector"></select>
+            <svg id="menu-toggler" title="Contents" onclick="toggleIndexPage();" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 6C2 5.44772 2.44772 5 3 5H21C21.5523 5 22 5.44772 22 6C22 6.55228 21.5523 7 21 7H3C2.44772 7 2 6.55228 2 6Z" fill="currentColor" /><path d="M2 12.0322C2 11.4799 2.44772 11.0322 3 11.0322H21C21.5523 11.0322 22 11.4799 22 12.0322C22 12.5845 21.5523 13.0322 21 13.0322H3C2.44772 13.0322 2 12.5845 2 12.0322Z" fill="currentColor" /><path d="M3 17.0645C2.44772 17.0645 2 17.5122 2 18.0645C2 18.6167 2.44772 19.0645 3 19.0645H21C21.5523 19.0645 22 18.6167 22 18.0645C22 17.5122 21.5523 17.0645 21 17.0645H3Z" fill="currentColor" /></svg>
+        </div>
+        <div id="toc"><p><a href="../../README.html">Introduction</a></p>
+<h1 id="tutorials"><a href="../../#tutorials" class="anchor"></a>Tutorials</h1>
+<ul>
+<li><a href="../../docs/tutorials/getting-started.html">Quickstart</a></li>
+<li><a href="../../docs/tutorials/sbitstream.html">Stochastic bitstreams 101</a></li>
+<li><a href="../../docs/tutorials/simulation-and-hardware.html">Simulation and hardware</a></li>
+<li><a href="../../docs/tutorials/iterative-svd.html">Complex functions of bitstreams</a></li>
+</ul>
+<h1 id="how-to-"><a href="../../#how-to-" class="anchor"></a>How To …</h1>
+<ul>
+<li><a href="../../docs/how-tos/custom-sbitstream.html">Create a custom <code>SBitstream</code> operator</a></li>
+<li><a href="../../docs/how-tos/nosim.html">Create a simulation nop</a></li>
+</ul>
+<h1 id="developer-guide"><a href="../../#developer-guide" class="anchor"></a>Developer Guide</h1>
+<!-- * [Archicture overview](dev-guide/architecture.md) -->
+<!-- * [Understanding simulation](dev-guide/simulation.md) -->
+<!-- * [Understanding hardware generation](dev-guide/hardware.md) -->
+<hr />
+<p><a href="../../docstrings.html">API Reference</a></p>
+</div>
+        <article id="content"><h1 id="stochastic-bitstreams-101"><a href="#stochastic-bitstreams-101" class="anchor"></a>Stochastic bitstreams 101</h1>
+<p>A stochastic bitstreams, <span class="math tex">\(X_t\)</span>, is a sequence of samples from a Bernoulli distribution:</p>
+<div class="display-math tex">\[X_t \sim \mathrm{Ber}(p)\]</div>
+<p>where <span class="math tex">\(p\)</span> is the underlying value being encoded. Stochastic bitstreams are the data format used in <a href="https://en.wikipedia.org/wiki/Stochastic_computing">stochastic computing</a>.</p>
+<p>So, <em>why stochastic bitstreams?</em> You can refer to <a href="http://pages.cpsc.ucalgary.ca/%7Egaines/reports/COMP/SCS69/SCS69.pdf">Gaines’ original work</a> on the topic, but in short, stochastic computing systems tend to be much more area and power efficient compared to traditional binary systems. The reason for this is that any hardware operation on stochastic bitstreams must only process a single bit at a time, and this can often be done in a “streaming” fashion (eliminating the need for sequential logic).</p>
+<p>Take multiplication as an example. For numbers represented in floating point binary, multiplication can be an expensive hardware operation. In many ultra-low power systems, floating-point multiplication is evaluated over multiple clock cycles with integer arithemetic units. In contrast, a stochastic computing multiplier is a single AND gate. In the next section, you’ll see why this is the case.</p>
+<h2 id="basics-of-stochastic-bitstreams"><a href="#basics-of-stochastic-bitstreams" class="anchor"></a>Basics of stochastic bitstreams</h2>
+<p>First, let’s try creating a stochastic bitstream.</p>
+<pre><code cell="sbitstream-101" class="language-julia">using BitSAD
+
+x = SBitstream(0.3)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.3)
+    with 0 bits.</code></pre>
+<p>Here, we created a <a href="../../docstrings/BitSAD.SBitstream.html"><code>SBitstream</code></a> (the type in BitSAD for stochastic bitstreams) encoding the real value 0.3. <code>SBitstream</code> will keep track of the mean of the Bernoulli distribution, which we can recover with <a href="../../docstrings/Base.float.html"><code>float</code></a>.</p>
+<pre><code cell="sbitstream-101" class="language-julia">float(x)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.3</code></pre>
+<p>You’ll also notice that there were “0 bits enqueue” in <code>x</code>. This refers to the fact that the bitstream, <code>x</code>, is a sequence of samples. Currently, we have not drawn any samples from <code>x</code>. We can try that now:</p>
+<pre><code cell="sbitstream-101" class="language-julia">xt = pop!(x)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBit(pos = false, neg = false)</code></pre>
+<p>Now, we have a single sample, <code>xt</code>, which is of type <a href="../../docstrings/BitSAD.SBit.html"><code>SBit</code></a>. An <code>SBit</code> is a “stochastic bit” which is just a convenient alias for a <a href="https://docs.julialang.org/en/v1.6/manual/functions/#Named-Tuples"><code>NamedTuple</code></a> with two parts — the positive part (<a href="../../docstrings/BitSAD.pos.html"><code>pos</code></a>) and the negative part (<a href="../../docstrings/BitSAD.neg.html"><code>neg</code></a>).</p>
+<blockquote>
+<p>Wait, I thought stochastic bitstreams were a single bit sequence? <br />
+— You (probably)</p>
+</blockquote>
+<p>Yes, in theory, but this definition means that we can only represent real numbers <span class="math tex">\(p \in [0, 1]\)</span>. In practice, we would like to represent signed numbers (though we still normalize them to <span class="math tex">\(p \in [-1, 1]\)</span>). BitSAD uses a two-channel format for encoding signed numbers as two underlying bitstreams. One channel is the positive part and the other is the negative part, such that</p>
+<div class="display-math tex">\[p = \mathbb{E} \left[ \mathrm{Pos}(X_t) - \mathrm{Neg}(X_t) \right]\]</div>
+<p>Samples from these two separate channels are neatly packaged into a single <code>SBit</code> so that we can think of <code>SBitstream</code>s as a sequence of <code>SBit</code>s without having to worry too much about the underlying signed encoding scheme.</p>
+<p>If we want, we can even add <code>SBit</code>s onto a <code>SBitstream</code>.</p>
+<pre><code cell="sbitstream-101" class="language-julia">push!(x, xt)
+x
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.3)
+    with 1 bits.</code></pre>
+<p>We see that <code>x</code> now has a single bit in queue. For convenience, BitSAD provides <a href="../../docstrings/BitSAD.generate!.html"><code>generate!</code></a> to pre-load a <code>SBitstream</code> with samples from the underlying distributions.</p>
+<pre><code cell="sbitstream-101" class="language-julia">generate!(x) # add a single sample
+@show length(x)
+generate!(x, 1000)
+x
+</code></pre>
+<pre><code class="plaintext cell-output cell-stream">length(x) = 2
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.3)
+    with 1002 bits.</code></pre>
+<p>Finally, we can see that the empirical average over the <code>SBit</code>s in queue matches to encoded value quite closely.</p>
+<pre><code cell="sbitstream-101" class="language-julia">abs(estimate(x) - float(x))
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.007385229540918192</code></pre>
+<h2 id="operations-on-sbitstreams"><a href="#operations-on-sbitstreams" class="anchor"></a>Operations on <code>SBitstream</code>s</h2>
+<p>So far, we have not computed any meaningful results with BitSAD. Let’s go back to the multiplication example and try to multiply two <code>SBitstream</code>s.</p>
+<pre><code id="sbitstream-101-z" cell="sbitstream-101" class="language-julia">y = SBitstream(0.5)
+z = x * y
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.15)
+    with 0 bits.</code></pre>
+<p>The result, <code>z</code>, has an encoded value of <code>0.15 = 0.3 * 0.5</code>. Recall that stochastic bitstreams encode the value in the mean of their underlying distributions. Any function on applied to <code>SBitstream</code>s is implying a function over their means. Thus,</p>
+<div class="display-math tex">\[\mathbb{E} [Z_t] = \mathbb{E} [X_t] \mathbb{E} [Y_t]\]</div>
+<p>We can verify this in BitSAD too.</p>
+<pre><code cell="sbitstream-101" class="language-julia">float(z) == float(x) * float(y)
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">true</code></pre>
+<p>So far, we haven’t described how this multiplication is actually executed on hardware. Certainly, multiplying the floating point means then drawing from the resulting distribution would be no better than traditional arithemetic. Stochastic computing takes advantage of the fact that <span class="math tex">\(X_t\)</span> and <span class="math tex">\(Y_t\)</span> are independent to note that</p>
+<div class="display-math tex">\[\mathbb{E} [Z_t] = \mathbb{E} [X_t] \mathbb{E} [Y_t] = \mathbb{E} [X_t Y_t]\]</div>
+<p>In other words, we can multiply the samples at step <code>t</code> from each sequence to create a new sequence. The mean of this new sequence should match <span class="math tex">\(\mathbb{E} [Z_t]\)</span>. Let’s see it in action.</p>
+<pre><code cell="sbitstream-101" class="language-julia">multiply_sbit(x, y) = SBit((pos(x) * pos(y), neg(x) * neg(y)))
+
+num_samples = 1000
+for t in 1:num_samples
+    xbit, ybit = pop!(x), pop!(y)
+    zbit = multiply_sbit(xbit, ybit)
+    push!(z, zbit)
+end
+
+abs(estimate(z) - float(z))
+</code></pre>
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">0.007000000000000006</code></pre>
+<p>We used a helper function, <code>multiply_sbit</code> to multiply the positive and negative channel of each <code>SBit</code> separately. This resulted in a new <code>SBit</code>, <code>zbit</code>, which we pushed onto <code>z</code>. When we take the empirical average of all these <code>zbit</code>s, we see that it is close to the true mean of <code>z</code>.</p>
+<p>Hopefully, you can now see why stochastic computing can be so resource efficient. Each channel of <code>multiply_sbit</code> only needed to multiply two 1-bit numbers. This can be done with a single AND gate.</p>
+<p>In the next tutorial, you’ll see how to automate the <code>SBit</code>-level simulation we did above, and how to generate synthesizable hardware from a Julia function.</p>
+</article>
+        <div id="page-navigation">
+            <a id="previous-page" title="Previous" href="getting-started.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16.2426 6.34317L14.8284 4.92896L7.75739 12L14.8285 19.0711L16.2427 17.6569L10.5858 12L16.2426 6.34317Z" fill="currentColor" /></svg></a>
+            <a id="next-page" title="Next" href="simulation-and-hardware.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.5858 6.34317L12 4.92896L19.0711 12L12 19.0711L10.5858 17.6569L16.2427 12L10.5858 6.34317Z" fill="currentColor" /></svg></a>
+        </div>
+        <footer>
+            Built with <a target="_blank" href="https://github.com/MichaelHatherly/Publish.jl">Publish.jl</a> and the <a target="_blank" href="https://julialang.org">Julia Language</a>.
+        </footer>
+    </main>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false},
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "\\[", right: "\\]", display: true}
+                ]
+            });
+        });
+    </script>
+</body>
+</html>
