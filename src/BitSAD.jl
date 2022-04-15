@@ -2,7 +2,8 @@ module BitSAD
 
 using LinearAlgebra
 using DataStructures
-using Random: MersenneTwister
+using Random
+using RandomNumbers
 using Setfield
 using Ghost
 using OrderedCollections: LittleDict
