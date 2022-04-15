@@ -2,8 +2,8 @@
     x = SBitstream(0.5)
     y = SBitstream(0.1)
     w = SBitstream(-0.1)
-    X = SBitstream.(0.5 * rand(2, 2))
-    Y = SBitstream.(-0.5 * rand(2, 2))
+    X = SBitstream.(0.75 * rand(2, 2))
+    Y = SBitstream.(-0.75 * rand(2, 2))
     v = SBitstream.([0.5 * rand(), -0.5 * rand()])
 
     @testset "FP Values" begin

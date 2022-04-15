@@ -1,12 +1,16 @@
-@kwdef mutable struct SDecorrelator
+@kwdef mutable struct SDecorrelator{T<:Random.AbstractRNG}
     stepval::Int = 16
     rngrange::Int = 255
     buffer::CircularBuffer{Bool} = CircularBuffer{Bool}(2)
     counter::Int = 0
-    rng::MersenneTwister = MersenneTwister(rand(UInt))
+    rng::T = PCG.PCGStateUnique(rand(UInt))
 
-    function SDecorrelator(stepval, rngrange, buffer, counter, rng)
-        decorr = new(stepval, rngrange, buffer, counter, rng)
+    function SDecorrelator(stepval,
+                           rngrange,
+                           buffer,
+                           counter,
+                           rng::T) where {T<:Random.AbstractRNG}
+        decorr = new{T}(stepval, rngrange, buffer, counter, rng)
         fill!(decorr.buffer, false)
 
         return decorr
