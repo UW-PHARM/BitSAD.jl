@@ -63,12 +63,12 @@ h(x) = g(f(x))
 v = SBitstream.(rand(3) ./ 10)
 h(v)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.10803694454426567)
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">SBitstream{Float64}(value = 0.13063728370744396)
     with 0 bits.</code></pre>
 <p>If we look at the transformed simulation code for <code>h</code>, we see that BitSAD recurses into the call stack of <code>f</code>.</p>
 <pre><code cell="nop" class="language-julia">BitSAD.show_simulatable(h, v)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_h#1147&quot;(x1::typeof(Main.anonymous.h), x2::Vector{SBitstream{Float64}})
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_h#333&quot;(x1::typeof(Main.anonymous.h), x2::Vector{SBitstream{Float64}})
       x3 = (BitSAD.getbit)(x2)
       x4 = (reverse)(x2)
       x5 = (LinearAlgebra.norm)(x4)
@@ -86,7 +86,7 @@ h(v)
 </div>
 <pre><code cell="nop" class="language-julia">BitSAD.show_simulatable(h, v)
 </code></pre>
-<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_h#1148&quot;(x1::typeof(Main.anonymous.h), x2::Vector{SBitstream{Float64}})
+<pre><code class="plaintext cell-output cell-result" class="language-plaintext">:(function var&quot;##tape_h#334&quot;(x1::typeof(Main.anonymous.h), x2::Vector{SBitstream{Float64}})
       x3 = (BitSAD.getbit)(x2)
       x4 = (Main.anonymous.f)(x2)
       x5 = (LinearAlgebra.norm)(x4)
