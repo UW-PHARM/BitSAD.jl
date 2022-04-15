@@ -29,6 +29,7 @@
     @testset "Promotion" begin
         @test (x + 0.1) isa SBitstream{Float64}
         @test float(x + 0.1) == 0.6
+        @test (x + 1) isa SBitstream{Float64}
     end
 
     @testset "Sample Generation" begin

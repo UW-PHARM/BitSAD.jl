@@ -49,10 +49,14 @@ Base.float(s::SBitstream) = s.value
 Base.zero(::SBitstream{T}) where T = SBitstream(zero(T))
 Base.one(::SBitstream{T}) where T = SBitstream(one(T))
 
-Base.promote_rule(::Type{SBitstream{T}}, ::Type{T}) where {T<:AbstractFloat} = SBitstream{T}
+Base.promote_rule(::Type{SBitstream{T}}, ::Type{S}) where {T, S<:Number} =
+    SBitstream{promote_type(T, S)}
 
 Base.typemin(::Type{T}) where {T<:SBitstream} = zero(T)
 Base.typemax(::Type{T}) where {T<:SBitstream} = one(T)
+
+Base.isinf(::SBitstream) = false
+Base.isnan(::SBitstream) = false
 
 Base.isless(x::SBitstream, y::SBitstream) = Base.isless(float(x), float(y))
 Base.:(==)(x::SBitstream, y::SBitstream) = (float(x) == float(y))
