@@ -26,6 +26,11 @@
         @test float(max(x, y)) == max(float(x), float(y))
     end
 
+    @testset "Promotion" begin
+        @test (x + 0.1) isa SBitstream{Float64}
+        @test float(x + 0.1) == 0.6
+    end
+
     @testset "Sample Generation" begin
         xbits = generate(x, 100000)
         @test mean(map(xbit -> pos(xbit) - neg(xbit), xbits)) ≈ x.value rtol = 0.1
