@@ -22,9 +22,15 @@ Base.show(io::IO, ::MIME"text/plain", b::SBit) = print(io, "SBit(pos = $(b.pos),
 A stochastic bitstream that represents a real (floating-point) number
 between [-1, 1].
 
+!!! tip
+    You can turn of saturation warnings by calling
+    `BitSAD.set_saturation_verbosity(:none)`.
+    Turn them back on by calling
+    `BitSAD.set_saturation_verbosity(:full)`.
+
 Fields:
 - `bits::Vector{SBit}`: the underlying bitstream
-- `value::Float64`: the underlying floating-point number being represented
+- `value::T`: the underlying floating-point number being represented
 """
 struct SBitstream{T<:Real} <: Number
     bits::Vector{SBit}
