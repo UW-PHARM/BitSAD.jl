@@ -118,6 +118,56 @@ function Base.show(io::IO, ::MIME"text/plain", x::SSignedAdder)
     print(io, ")")
 end
 
+@kwdef mutable struct SAverager{N}
+    counter::Int = 0
+end
+function (op::SAverager{N})(xs::Vararg{Bool, N}) where N
+    # Increment counter
+    op.counter += sum(xs)
+
+    # Decide output
+    z = (op.counter >= N)
+
+    # Decrement counter
+    op.counter = max(op.counter - z * N, 0)
+
+    return z
+end
+function Base.show(io::IO, x::SAverager{N}) where N
+    print(io, "SAverager{$N}(")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", x::SAverager{N}) where N
+    print(io, "SAverager{$N}(counter = ")
+    print(io, string(x.counter))
+    print(io, ")")
+end
+
+"""
+    SSignedAverager{N}()
+
+A signed stochastic bitstream average operator over `N` inputs.
+"""
+@kwdef struct SSignedAverager{N}
+    pavger::SAverager{N} = SAverager{N}()
+    navger::SAverager{N} = SAverager{N}()
+end
+function (op::SSignedAverager{N})(xs::Vararg{SBit, N}) where N
+    pbit = op.pavger(pos.(xs)...)
+    nbit = op.navger(neg.(xs)...)
+
+    return SBit((pbit, nbit))
+end
+Base.show(io::IO, ::SSignedAverager{N}) where N = print(io, "SSignedAverager{N}(...)")
+function Base.show(io::IO, ::MIME"text/plain", x::SSignedAverager{N}) where N
+    print(io, "SSignedAverager{N}(")
+    show(io, x.pavger)
+    print(io, ", ")
+    show(io, x.navger)
+    print(io, ")")
+end
+
 @kwdef mutable struct SSaturatingSubtractor
     counter::Int = 0
 end
