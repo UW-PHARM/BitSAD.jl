@@ -53,6 +53,8 @@ Base.convert(::Type{SBitstream{T}}, s::SBitstream) where {T<:Real} =
 
 const SBitstreamLike = Union{<:SBitstream, AbstractArray{<:SBitstream}}
 
+bits(s::SBitstream) = s.bits
+
 Base.float(s::SBitstream) = s.value
 Base.zero(::SBitstream{T}) where T = SBitstream(zero(T))
 Base.one(::SBitstream{T}) where T = SBitstream(one(T))
@@ -177,7 +179,19 @@ getsimulator(::typeof(max),
              y::SBitstreamLike,
              zs::SBitstreamLike...) = getsimulator.(max, x, y, zs...)
 
-bits(s::SBitstream) = s.bits
+average(x, y, zs...) = sum([x, y, zs...]) / (length(zs) + 2)
+average(x::SBitstream, y::SBitstream, zs::SBitstream...) = SBitstream(average(float(x), float(y), float.(zs)...))
+is_trace_primitive(::Type{typeof(average)}, ::Type{<:SBitstream}, ::Type{<:SBitstream}, ::Type{<:SBitstream}...) = true
+is_trace_primitive(::Type{typeof(Base.broadcasted)},
+                   ::Type{typeof(average)},
+                   ::Type{<:SBitstreamLike},
+                   ::Type{<:SBitstreamLike},
+                   ::Type{<:SBitstreamLike}...) = true
+getsimulator(::typeof(average), x::SBitstream, y::SBitstream, zs::SBitstream...) = SSignedAverager{length(zs) + 2}()
+getsimulator(::typeof(average),
+             x::SBitstreamLike,
+             y::SBitstreamLike,
+             zs::SBitstreamLike...) = getsimulator.(average, x, y, zs...)
 
 """
     generate(s::SBitstream, T::Integer = 1)

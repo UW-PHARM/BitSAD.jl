@@ -129,6 +129,18 @@
                 z / T
             end ≈ float(max(x, y, w)) rtol = 0.1
         end
+        @testset "op = average(x, y, z)" begin
+            sim = simulatable(BitSAD.average, x, y, w)
+            @test begin
+                z = 0
+                for t in 1:T
+                    bit = pop!(sim(BitSAD.average, x, y, w))
+                    z += pos(bit) - neg(bit)
+                end
+
+                z / T
+            end ≈ float(BitSAD.average(x, y, w)) rtol = 0.1
+        end
         @testset "op = * (matrix, scalar)" begin
             sim = simulatable(*, X, y)
             @test begin
