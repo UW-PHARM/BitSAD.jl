@@ -195,7 +195,7 @@
                 end
 
                 Z ./ T
-            end ≈ float.(transpose(v) * X) rtol = 0.1
+            end ≈ float.(transpose(v) * X) rtol = 0.15
         end
         @testset "op = norm" begin
             sim = simulatable(norm, v)

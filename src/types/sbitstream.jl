@@ -32,7 +32,9 @@ struct SBitstream{T<:Real} <: Number
 
     function SBitstream{T}(bits::Vector{SBit}, value::T) where {T<:Real}
         if value > 1 || value < -1
-            @warn "SBitstream can only be ∈ [-1, 1] (saturation occurring)."
+            if verbosity[] == :full
+                @warn "SBitstream can only be ∈ [-1, 1] (saturation occurring)."
+            end
         end
 
         new{T}(bits, min(max(value, -1), 1))

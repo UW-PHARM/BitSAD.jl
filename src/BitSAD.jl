@@ -21,6 +21,15 @@ export generate, generate!, estimate, estimate!, observe
 export simulatable
 export generatehw
 
+const verbosity = Base.RefValue(:full)
+function set_saturation_verbosity(level = :full)
+    level ∈ (:full, :none) ||
+        throw(ArgumentError("Verbosity level can be one of (:full or :none) (got $level)"))
+    verbosity[] = level
+
+    return nothing
+end
+
 include("tracing/trace.jl")
 
 include("types/sbitstream.jl")
