@@ -115,13 +115,13 @@ println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
 println(&quot;σ error: $(float(σ) * sqrt(n) - svddecomp.S[1])&quot;)
 </code></pre>
 <pre><code class="plaintext cell-output cell-stream">┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:35
+└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:42
 ┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:35
+└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:42
 ┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:35
+└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:42
 ┌ Warning: SBitstream can only be ∈ [-1, 1] (saturation occurring).
-└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:35
+└ @ BitSAD ~/work/BitSAD.jl/BitSAD.jl/src/types/sbitstream.jl:42
 u error: [0.00933908309264786, -0.053089361040584454]
 v error: [6.005047311419265e-5, 6.234863760379294e-5]
 σ error: -0.002019506217728395
@@ -188,7 +188,7 @@ v = estimate(vbuffer)
 
 println(&quot;final error: $(ϵ[end])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">final error: 0.23400922739890015
+<pre><code class="plaintext cell-output cell-stream">final error: 0.19473294499640695
 </code></pre>
 <p>Since we are simulating bits, we need to store the bits in order to compute an estimate of the current simulation output. We use a <code>CircularBuffer</code> from DataStructures.jl to do this. Additionally, in the previous section, we directly fed back the output, <code>v</code>, as an input in the subsequent iteration. Now, <code>v</code> is unstable during the first few iterations, so we only start the feedback after 1,000 iterations. Finally, we measure the output error using the formula</p>
 <div class="display-math tex">\[Av = \sigma u\]</div>
