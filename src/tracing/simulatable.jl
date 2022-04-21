@@ -153,7 +153,7 @@ function _broadcasted_transform(ctx, call, sim)
     # push resulting bits onto bitstream
     psh = Ghost.mkcall(setbit!, Ghost.Variable(mat), Ghost.Variable(bit))
 
-    return [call, mat, popcalls..., bit, psh], 1
+    return [call, mat, popcalls..., bit, psh], 2
 end
 
 # how we transform broadcasted operations
@@ -173,7 +173,7 @@ function _broadcasted_transform(ctx, call, sims::AbstractArray)
     # push resulting bits onto bitstreams
     psh = Ghost.mkcall(setbit!, Ghost.Variable(mat), Ghost.Variable(matbits))
 
-    return [call, mat, popcalls..., wrapcalls..., bits, matbits, psh], 1
+    return [call, mat, popcalls..., wrapcalls..., bits, matbits, psh], 2
 end
 
 # check if the function is broadcasted and
