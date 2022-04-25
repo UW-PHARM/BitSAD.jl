@@ -210,7 +210,7 @@ function _generate_array(s::AbstractArray{<:SBitstream{FT}}, T::Integer = 1) whe
     values = float.(s)
     bits = rand(FT, size(s)..., T) .< abs.(values)
     isneg = values .>= 0
-    sbits = SBit.(bits .* .!(isneg), bits .* isneg)
+    sbits = map(b -> SBit.(b .* .!(isneg), b .* isneg), eachslice(bits; dims = ndims(bits)))
 
     return sbits
 end
@@ -236,7 +236,7 @@ Base.pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : popfirst!(s.bits)
 function Base.broadcasted(::typeof(Base.pop!), s::AbstractArray{<:SBitstream})
     bs = bits.(s)
 
-    return all(isempty, bs) ? generate.(s) : popfirst!.(bs)
+    return all(isempty, bs) ? generate.(s)[1] : popfirst!.(bs)
 end
 observe(s::SBitstream) = last(s.bits)
 
