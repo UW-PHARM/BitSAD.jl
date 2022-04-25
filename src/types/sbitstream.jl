@@ -210,7 +210,7 @@ function _generate_array(s::AbstractArray{<:SBitstream{FT}}, T::Integer = 1) whe
     values = float.(s)
     bits = rand(FT, size(s)..., T) .< abs.(values)
     isneg = values .>= 0
-    sbits = SBit.(bits .* .!(isneg), bits .* isneg)
+    sbits = map(b -> SBit.(b .* .!(isneg), b .* isneg), eachslice(bits; dims = ndims(bits)))
 
     return sbits
 end
@@ -231,8 +231,13 @@ Base.firstindex(s::SBitstream) = 1
 Base.lastindex(s::SBitstream) = length(s)
 
 Base.push!(s::SBitstream, b) = push!(s.bits, b)
-Base.append!(s::SBitstream, bits) = foreach(Base.Fix1(push!, s), bits)
+Base.append!(s::SBitstream, bits) = append!(bits(s), bits)
 Base.pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : popfirst!(s.bits)
+function Base.broadcasted(::typeof(Base.pop!), s::AbstractArray{<:SBitstream})
+    bs = bits.(s)
+
+    return all(isempty, bs) ? generate.(s)[1] : popfirst!.(bs)
+end
 observe(s::SBitstream) = last(s.bits)
 
 """
