@@ -151,7 +151,7 @@
                 end
 
                 Z ./ T
-            end ≈ float.(X * y) rtol = 0.1
+            end ≈ float.(X * y) rtol = 0.15
             sim = simulatable(*, y, X)
             @test begin
                 Z = zeros(2, 2)
@@ -161,7 +161,7 @@
                 end
 
                 Z ./ T
-            end ≈ float.(y * X) rtol = 0.1
+            end ≈ float.(y * X) rtol = 0.15
         end
         @testset "op = * (matrix, matrix)" begin
             sim = simulatable(*, X, Y)
