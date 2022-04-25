@@ -198,9 +198,9 @@ version = "1.4.1"
 
 [[deps.Parsers]]
 deps = ["Dates"]
-git-tree-sha1 = "621f4f3b4977325b9128d5fae7a8b4829a0c2222"
+git-tree-sha1 = "3b429f37de37f1fc603cc1de4a799dc7fbe4c0b6"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.2.4"
+version = "2.3.0"
 
 [[deps.Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
@@ -266,9 +266,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "4f6ec5d99a28e1a749559ef7dd518663c5eca3d5"
+git-tree-sha1 = "cd56bf18ed715e8b09f06ef8c6b781e6cdc49911"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.4.3"
+version = "1.4.4"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
