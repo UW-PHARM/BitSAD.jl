@@ -138,7 +138,7 @@ println(&quot;u error: $(float.(u) - svddecomp.U[1, :])&quot;)
 println(&quot;v error: $(float.(v) - svddecomp.V[1, :])&quot;)
 println(&quot;σ error: $(float(σ) * α * sqrt(n) - svddecomp.S[1])&quot;)
 </code></pre>
-<pre><code class="plaintext cell-output cell-stream">u error: [-2.220446049250313e-16, -2.7755575615628914e-17]
+<pre><code class="plaintext cell-output cell-stream">u error: [-2.220446049250313e-16, 0.0]
 v error: [1.1102230246251565e-16, 0.0]
 σ error: -2.220446049250313e-16
 </code></pre>
