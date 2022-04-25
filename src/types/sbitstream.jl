@@ -200,13 +200,25 @@ getsimulator(::typeof(average),
 Generate `T` samples of the bitstream, `s`.
 Add them to the queue for `generate!`, otherwise return the vector of bits.
 """
-function generate(s::SBitstream, T::Integer = 1)
-    bits = rand(T) .< abs(s.value)
+function generate(s::SBitstream{FT}, T::Integer = 1) where FT
+    bits = rand(FT, T) .< abs(s.value)
     sbits = map(b -> (s.value >= 0) ? (pos = b, neg = false) : (pos = false, neg = b), bits)
 
     return sbits
 end
+function _generate_array(s::AbstractArray{<:SBitstream{FT}}, T::Integer = 1) where FT
+    values = float.(s)
+    bits = rand(FT, size(s)..., T) .< abs.(values)
+    isneg = values .>= 0
+    sbits = SBit.(bits .* .!(isneg), bits .* isneg)
+
+    return sbits
+end
+Base.broadcasted(::typeof(generate), s::AbstractArray{<:SBitstream}, args...) =
+    _generate_array(s, args...)
 generate!(s::SBitstream, T::Integer = 1) = append!(s, generate(s, T))
+Base.broadcasted(::typeof(generate!), s::AbstractArray{<:SBitstream}, args...) =
+    append!.(s, _generate_array(s, args...))
 
 Base.length(s::SBitstream) = length(bits(s))
 
