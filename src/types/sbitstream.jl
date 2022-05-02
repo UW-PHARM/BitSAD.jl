@@ -231,7 +231,7 @@ Base.firstindex(s::SBitstream) = 1
 Base.lastindex(s::SBitstream) = length(s)
 
 Base.push!(s::SBitstream, b) = push!(s.bits, b)
-Base.append!(s::SBitstream, bits) = append!(bits(s), bits)
+Base.append!(s::SBitstream, bs) = append!(bits(s), bs)
 Base.pop!(s::SBitstream) = isempty(s.bits) ? generate(s)[1] : popfirst!(s.bits)
 function Base.broadcasted(::typeof(Base.pop!), s::AbstractArray{<:SBitstream})
     bs = bits.(s)
