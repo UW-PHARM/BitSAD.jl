@@ -30,9 +30,6 @@ always @(posedge CLK) begin
     else counter <= next_counter;
 end
 
-always @(c, y) begin
-    if (~|c & y) next_counter <= {COUNTER_SIZE{1'b0}};
-    else next_counter <= c - y;
-end
+assign next_counter = c - y;
 
 endmodule
